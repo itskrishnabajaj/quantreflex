@@ -17,6 +17,9 @@
 var FirestoreSync = (function () {
   var _syncTimer = null;
   var _pendingUpdates = {};
+  var _memoryCache = null; /* In-memory cache of the user document */
+  var _dataLoaded = false; /* Whether initial load has completed */
+  var _drillActive = false; /* Whether a drill is in progress (defers syncing) */
   var SYNC_DEBOUNCE_MS = 2000; /* batch updates every 2 seconds */
 
   /**
@@ -32,10 +35,17 @@ var FirestoreSync = (function () {
 
   /**
    * Load all user data from Firestore and merge into localStorage.
+   * Uses in-memory cache to prevent duplicate reads within the same session.
    * Called on app startup.
    * @param {function} [callback] - Optional callback when done
    */
   function loadFromFirestore(callback) {
+    /* Return cached data if already loaded this session */
+    if (_dataLoaded && _memoryCache) {
+      if (callback) callback(true);
+      return;
+    }
+
     var docRef = _getUserDocRef();
     if (!docRef) {
       if (callback) callback(false);
@@ -45,6 +55,8 @@ var FirestoreSync = (function () {
     docRef.get().then(function (doc) {
       if (doc.exists) {
         var data = doc.data();
+        _memoryCache = data;
+        _dataLoaded = true;
         /* Merge Firestore data into localStorage (Firestore is source of truth) */
         if (data.settings) {
           try { localStorage.setItem('quant_reflex_settings', JSON.stringify(data.settings)); } catch (_) {}
@@ -65,13 +77,74 @@ var FirestoreSync = (function () {
           try { localStorage.setItem('quant_bookmarks', JSON.stringify(data.bookmarks)); } catch (_) {}
         }
       } else {
-        /* First time: push local data to Firestore */
-        pushAllToFirestore();
+        /* First time: create document with default data */
+        _createDefaultDocument();
       }
       if (callback) callback(true);
     }).catch(function (err) {
       console.warn('Firestore load failed:', err);
+      _dataLoaded = true; /* Mark as loaded to prevent retries */
       if (callback) callback(false);
+    });
+  }
+
+  /**
+   * Create a default Firestore document for a new user.
+   * Pushes existing local data or initializes with defaults.
+   */
+  function _createDefaultDocument() {
+    var docRef = _getUserDocRef();
+    if (!docRef) return;
+
+    var defaults = {
+      settings: { darkMode: false, sound: true, vibration: true, difficulty: 'medium', dailyGoal: 50 },
+      stats: {
+        totalAttempted: 0, totalCorrect: 0,
+        bestStreak: 0, currentStreak: 0,
+        drillSessions: 0, timedTestSessions: 0,
+        dailyStreak: 0, lastActiveDate: null,
+        lastPracticeDate: null,
+        todayAttempted: 0, todayCorrect: 0,
+        categoryStats: {}, mistakes: [],
+        responseTimes: [], dailyHistory: {}
+      },
+      quickLinks: ['fractionTable', 'tablesContainer', 'formulaSections', 'mentalTricks'],
+      customTopics: [],
+      customFormulas: {},
+      bookmarks: []
+    };
+
+    /* Override defaults with any existing local data */
+    try {
+      var localSettings = localStorage.getItem('quant_reflex_settings');
+      if (localSettings) defaults.settings = JSON.parse(localSettings);
+    } catch (_) {}
+    try {
+      var localStats = localStorage.getItem('quant_reflex_progress');
+      if (localStats) defaults.stats = JSON.parse(localStats);
+    } catch (_) {}
+    try {
+      var localLinks = localStorage.getItem('quant_quick_links');
+      if (localLinks) defaults.quickLinks = JSON.parse(localLinks);
+    } catch (_) {}
+    try {
+      var localTopics = localStorage.getItem('quant_custom_topics');
+      if (localTopics) defaults.customTopics = JSON.parse(localTopics);
+    } catch (_) {}
+    try {
+      var localFormulas = localStorage.getItem('quant_custom_formulas');
+      if (localFormulas) defaults.customFormulas = JSON.parse(localFormulas);
+    } catch (_) {}
+    try {
+      var localBookmarks = localStorage.getItem('quant_bookmarks');
+      if (localBookmarks) defaults.bookmarks = JSON.parse(localBookmarks);
+    } catch (_) {}
+
+    _memoryCache = defaults;
+    _dataLoaded = true;
+
+    docRef.set(defaults, { merge: true }).catch(function (err) {
+      console.warn('Firestore default document creation failed:', err);
     });
   }
 
@@ -119,12 +192,22 @@ var FirestoreSync = (function () {
   /**
    * Queue a field update for batched Firestore write.
    * Only changed fields are updated to minimize writes.
+   * During active drills, stats updates are deferred until drill ends.
    * @param {string} field - Firestore document field name
    * @param {*} value - Value to write
    */
   function queueUpdate(field, value) {
     if (!FirebaseApp.isReady()) return;
+
+    /* Update in-memory cache */
+    if (_memoryCache) {
+      _memoryCache[field] = value;
+    }
+
     _pendingUpdates[field] = value;
+
+    /* During drills, defer all syncing to reduce writes */
+    if (_drillActive) return;
 
     /* Debounce: batch updates */
     if (_syncTimer) clearTimeout(_syncTimer);
@@ -198,6 +281,24 @@ var FirestoreSync = (function () {
     queueUpdate('bookmarks', bookmarks);
   }
 
+  /**
+   * Begin drill mode — defers Firestore writes until drill ends.
+   * Reduces write costs during rapid stat updates.
+   */
+  function beginDrillBatch() {
+    _drillActive = true;
+  }
+
+  /**
+   * End drill mode — flushes all pending updates to Firestore.
+   */
+  function endDrillBatch() {
+    _drillActive = false;
+    if (Object.keys(_pendingUpdates).length > 0) {
+      _flushUpdates();
+    }
+  }
+
   /* Flush pending updates when the page is closing */
   window.addEventListener('beforeunload', function () {
     if (Object.keys(_pendingUpdates).length > 0) {
@@ -213,6 +314,8 @@ var FirestoreSync = (function () {
     syncQuickLinks: syncQuickLinks,
     syncCustomTopics: syncCustomTopics,
     syncCustomFormulas: syncCustomFormulas,
-    syncBookmarks: syncBookmarks
+    syncBookmarks: syncBookmarks,
+    beginDrillBatch: beginDrillBatch,
+    endDrillBatch: endDrillBatch
   };
 })();

@@ -119,7 +119,7 @@ users/
 ## How Device-Based Identity Works
 
 - On first app launch, a unique device ID is generated using `crypto.randomUUID()`.
-- The ID is stored in `localStorage` as `deviceId` (e.g., `user_a8f3b29c1d4e`).
+- The ID is stored in `localStorage` as `deviceId` (e.g., `device_a8f3b29c-1d4e-4abc-9def-1234567890ab`).
 - This ID acts as the Firestore document key under the `users` collection.
 - No login or authentication is required.
 - Each installation gets its own profile automatically.

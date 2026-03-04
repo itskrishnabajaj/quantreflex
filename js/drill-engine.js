@@ -216,6 +216,11 @@ function createDrillEngine(container, opts) {
       recordDrillSession();
     }
 
+    /* End Firestore write batching — flush all queued updates */
+    if (typeof FirestoreSync !== 'undefined') {
+      FirestoreSync.endDrillBatch();
+    }
+
     var totalTime = ((performance.now() - overallStart) / 1000).toFixed(1);
     var avg = perQuestionTimes.length
       ? (perQuestionTimes.reduce(function (a, b) { return a + b; }, 0) / perQuestionTimes.length).toFixed(1)
@@ -306,9 +311,18 @@ function createDrillEngine(container, opts) {
   /* ---- begin drill ---- */
 
   function begin() {
+    /* Begin Firestore write batching during drill */
+    if (typeof FirestoreSync !== 'undefined') {
+      FirestoreSync.beginDrillBatch();
+    }
+
     if (reviewMode) {
       questions = generateMistakeReviewQuestions(count);
       if (questions.length === 0) {
+        /* End drill batch since no drill will happen */
+        if (typeof FirestoreSync !== 'undefined') {
+          FirestoreSync.endDrillBatch();
+        }
         container.innerHTML =
           '<div class="card center-content">' +
             '<h2>No Mistakes to Review</h2>' +

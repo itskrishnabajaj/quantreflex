@@ -39,12 +39,12 @@ var FirebaseApp = (function () {
     try {
       _deviceId = localStorage.getItem('deviceId');
       if (!_deviceId) {
-        _deviceId = 'user_' + _generateId();
+        _deviceId = 'device_' + _generateId();
         localStorage.setItem('deviceId', _deviceId);
       }
     } catch (e) {
       /* Fallback if localStorage is unavailable */
-      _deviceId = 'user_' + _generateId();
+      _deviceId = 'device_' + _generateId();
     }
     return _deviceId;
   }
