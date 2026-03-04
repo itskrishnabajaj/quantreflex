@@ -3,7 +3,7 @@
  * Caches all assets for offline use.
  */
 
-var CACHE_NAME = 'quant-reflex-v8';
+var CACHE_NAME = 'quant-reflex-v9';
 
 var ASSETS = [
   './',
@@ -18,7 +18,9 @@ var ASSETS = [
   './js/formulas.js',
   './js/learn-manager.js',
   './js/settings.js',
-  './manifest.json'
+  './manifest.json',
+  './icons/icon-192.svg',
+  './icons/icon-512.svg'
 ];
 
 /* Install: pre-cache all assets */

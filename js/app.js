@@ -111,6 +111,7 @@ document.addEventListener('DOMContentLoaded', function () {
   /* ---- HOME VIEW: study card and warmup click handlers ---- */
   document.getElementById('startWarmup').addEventListener('click', function (e) {
     e.preventDefault();
+    Router.showView('practice');
     startDrillFromPractice('quick');
   });
 
