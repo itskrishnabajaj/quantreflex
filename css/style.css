@@ -12,7 +12,7 @@
 /* ---- Reset & Base ---- */
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
-html { font-size: 16px; -webkit-tap-highlight-color: transparent; }
+html { font-size: 16px; -webkit-tap-highlight-color: transparent; scroll-behavior: smooth; overscroll-behavior-y: contain; }
 
 body {
   font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
@@ -25,6 +25,7 @@ body {
   padding-bottom: calc(4.5rem + env(safe-area-inset-bottom, 0px)); /* space for bottom nav */
   opacity: 0;
   transition: opacity .3s ease;
+  overscroll-behavior-y: contain;
 }
 body.loaded { opacity: 1; }
 
@@ -424,16 +425,16 @@ header h1 {
 /* ---- Multiplication Table Cards ---- */
 .tables-container {
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
   gap: .75rem;
 }
 .table-card {
   background: #f8fafc;
   border-radius: .75rem;
-  padding: .75rem;
+  padding: .75rem .5rem;
   border: 1px solid #e2e8f0;
   min-width: 0;
-  overflow-x: auto;
+  overflow: hidden;
 }
 .table-title {
   font-size: .95rem;
@@ -443,16 +444,24 @@ header h1 {
 }
 .table-card .math-table {
   width: 100%;
+  table-layout: fixed;
 }
 .table-card .math-table td,
 .table-card .shortcut-table td {
-  font-size: .8rem;
-  padding: .25rem .4rem;
+  font-size: .78rem;
+  padding: .2rem .25rem;
   white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 @media (max-width: 360px) {
   .tables-container {
     grid-template-columns: 1fr;
+  }
+  .table-card .math-table td,
+  .table-card .shortcut-table td {
+    font-size: .82rem;
+    padding: .25rem .35rem;
   }
 }
 
@@ -988,4 +997,11 @@ body.dark-mode mark.search-highlight { background: #854d0e; color: #fef08a; }
 @media (min-width: 600px) {
   header h1 { font-size: 2rem; }
   .question-text { font-size: 2.25rem; }
+  .container { max-width: 600px; }
+}
+@media (min-width: 768px) {
+  .container { max-width: 720px; }
+  .tables-container {
+    grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  }
 }
