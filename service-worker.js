@@ -63,23 +63,31 @@ self.addEventListener('activate', function (event) {
 self.addEventListener('fetch', function (event) {
   var url = event.request.url;
 
-  /* Let Firebase SDK handle its own API requests — don't intercept */
-  if (url.indexOf('googleapis.com') !== -1 ||
-      url.indexOf('firebaseio.com') !== -1 ||
-      url.indexOf('firebaseinstallations') !== -1) {
-    return;
-  }
+  /* Let Firebase SDK handle its own API requests — don't intercept.
+     Use hostname-based checks to avoid substring false positives. */
+  try {
+    var reqUrl = new URL(url);
+    var host = reqUrl.hostname;
+    if (host.endsWith('.googleapis.com') ||
+        host.endsWith('.firebaseio.com') ||
+        host.endsWith('.firebaseinstallations.googleapis.com')) {
+      return;
+    }
+  } catch (e) { /* non-HTTP requests — proceed normally */ }
 
   event.respondWith(
     caches.match(event.request).then(function (cached) {
       if (cached) return cached;
       return fetch(event.request).then(function (response) {
         /* Cache Firebase CDN scripts on first fetch for offline support */
-        if (response.ok && CDN_SCRIPTS.indexOf(url) !== -1) {
-          var clone = response.clone();
-          caches.open(CACHE_NAME).then(function (cache) {
-            cache.put(event.request, clone);
-          });
+        if (response.ok) {
+          var urlBase = url.split('?')[0];
+          if (CDN_SCRIPTS.indexOf(urlBase) !== -1) {
+            var clone = response.clone();
+            caches.open(CACHE_NAME).then(function (cache) {
+              cache.put(event.request, clone);
+            });
+          }
         }
         return response;
       });
