@@ -230,7 +230,8 @@ function initSwipeNavigation() {
   var swipeLocked = false;
   var SWIPE_THRESHOLD = 40;
   var SWIPE_VELOCITY_THRESHOLD = 0.25;
-  var VERTICAL_LOCK_RATIO = 1.2;
+  var VERTICAL_THRESHOLD_RATIO = 1.2;
+  var MIN_VERTICAL_PX = 10;
 
   document.addEventListener('touchstart', function (e) {
     /* Don't capture swipes on inputs or inside modals */
@@ -247,7 +248,7 @@ function initSwipeNavigation() {
     var dx = e.touches[0].clientX - touchStartX;
     var dy = e.touches[0].clientY - touchStartY;
     /* If vertical movement dominates early, cancel swipe detection */
-    if (Math.abs(dy) > 10 && Math.abs(dy) > Math.abs(dx) * VERTICAL_LOCK_RATIO) {
+    if (Math.abs(dy) > MIN_VERTICAL_PX && Math.abs(dy) > Math.abs(dx) * VERTICAL_THRESHOLD_RATIO) {
       isSwiping = false;
       swipeLocked = true;
     }
@@ -264,7 +265,7 @@ function initSwipeNavigation() {
     var elapsed = Date.now() - touchStartTime;
 
     /* Must be primarily horizontal */
-    if (Math.abs(deltaY) * VERTICAL_LOCK_RATIO > Math.abs(deltaX)) return;
+    if (Math.abs(deltaY) * VERTICAL_THRESHOLD_RATIO > Math.abs(deltaX)) return;
     /* Must exceed minimum distance */
     if (Math.abs(deltaX) < SWIPE_THRESHOLD) return;
     /* Check velocity */
