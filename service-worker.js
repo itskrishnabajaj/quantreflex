@@ -3,7 +3,7 @@
  * Caches all HTML, CSS, and JS files for offline use.
  */
 
-const CACHE_NAME = 'quant-reflex-v1';
+const CACHE_NAME = 'quant-reflex-v2';
 
 const ASSETS = [
   './',
@@ -17,6 +17,7 @@ const ASSETS = [
   './drill-engine.js',
   './questions.js',
   './progress.js',
+  './tables.js',
   './manifest.json'
 ];
 

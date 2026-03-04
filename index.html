@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <meta name="theme-color" content="#38bdf8" />
+  <meta name="theme-color" content="#2563eb" />
   <title>Quant Reflex Trainer</title>
   <link rel="manifest" href="manifest.json" />
   <link rel="stylesheet" href="style.css" />
@@ -13,23 +13,43 @@
 
     <!-- Header -->
     <header>
-      <h1>⚡ Quant Reflex Trainer</h1>
-      <p style="color:#94a3b8;margin-top:.35rem;">Sharpen your mental math</p>
+      <h1>Quant Reflex Trainer</h1>
+      <p style="color:#64748b;margin-top:.35rem;">Train your mental math speed daily</p>
     </header>
 
-    <!-- Navigation buttons -->
-    <div class="card center-content">
-      <a href="drill.html"  class="btn accent">🧠 Reflex Drills</a>
-      <a href="learn.html"  class="btn">📖 Learn Shortcuts</a>
-      <a href="test.html"   class="btn">⏱ Timed Test</a>
-      <a href="learn.html#formulas" class="btn">📐 Formula Vault</a>
-      <a href="drill.html?warmup=1" class="btn">☀️ Daily Warmup</a>
-      <a href="progress.html" class="btn">📊 Progress</a>
+    <!-- Study Cards -->
+    <a href="drill.html" class="study-card">
+      <h3>🧠 Reflex Drills</h3>
+      <p>Practice random mental math questions to sharpen your calculation speed.</p>
+    </a>
 
-      <!-- PWA install (shown when available) -->
-      <button id="installBtn" class="btn accent" hidden>📲 Install App</button>
-    </div>
+    <a href="learn.html" class="study-card">
+      <h3>📖 Study Tables &amp; Shortcuts</h3>
+      <p>Review multiplication tables, squares, cubes, and mental math tricks.</p>
+    </a>
+
+    <a href="test.html" class="study-card">
+      <h3>⏱ Timed Test</h3>
+      <p>Take a 3-minute quiz under exam-like conditions and track your score.</p>
+    </a>
+
+    <a href="progress.html" class="study-card">
+      <h3>📊 View Progress</h3>
+      <p>See your accuracy, streaks, and total questions attempted over time.</p>
+    </a>
+
+    <!-- PWA install (shown when available) -->
+    <button id="installBtn" class="btn accent" hidden>📲 Install App</button>
   </div>
+
+  <!-- Bottom Navigation -->
+  <nav class="bottom-nav">
+    <a href="index.html" class="active"><span class="nav-icon">🏠</span>Home</a>
+    <a href="learn.html"><span class="nav-icon">📖</span>Learn</a>
+    <a href="drill.html"><span class="nav-icon">🧠</span>Drill</a>
+    <a href="test.html"><span class="nav-icon">⏱</span>Test</a>
+    <a href="progress.html"><span class="nav-icon">📊</span>Stats</a>
+  </nav>
 
   <script src="app.js"></script>
 </body>

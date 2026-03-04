@@ -100,6 +100,7 @@ function createDrillEngine(container, opts) {
 
   function finish() {
     if (overallTimer) clearInterval(overallTimer);
+    recordDrillSession(); // progress.js — track completed sessions
     const totalTime = ((performance.now() - overallStart) / 1000).toFixed(1);
     const avg = (perQuestionTimes.reduce((a, b) => a + b, 0) / perQuestionTimes.length).toFixed(1);
     const accuracy = ((score / count) * 100).toFixed(0);

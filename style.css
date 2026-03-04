@@ -1,11 +1,12 @@
 /**
  * style.css — Mobile-first responsive styles for Quant Reflex Trainer
  *
- * Color scheme:
- *   background : #0f172a
- *   card       : #1e293b
- *   accent     : #38bdf8
- *   text       : #f1f5f9
+ * Color scheme (light study theme):
+ *   background : #f8fafc
+ *   card       : #ffffff
+ *   accent     : #2563eb
+ *   text       : #0f172a
+ *   secondary  : #64748b
  */
 
 /* ---- Reset & Base ---- */
@@ -15,12 +16,13 @@ html { font-size: 16px; }
 
 body {
   font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
-  background: #0f172a;
-  color: #f1f5f9;
+  background: #f8fafc;
+  color: #0f172a;
   min-height: 100vh;
   display: flex;
   flex-direction: column;
   align-items: center;
+  padding-bottom: 4.5rem; /* space for bottom nav */
   opacity: 0;
   transition: opacity .3s ease;
 }
@@ -43,16 +45,16 @@ header {
 header h1 {
   font-size: 1.5rem;
   letter-spacing: .05em;
-  color: #38bdf8;
+  color: #2563eb;
 }
 
 /* ---- Cards ---- */
 .card {
-  background: #1e293b;
+  background: #ffffff;
   border-radius: 1rem;
   padding: 1.5rem;
   margin-bottom: 1rem;
-  box-shadow: 0 4px 24px rgba(0,0,0,.3);
+  box-shadow: 0 2px 12px rgba(0,0,0,.08);
 }
 
 .center-content {
@@ -60,6 +62,28 @@ header h1 {
   flex-direction: column;
   align-items: center;
   text-align: center;
+}
+
+/* ---- Study Cards (Home page) ---- */
+.study-card {
+  background: #ffffff;
+  border-radius: 1rem;
+  padding: 1.25rem;
+  margin-bottom: .85rem;
+  box-shadow: 0 2px 12px rgba(0,0,0,.08);
+  display: block;
+  transition: transform .15s, box-shadow .15s;
+}
+.study-card:active { transform: scale(.98); }
+.study-card h3 {
+  font-size: 1.05rem;
+  color: #0f172a;
+  margin-bottom: .3rem;
+}
+.study-card p {
+  font-size: .88rem;
+  color: #64748b;
+  line-height: 1.4;
 }
 
 /* ---- Buttons ---- */
@@ -75,42 +99,42 @@ header h1 {
   cursor: pointer;
   text-align: center;
   margin-top: .6rem;
-  background: #334155;
-  color: #f1f5f9;
+  background: #e2e8f0;
+  color: #0f172a;
   transition: background .2s, transform .1s;
 }
 .btn:active { transform: scale(.97); }
-.btn.accent { background: #38bdf8; color: #0f172a; }
-.btn.accent:hover { background: #7dd3fc; }
-.btn:hover { background: #475569; }
+.btn.accent { background: #2563eb; color: #ffffff; }
+.btn.accent:hover { background: #3b82f6; }
+.btn:hover { background: #cbd5e1; }
 
 /* ---- Inputs ---- */
 .input {
   width: 100%;
   max-width: 320px;
   padding: .85rem 1rem;
-  border: 2px solid #334155;
+  border: 2px solid #e2e8f0;
   border-radius: .75rem;
-  background: #0f172a;
-  color: #f1f5f9;
+  background: #ffffff;
+  color: #0f172a;
   font-size: 1.15rem;
   text-align: center;
   outline: none;
   margin: .75rem 0;
   transition: border-color .2s;
 }
-.input:focus { border-color: #38bdf8; }
+.input:focus { border-color: #2563eb; }
 
 /* ---- Drill / Test UI ---- */
 .drill-progress {
   font-size: .85rem;
-  color: #94a3b8;
+  color: #64748b;
   margin-bottom: .5rem;
 }
 
 .timer {
   font-size: 1rem;
-  color: #fbbf24;
+  color: #dc2626;
   margin-bottom: .5rem;
 }
 
@@ -125,8 +149,8 @@ header h1 {
   font-weight: 600;
   margin-bottom: .25rem;
 }
-.feedback.correct { color: #4ade80; }
-.feedback.wrong   { color: #f87171; }
+.feedback.correct { color: #16a34a; }
+.feedback.wrong   { color: #dc2626; }
 
 /* ---- Results Grid ---- */
 .results-grid {
@@ -137,20 +161,20 @@ header h1 {
   width: 100%;
 }
 .result-item {
-  background: #0f172a;
+  background: #f1f5f9;
   border-radius: .75rem;
   padding: 1rem;
   display: flex;
   flex-direction: column;
   align-items: center;
 }
-.result-value { font-size: 1.5rem; font-weight: 700; color: #38bdf8; }
-.result-label { font-size: .8rem; color: #94a3b8; margin-top: .25rem; }
+.result-value { font-size: 1.5rem; font-weight: 700; color: #2563eb; }
+.result-label { font-size: .8rem; color: #64748b; margin-top: .25rem; }
 
 /* ---- Learn Page ---- */
 .section-title {
   font-size: 1.1rem;
-  color: #38bdf8;
+  color: #2563eb;
   margin: 1.25rem 0 .5rem;
 }
 
@@ -163,10 +187,33 @@ header h1 {
 .shortcut-table td {
   padding: .45rem .6rem;
   text-align: left;
-  border-bottom: 1px solid #334155;
+  border-bottom: 1px solid #e2e8f0;
   font-size: .9rem;
 }
-.shortcut-table th { color: #94a3b8; font-weight: 600; }
+.shortcut-table th { color: #64748b; font-weight: 600; }
+
+/* ---- Multiplication Table Cards ---- */
+.tables-container {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: .75rem;
+}
+.table-card {
+  background: #f8fafc;
+  border-radius: .75rem;
+  padding: .75rem;
+  border: 1px solid #e2e8f0;
+}
+.table-title {
+  font-size: .95rem;
+  color: #2563eb;
+  margin-bottom: .4rem;
+  text-align: center;
+}
+.table-card .shortcut-table td {
+  font-size: .8rem;
+  padding: .25rem .4rem;
+}
 
 /* ---- Progress Page ---- */
 .stat-grid {
@@ -176,22 +223,51 @@ header h1 {
   margin-top: 1rem;
 }
 .stat-card {
-  background: #0f172a;
+  background: #f1f5f9;
   border-radius: .75rem;
   padding: 1.25rem;
   text-align: center;
 }
-.stat-card .value { font-size: 1.75rem; font-weight: 700; color: #38bdf8; }
-.stat-card .label { font-size: .8rem; color: #94a3b8; margin-top: .25rem; }
+.stat-card .value { font-size: 1.75rem; font-weight: 700; color: #2563eb; }
+.stat-card .label { font-size: .8rem; color: #64748b; margin-top: .25rem; }
+
+/* ---- Bottom Navigation ---- */
+.bottom-nav {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  background: #ffffff;
+  border-top: 1px solid #e2e8f0;
+  display: flex;
+  justify-content: space-around;
+  align-items: center;
+  height: 3.75rem;
+  z-index: 100;
+  box-shadow: 0 -2px 8px rgba(0,0,0,.06);
+}
+.bottom-nav a {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  font-size: .65rem;
+  color: #64748b;
+  padding: .4rem 0;
+  flex: 1;
+  text-decoration: none;
+  transition: color .2s;
+}
+.bottom-nav a .nav-icon { font-size: 1.25rem; margin-bottom: .15rem; }
+.bottom-nav a.active { color: #2563eb; font-weight: 600; }
 
 /* ---- Nav back link ---- */
 .back-link {
   display: inline-block;
   margin-bottom: 1rem;
   font-size: .9rem;
-  color: #94a3b8;
+  color: #64748b;
 }
-.back-link:hover { color: #f1f5f9; }
+.back-link:hover { color: #0f172a; }
 
 /* ---- Install button (hidden by default) ---- */
 #installBtn { display: none; }

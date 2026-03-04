@@ -3,19 +3,27 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <meta name="theme-color" content="#38bdf8" />
+  <meta name="theme-color" content="#2563eb" />
   <title>Reflex Drill – Quant Reflex Trainer</title>
   <link rel="manifest" href="manifest.json" />
   <link rel="stylesheet" href="style.css" />
 </head>
 <body>
   <div class="container">
-    <a href="index.html" class="back-link">← Home</a>
     <header><h1>🧠 Reflex Drill</h1></header>
 
     <!-- Drill engine renders here -->
     <div id="drillContainer"></div>
   </div>
+
+  <!-- Bottom Navigation -->
+  <nav class="bottom-nav">
+    <a href="index.html"><span class="nav-icon">🏠</span>Home</a>
+    <a href="learn.html"><span class="nav-icon">📖</span>Learn</a>
+    <a href="drill.html" class="active"><span class="nav-icon">🧠</span>Drill</a>
+    <a href="test.html"><span class="nav-icon">⏱</span>Test</a>
+    <a href="progress.html"><span class="nav-icon">📊</span>Stats</a>
+  </nav>
 
   <!-- Load modules in dependency order -->
   <script src="questions.js"></script>
