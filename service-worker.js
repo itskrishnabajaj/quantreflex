@@ -3,7 +3,7 @@
  * Caches all HTML, CSS, and JS files for offline use.
  */
 
-var CACHE_NAME = 'quant-reflex-v3';
+var CACHE_NAME = 'quant-reflex-v4';
 
 var ASSETS = [
   './',

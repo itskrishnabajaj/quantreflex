@@ -67,13 +67,17 @@ function genFraction() {
   return { question: item.frac + ' = ?%', answer: item.pct, category: 'fractions' };
 }
 
-/** Percentage calculations: x% of y */
+/** Percentage calculations: x% of y with randomized values */
 function genPercentage() {
-  var pcts = [10, 15, 20, 25, 30, 50];
-  var bases = [120, 200, 250, 300, 400, 450, 500, 600, 800, 1000];
-  var p = pick(pcts);
-  var b = pick(bases);
-  return { question: p + '% of ' + b + ' = ?', answer: (p / 100) * b, category: 'percentages' };
+  var p = pick([5, 10, 12, 15, 20, 25, 30, 40, 50, 60, 75]);
+  var b = randInt(2, 20) * pick([10, 25, 50]);
+  var result = (p / 100) * b;
+  /* Ensure whole-number result for clean mental math */
+  if (result !== Math.floor(result)) {
+    b = randInt(2, 10) * 100;
+    result = (p / 100) * b;
+  }
+  return { question: p + '% of ' + b + ' = ?', answer: result, category: 'percentages' };
 }
 
 /** Mental multiplication: x × m */
@@ -121,48 +125,48 @@ function genAverage() {
   };
 }
 
-/** Profit and Loss calculations */
+/** Profit and Loss calculations with randomized values */
 function genProfitLoss() {
   var type = randInt(0, 2);
   if (type === 0) {
     /* Find SP given CP and profit% */
-    var cp = pick([100, 200, 250, 400, 500, 800]);
-    var profitPct = pick([10, 15, 20, 25, 30, 50]);
+    var cp = randInt(1, 10) * pick([50, 100, 200]);
+    var profitPct = pick([5, 10, 15, 20, 25, 30, 40, 50]);
     var sp = cp * (1 + profitPct / 100);
     return { question: 'CP = ' + cp + ', Profit = ' + profitPct + '%. SP = ?', answer: sp, category: 'profit-loss' };
   } else if (type === 1) {
     /* Find SP given CP and loss% */
-    var cp2 = pick([100, 200, 250, 400, 500, 800]);
-    var lossPct = pick([10, 15, 20, 25]);
+    var cp2 = randInt(1, 10) * pick([50, 100, 200]);
+    var lossPct = pick([5, 10, 15, 20, 25]);
     var sp2 = cp2 * (1 - lossPct / 100);
     return { question: 'CP = ' + cp2 + ', Loss = ' + lossPct + '%. SP = ?', answer: sp2, category: 'profit-loss' };
   } else {
     /* Find profit% given CP and SP */
-    var cp3 = pick([100, 200, 250, 400, 500]);
-    var profitPct2 = pick([10, 20, 25, 50]);
+    var cp3 = randInt(1, 10) * 100;
+    var profitPct2 = pick([10, 15, 20, 25, 30, 50]);
     var sp3 = cp3 * (1 + profitPct2 / 100);
     return { question: 'CP = ' + cp3 + ', SP = ' + sp3 + '. Profit% = ?', answer: profitPct2, category: 'profit-loss' };
   }
 }
 
-/** Time, Speed, Distance calculations */
+/** Time, Speed, Distance calculations with randomized values */
 function genTSD() {
   var type = randInt(0, 2);
   if (type === 0) {
     /* Find distance given speed and time */
-    var speed = pick([20, 30, 40, 50, 60, 80]);
-    var time = pick([2, 3, 4, 5, 6]);
+    var speed = randInt(2, 12) * 10;
+    var time = randInt(2, 8);
     return { question: 'Speed = ' + speed + ' km/h, Time = ' + time + ' hrs. Distance = ?', answer: speed * time, category: 'time-speed-distance' };
   } else if (type === 1) {
     /* Find time given speed and distance */
-    var speed2 = pick([20, 30, 40, 50, 60]);
-    var time2 = pick([2, 3, 4, 5]);
+    var speed2 = randInt(2, 10) * 10;
+    var time2 = randInt(2, 6);
     var dist = speed2 * time2;
     return { question: 'Speed = ' + speed2 + ' km/h, Distance = ' + dist + ' km. Time = ?', answer: time2, category: 'time-speed-distance' };
   } else {
     /* Find speed given distance and time */
-    var speed3 = pick([20, 30, 40, 50, 60, 80]);
-    var time3 = pick([2, 3, 4, 5]);
+    var speed3 = randInt(2, 12) * 10;
+    var time3 = randInt(2, 6);
     var dist2 = speed3 * time3;
     return { question: 'Distance = ' + dist2 + ' km, Time = ' + time3 + ' hrs. Speed = ?', answer: speed3, category: 'time-speed-distance' };
   }
@@ -195,7 +199,8 @@ function generateQuestion() {
 }
 
 /**
- * Generate an array of n random questions.
+ * Generate an array of n random questions with deduplication.
+ * Tracks recently asked questions within the session to avoid repeats.
  * @param {number} n
  * @param {string} [category] - optional category filter
  * @returns {Array<{ question: string, answer: number|string, category: string }>}
@@ -203,8 +208,23 @@ function generateQuestion() {
 function generateQuestions(n, category) {
   var gen = category && categoryGenerators[category] ? categoryGenerators[category] : null;
   var qs = [];
-  for (var i = 0; i < n; i++) {
+  var seen = {}; /* track question strings to avoid repeats */
+  var maxAttempts = n * 5; /* prevent infinite loops */
+  var attempts = 0;
+
+  while (qs.length < n && attempts < maxAttempts) {
+    var q = gen ? gen() : generateQuestion();
+    attempts++;
+    /* Skip if we've already generated this exact question */
+    if (seen[q.question]) continue;
+    seen[q.question] = true;
+    qs.push(q);
+  }
+
+  /* Fill remaining if deduplication exhausted attempts */
+  while (qs.length < n) {
     qs.push(gen ? gen() : generateQuestion());
   }
+
   return qs;
 }
