@@ -121,7 +121,7 @@ self.addEventListener('push', function (event) {
 
   var notif = data.notification || {};
   var title = notif.title || 'Quant Reflex Trainer';
-  var body = notif.body || PUSH_MESSAGES[Math.floor(Math.random() * PUSH_MESSAGES.length)].body;
+  var body = notif.body || (PUSH_MESSAGES.length > 0 ? PUSH_MESSAGES[Math.floor(Math.random() * PUSH_MESSAGES.length)].body : 'Time to practice mental math!');
 
   var options = {
     body: body,
