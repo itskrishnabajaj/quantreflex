@@ -286,24 +286,64 @@ function initLearnView() {
     }
   }
 
-  /* Render topic-wise formula sections from formulas.js */
+  /* Render topic-wise formula sections from formulas.js with add-formula support */
   var sections = getFormulaSections();
   var topicContainer = document.getElementById('topicSections');
   if (topicContainer) {
     for (var i = 0; i < sections.length; i++) {
-      var s = sections[i];
-      var card = document.createElement('div');
-      card.className = 'card learn-searchable';
-      card.id = s.id;
-      card.innerHTML = '<h3 class="section-title">' + s.title + '</h3>' + s.content;
-      topicContainer.appendChild(card);
+      (function (s) {
+        var card = document.createElement('div');
+        card.className = 'card learn-searchable';
+        card.id = s.id;
+        card.innerHTML = '<h3 class="section-title">' + s.title + '</h3>' + s.content;
+
+        /* Add custom formulas area for this built-in topic */
+        var customArea = document.createElement('div');
+        customArea.className = 'custom-formulas-list';
+        card.appendChild(customArea);
+
+        function refreshBuiltinTopicFormulas() {
+          renderCustomFormulas(customArea, s.id, refreshBuiltinTopicFormulas);
+        }
+        refreshBuiltinTopicFormulas();
+        renderAddFormulaButton(card, s.id, refreshBuiltinTopicFormulas);
+
+        topicContainer.appendChild(card);
+      })(sections[i]);
     }
   }
 
-  /* Quick jump navigation */
+  /* Render custom topic sections */
+  renderCustomTopicSections();
+  updateCustomTopicJumpNav();
+
+  /* Render bookmarked formulas */
+  renderBookmarksSection();
+
+  /* Add new topic button handler */
+  var addTopicBtn = document.getElementById('addTopicBtn');
+  if (addTopicBtn) {
+    addTopicBtn.addEventListener('click', function () {
+      _createModal('Create New Topic', [
+        { name: 'name', label: 'Topic Name', placeholder: 'e.g. Number Systems' }
+      ], function (values) {
+        if (!values.name) return;
+        addCustomTopic(values.name);
+        renderCustomTopicSections();
+        updateCustomTopicJumpNav();
+      });
+    });
+  }
+
+  /* Quick jump navigation with active highlight */
   var jumpBtns = document.querySelectorAll('.learn-jump-btn');
   for (var j = 0; j < jumpBtns.length; j++) {
     jumpBtns[j].addEventListener('click', function () {
+      /* Highlight active button */
+      var allJumpBtns = document.querySelectorAll('.learn-jump-btn');
+      for (var ab = 0; ab < allJumpBtns.length; ab++) allJumpBtns[ab].classList.remove('active');
+      this.classList.add('active');
+
       var targetId = this.getAttribute('data-jump');
       var target = document.getElementById(targetId);
       if (target) {
@@ -320,66 +360,12 @@ function initLearnView() {
     });
   }
 
-  /* Learn search functionality */
+  /* Enhanced search functionality */
   var searchInput = document.getElementById('learnSearch');
   if (searchInput) {
     searchInput.addEventListener('input', function () {
       var query = this.value.toLowerCase().trim();
-      var searchables = document.querySelectorAll('#view-learn .learn-searchable');
-      for (var k = 0; k < searchables.length; k++) {
-        var el = searchables[k];
-        if (!query) {
-          el.style.display = '';
-        } else {
-          var text = el.textContent.toLowerCase();
-          el.style.display = text.indexOf(query) !== -1 ? '' : 'none';
-        }
-      }
-      /* Also search non-searchable cards in learn view */
-      var allCards = document.querySelectorAll('#view-learn .card:not(.learn-searchable)');
-      for (var l = 0; l < allCards.length; l++) {
-        var card = allCards[l];
-        if (!query) {
-          card.style.display = '';
-        } else {
-          var cardText = card.textContent.toLowerCase();
-          card.style.display = cardText.indexOf(query) !== -1 ? '' : 'none';
-        }
-      }
-      /* Hide group titles and descriptions when all children are filtered out */
-      var groupTitles = document.querySelectorAll('#view-learn .learn-group-title');
-      for (var g = 0; g < groupTitles.length; g++) {
-        var titleEl = groupTitles[g];
-        if (!query) {
-          titleEl.style.display = '';
-          /* Also show the description paragraph after the title */
-          if (titleEl.nextElementSibling && titleEl.nextElementSibling.classList.contains('secondary-text')) {
-            titleEl.nextElementSibling.style.display = '';
-          }
-          continue;
-        }
-        /* Check if any sibling cards between this title and the next title are visible */
-        var hasVisible = false;
-        var sibling = titleEl.nextElementSibling;
-        while (sibling && !sibling.classList.contains('learn-group-title')) {
-          if (sibling.classList.contains('card') || sibling.classList.contains('learn-searchable') || sibling.id === 'topicSections') {
-            if (sibling.id === 'topicSections') {
-              /* Check if any cards inside topicSections are visible */
-              var innerCards = sibling.querySelectorAll('.card');
-              for (var ic = 0; ic < innerCards.length; ic++) {
-                if (innerCards[ic].style.display !== 'none') { hasVisible = true; break; }
-              }
-            } else if (sibling.style.display !== 'none') {
-              hasVisible = true;
-            }
-          }
-          sibling = sibling.nextElementSibling;
-        }
-        titleEl.style.display = hasVisible ? '' : 'none';
-        if (titleEl.nextElementSibling && titleEl.nextElementSibling.classList.contains('secondary-text')) {
-          titleEl.nextElementSibling.style.display = hasVisible ? '' : 'none';
-        }
-      }
+      performLearnSearch(query);
     });
   }
 }
@@ -405,6 +391,35 @@ function renderStatsView() {
   var weakest = getWeakestCategory();
   var strongest = getStrongestCategory();
 
+  /* Calculate improvement trend from daily history */
+  var trend = '—';
+  var history = p.dailyHistory || {};
+  var dates = Object.keys(history).sort();
+  if (dates.length >= 2) {
+    var recentDays = dates.slice(-7);
+    var olderDays = dates.slice(-14, -7);
+    if (olderDays.length > 0) {
+      var recentAcc = 0, recentTotal = 0;
+      for (var r = 0; r < recentDays.length; r++) {
+        var rd = history[recentDays[r]];
+        if (rd.attempted > 0) { recentAcc += rd.correct; recentTotal += rd.attempted; }
+      }
+      var olderAcc = 0, olderTotal = 0;
+      for (var o = 0; o < olderDays.length; o++) {
+        var od = history[olderDays[o]];
+        if (od.attempted > 0) { olderAcc += od.correct; olderTotal += od.attempted; }
+      }
+      if (recentTotal > 0 && olderTotal > 0) {
+        var recentPct = (recentAcc / recentTotal) * 100;
+        var olderPct = (olderAcc / olderTotal) * 100;
+        var diff = recentPct - olderPct;
+        if (diff > 2) trend = '📈 Improving';
+        else if (diff < -2) trend = '📉 Declining';
+        else trend = '➡️ Steady';
+      }
+    }
+  }
+
   var statsGrid = document.getElementById('statsGrid');
   if (statsGrid) {
     statsGrid.innerHTML =
@@ -419,10 +434,10 @@ function renderStatsView() {
       '<div class="stat-card"><div class="value">' + (avgTime || '—') + 's</div><div class="label">Avg Response Time</div></div>' +
       '<div class="stat-card' + (weakest ? ' highlight' : '') + '"><div class="value value-sm">' + (weakest || '—') + '</div><div class="label">Weakest Category</div></div>' +
       '<div class="stat-card' + (strongest ? ' highlight' : '') + '"><div class="value value-sm">' + (strongest || '—') + '</div><div class="label">Strongest Category</div></div>' +
-      '<div class="stat-card"><div class="value">' + ((p.mistakes || []).length) + '</div><div class="label">Mistakes Logged</div></div>';
+      '<div class="stat-card"><div class="value value-sm">' + trend + '</div><div class="label">Recent Trend</div></div>';
   }
 
-  /* Category stats with color-coded bars */
+  /* Category stats with color-coded bars and strength labels */
   var catContainer = document.getElementById('categoryStats');
   if (!catContainer) return;
   var cats = p.categoryStats || {};
@@ -447,16 +462,18 @@ function renderStatsView() {
     var barWidth = cs.attempted ? Math.round((cs.correct / cs.attempted) * 100) : 0;
     /* Color-coded bar class */
     var barClass = 'cat-bar ';
-    if (barWidth >= 85) barClass += 'cat-bar-high';
-    else if (barWidth >= 65) barClass += 'cat-bar-mid';
-    else if (barWidth >= 40) barClass += 'cat-bar-low';
-    else barClass += 'cat-bar-weak';
+    var strengthLabel = '';
+    if (barWidth >= 85) { barClass += 'cat-bar-high'; strengthLabel = '<span class="category-strength-label strength-strong">Strong</span>'; }
+    else if (barWidth >= 65) { barClass += 'cat-bar-mid'; strengthLabel = '<span class="category-strength-label strength-moderate">Moderate</span>'; }
+    else if (barWidth >= 40) { barClass += 'cat-bar-low'; strengthLabel = '<span class="category-strength-label strength-moderate">Moderate</span>'; }
+    else { barClass += 'cat-bar-weak'; strengthLabel = '<span class="category-strength-label strength-weak">Weak</span>'; }
     html +=
       '<div class="category-stat-row">' +
         '<span class="cat-name">' + cat + '</span>' +
         '<div class="cat-bar-container">' +
           '<div class="' + barClass + '" style="width:' + barWidth + '%"></div>' +
         '</div>' +
+        strengthLabel +
         '<span class="cat-accuracy">' + catAcc + '%</span>' +
       '</div>';
   }

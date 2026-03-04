@@ -141,12 +141,20 @@
 
       <!-- Quick Jump Navigation -->
       <div class="learn-jump-nav" id="learnJumpNav">
+        <button class="learn-jump-btn" data-jump="bookmarksSection">⭐ Starred</button>
         <button class="learn-jump-btn" data-jump="generalMath">📚 General</button>
         <button class="learn-jump-btn" data-jump="tablesContainer">✖️ Tables</button>
         <button class="learn-jump-btn" data-jump="squaresSection">🔢 Squares</button>
         <button class="learn-jump-btn" data-jump="cubesSection">🧊 Cubes</button>
         <button class="learn-jump-btn" data-jump="formulaSections">📝 Formulas</button>
         <button class="learn-jump-btn" data-jump="mentalTricks">💡 Shortcuts</button>
+        <span id="customTopicJumpBtns"></span>
+      </div>
+
+      <!-- Bookmarked Formulas -->
+      <div class="card bookmarks-card learn-searchable" id="bookmarksSection" style="display:none;">
+        <h3 class="section-title">⭐ Starred Formulas</h3>
+        <div class="bookmarks-content"></div>
       </div>
 
       <!-- SECTION 1: General Maths -->
@@ -233,6 +241,12 @@
 
       <!-- Dynamic formula sections rendered by JS from formulas.js -->
       <div id="topicSections"></div>
+
+      <!-- Custom Topics (user-created) -->
+      <div id="customTopicSections"></div>
+
+      <!-- Add New Topic Button -->
+      <button class="btn add-topic-btn" id="addTopicBtn" style="width:100%;">+ Add New Topic</button>
     </div>
 
     <!-- ==================== STATS VIEW ==================== -->
@@ -345,6 +359,7 @@
   <script src="js/questions.js"></script>
   <script src="js/tables.js"></script>
   <script src="js/formulas.js"></script>
+  <script src="js/learn-manager.js"></script>
   <script src="js/settings.js"></script>
   <script src="js/drill-engine.js"></script>
   <script src="js/router.js"></script>

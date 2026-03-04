@@ -427,6 +427,8 @@ header h1 {
   border-radius: .75rem;
   padding: .75rem;
   border: 1px solid #e2e8f0;
+  min-width: 0;
+  overflow-x: auto;
 }
 .table-title {
   font-size: .95rem;
@@ -434,10 +436,21 @@ header h1 {
   margin-bottom: .4rem;
   text-align: center;
 }
+.table-card .math-table {
+  width: 100%;
+  table-layout: fixed;
+}
 .table-card .math-table td,
 .table-card .shortcut-table td {
   font-size: .8rem;
   padding: .25rem .4rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+@media (max-width: 360px) {
+  .tables-container {
+    grid-template-columns: 1fr;
+  }
 }
 
 /* ---- Progress/Stats Page ---- */
@@ -808,6 +821,163 @@ body.dark-mode .learn-jump-btn:active {
   border-color: #60a5fa;
   color: #60a5fa;
 }
+
+/* ---- Custom Formulas & Topics ---- */
+.custom-formula-item {
+  border-bottom: 1px solid #e2e8f0;
+  padding: .6rem 0;
+}
+.custom-formula-item:last-child { border-bottom: none; }
+.custom-formula-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: .5rem;
+  margin-bottom: .25rem;
+}
+.custom-formula-actions, .custom-topic-actions {
+  display: flex;
+  gap: .15rem;
+  flex-shrink: 0;
+}
+.formula-action-btn {
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: .85rem;
+  padding: .15rem .3rem;
+  border-radius: .25rem;
+  transition: background .15s;
+  opacity: .6;
+}
+.formula-action-btn:hover, .formula-action-btn:active { opacity: 1; background: rgba(0,0,0,.05); }
+.formula-action-btn.bookmarked { opacity: 1; }
+.custom-topic-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: .5rem;
+}
+.custom-topic-header .section-title { margin: 0; }
+.add-formula-btn {
+  font-size: .85rem;
+  padding: .5rem;
+  margin-top: .5rem;
+  background: #eff6ff;
+  color: #2563eb;
+  border: 1px dashed #93c5fd;
+}
+.add-formula-btn:hover { background: #dbeafe; }
+
+/* ---- Add Topic Button ---- */
+.add-topic-btn {
+  font-size: .9rem;
+  padding: .65rem;
+  margin-top: .5rem;
+  margin-bottom: 1rem;
+  background: #eff6ff;
+  color: #2563eb;
+  border: 1px dashed #93c5fd;
+}
+.add-topic-btn:hover { background: #dbeafe; }
+
+/* ---- Bookmarks Section ---- */
+.bookmarks-card { border-left: 3px solid #f59e0b; }
+
+/* ---- Modal ---- */
+.modal-overlay {
+  position: fixed;
+  top: 0; left: 0; right: 0; bottom: 0;
+  background: rgba(0,0,0,.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 200;
+  padding: 1rem;
+}
+.modal-content {
+  background: #ffffff;
+  border-radius: 1rem;
+  padding: 1.5rem;
+  width: 100%;
+  max-width: 400px;
+  max-height: 80vh;
+  overflow-y: auto;
+}
+.modal-title {
+  font-size: 1.1rem;
+  color: #2563eb;
+  margin-bottom: 1rem;
+}
+.modal-label {
+  display: block;
+  font-size: .85rem;
+  color: #64748b;
+  margin-bottom: .25rem;
+  margin-top: .5rem;
+}
+.modal-input {
+  width: 100%;
+  padding: .6rem .75rem;
+  border: 2px solid #e2e8f0;
+  border-radius: .5rem;
+  font-size: .9rem;
+  outline: none;
+  color: #0f172a;
+  background: #ffffff;
+  transition: border-color .2s;
+}
+.modal-input:focus { border-color: #2563eb; }
+textarea.modal-input { min-height: 4rem; resize: vertical; font-family: inherit; }
+.modal-actions {
+  display: flex;
+  gap: .5rem;
+  margin-top: 1rem;
+}
+.modal-actions .btn { flex: 1; margin-top: 0; }
+.modal-cancel { background: #e2e8f0; }
+
+/* ---- Search Highlighting ---- */
+mark.search-highlight {
+  background: #fef08a;
+  color: #0f172a;
+  padding: 0 .1rem;
+  border-radius: .15rem;
+}
+
+/* ---- Quick Jump Active State ---- */
+.learn-jump-btn.active {
+  background: #eff6ff;
+  border-color: #2563eb;
+  color: #2563eb;
+}
+
+/* ---- Category Strength ---- */
+.category-strength-label {
+  font-size: .75rem;
+  font-weight: 600;
+  padding: .1rem .4rem;
+  border-radius: .25rem;
+  white-space: nowrap;
+}
+.strength-strong { background: #dcfce7; color: #15803d; }
+.strength-moderate { background: #dbeafe; color: #1d4ed8; }
+.strength-weak { background: #fee2e2; color: #dc2626; }
+
+/* ---- Dark Mode additions ---- */
+body.dark-mode .custom-formula-item { border-bottom-color: #334155; }
+body.dark-mode .formula-action-btn:hover { background: rgba(255,255,255,.1); }
+body.dark-mode .add-formula-btn,
+body.dark-mode .add-topic-btn {
+  background: #1e293b;
+  color: #60a5fa;
+  border-color: #334155;
+}
+body.dark-mode .modal-content { background: #1e293b; }
+body.dark-mode .modal-input { background: #334155; border-color: #475569; color: #e2e8f0; }
+body.dark-mode .modal-title { color: #60a5fa; }
+body.dark-mode .modal-cancel { background: #334155; color: #e2e8f0; }
+body.dark-mode mark.search-highlight { background: #854d0e; color: #fef08a; }
 
 /* ---- Responsive ---- */
 @media (min-width: 600px) {

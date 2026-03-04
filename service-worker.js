@@ -3,7 +3,7 @@
  * Caches all assets for offline use.
  */
 
-var CACHE_NAME = 'quant-reflex-v7';
+var CACHE_NAME = 'quant-reflex-v8';
 
 var ASSETS = [
   './',
@@ -16,6 +16,7 @@ var ASSETS = [
   './js/progress.js',
   './js/tables.js',
   './js/formulas.js',
+  './js/learn-manager.js',
   './js/settings.js',
   './manifest.json'
 ];
