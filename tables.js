@@ -14,21 +14,21 @@
 function renderMultiplicationTables(container, maxNum) {
   maxNum = maxNum || 30;
 
-  for (var n = 1; n <= maxNum; n++) {
+  for (let n = 1; n <= maxNum; n++) {
     /* Create a card for each table */
-    var card = document.createElement('div');
+    let card = document.createElement('div');
     card.className = 'table-card';
 
-    var title = document.createElement('h4');
+    let title = document.createElement('h4');
     title.className = 'table-title';
     title.textContent = 'Table of ' + n;
     card.appendChild(title);
 
-    var table = document.createElement('table');
+    let table = document.createElement('table');
     table.className = 'shortcut-table';
 
-    for (var i = 1; i <= 10; i++) {
-      var row = document.createElement('tr');
+    for (let i = 1; i <= 10; i++) {
+      let row = document.createElement('tr');
       row.innerHTML = '<td>' + n + ' × ' + i + '</td><td>= ' + (n * i) + '</td>';
       table.appendChild(row);
     }

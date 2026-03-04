@@ -120,17 +120,17 @@
       renderMultiplicationTables(document.getElementById('tablesContainer'), 30);
 
       /* Populate squares table (1–30) */
-      var sq = document.getElementById('squaresTable');
-      for (var n = 1; n <= 30; n++) {
-        var tr = document.createElement('tr');
+      let sq = document.getElementById('squaresTable');
+      for (let n = 1; n <= 30; n++) {
+        let tr = document.createElement('tr');
         tr.innerHTML = '<td>' + n + '</td><td>' + (n * n) + '</td>';
         sq.appendChild(tr);
       }
 
       /* Populate cubes table (1–15) */
-      var cu = document.getElementById('cubesTable');
-      for (var n = 1; n <= 15; n++) {
-        var tr = document.createElement('tr');
+      let cu = document.getElementById('cubesTable');
+      for (let n = 1; n <= 15; n++) {
+        let tr = document.createElement('tr');
         tr.innerHTML = '<td>' + n + '</td><td>' + (n * n * n) + '</td>';
         cu.appendChild(tr);
       }
