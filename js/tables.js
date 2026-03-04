@@ -135,16 +135,20 @@ function _attachTripleTap(card, n) {
   var tapTimer = null;
   var TAP_WINDOW = 500; /* ms window for 3 taps */
 
+  function resetTaps() {
+    tapCount = 0;
+    if (tapTimer) { clearTimeout(tapTimer); tapTimer = null; }
+  }
+
   card.addEventListener('click', function (e) {
     /* Ignore if event target is a button or link inside the card */
     if (e.target.closest('button, a')) return;
     tapCount++;
     if (tapCount === 1) {
-      tapTimer = setTimeout(function () { tapCount = 0; }, TAP_WINDOW);
+      tapTimer = setTimeout(resetTaps, TAP_WINDOW);
     }
     if (tapCount >= 3) {
-      clearTimeout(tapTimer);
-      tapCount = 0;
+      resetTaps();
       _openTableModal(n);
     }
   });
@@ -189,7 +193,7 @@ function _openTableModal(n) {
   function closeModal() {
     overlay.classList.add('closing');
     setTimeout(function () {
-      if (overlay.parentNode) overlay.parentNode.removeChild(overlay);
+      if (overlay.parentNode) overlay.remove();
     }, 200);
   }
 
