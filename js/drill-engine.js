@@ -68,7 +68,7 @@ function createDrillEngine(container, opts) {
         '<button id="startBtn" class="btn accent">START</button>' +
       '</div>';
     hideCustomNumpad();
-    if (typeof _drillSessionActive !== 'undefined') _drillSessionActive = false;
+    _drillSessionActive = false;
     container.querySelector('#startBtn').addEventListener('click', begin);
   }
 
@@ -98,10 +98,10 @@ function createDrillEngine(container, opts) {
 
     /* Exit button handler */
     container.querySelector('#drillExitBtn').addEventListener('click', function () {
-      if (confirm('Exit this session? Your progress will be lost.')) {
+      if (confirm(_exitSessionMsg)) {
         cleanup();
         hideCustomNumpad();
-        if (typeof _drillSessionActive !== 'undefined') _drillSessionActive = false;
+        _drillSessionActive = false;
         /* End Firestore batch that was started in begin() */
         if (typeof FirestoreSync !== 'undefined') {
           FirestoreSync.endDrillBatch();
@@ -253,7 +253,7 @@ function createDrillEngine(container, opts) {
   function finish() {
     cleanup();
     hideCustomNumpad();
-    if (typeof _drillSessionActive !== 'undefined') _drillSessionActive = false;
+    _drillSessionActive = false;
     SoundEngine.play('drillEnd');
     /* Haptic feedback on drill completion */
     if (typeof triggerHaptic === 'function') triggerHaptic([50, 50, 100]);
@@ -361,7 +361,7 @@ function createDrillEngine(container, opts) {
 
   function begin() {
     /* Mark session as active for gesture control */
-    if (typeof _drillSessionActive !== 'undefined') _drillSessionActive = true;
+    _drillSessionActive = true;
 
     /* Begin Firestore write batching during drill */
     if (typeof FirestoreSync !== 'undefined') {
@@ -371,7 +371,7 @@ function createDrillEngine(container, opts) {
     if (reviewMode) {
       questions = generateMistakeReviewQuestions(count);
       if (questions.length === 0) {
-        if (typeof _drillSessionActive !== 'undefined') _drillSessionActive = false;
+        _drillSessionActive = false;
         /* End drill batch since no drill will happen */
         if (typeof FirestoreSync !== 'undefined') {
           FirestoreSync.endDrillBatch();

@@ -140,6 +140,7 @@ window.addEventListener('beforeinstallprompt', function (e) {
 var _activeDrillEngine = null;
 /* True only while user is actively answering questions (after START pressed) */
 var _drillSessionActive = false;
+var _exitSessionMsg = 'Exit this session? Your progress will be lost.';
 
 /* ---- Quick Study Links Configuration ---- */
 var QUICK_LINKS_KEY = 'quant_quick_links';
@@ -631,9 +632,9 @@ document.addEventListener('DOMContentLoaded', function () {
   /* ---- Cleanup drill engine on back/forward navigation ---- */
   window.addEventListener('popstate', function () {
     if (_drillSessionActive) {
-      /* Re-push state to keep user on the same page while confirming */
+      /* Drills only run inside the Practice view, so 'practice' is always correct here */
       history.pushState({ view: 'practice' }, '', '#practice');
-      if (confirm('Exit this session? Your progress will be lost.')) {
+      if (confirm(_exitSessionMsg)) {
         _drillSessionActive = false;
         if (_activeDrillEngine) {
           _activeDrillEngine.cleanup();
