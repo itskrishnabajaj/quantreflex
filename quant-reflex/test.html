@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="theme-color" content="#38bdf8" />
+  <title>Timed Test – Quant Reflex Trainer</title>
+  <link rel="manifest" href="manifest.json" />
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <div class="container">
+    <a href="index.html" class="back-link">← Home</a>
+    <header><h1>⏱ Timed Test</h1></header>
+
+    <!-- Drill engine renders here (timed mode) -->
+    <div id="testContainer"></div>
+  </div>
+
+  <script src="questions.js"></script>
+  <script src="progress.js"></script>
+  <script src="drill-engine.js"></script>
+  <script>
+    // 10 questions, 3-minute (180 s) time limit
+    var engine = createDrillEngine(
+      document.getElementById('testContainer'),
+      { count: 10, timeLimitSec: 180 }
+    );
+    engine.start();
+  </script>
+  <script src="app.js"></script>
+</body>
+</html>

@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="theme-color" content="#38bdf8" />
+  <title>Progress – Quant Reflex Trainer</title>
+  <link rel="manifest" href="manifest.json" />
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <div class="container">
+    <a href="index.html" class="back-link">← Home</a>
+    <header><h1>📊 Progress</h1></header>
+
+    <div class="card">
+      <div class="stat-grid" id="statsGrid">
+        <!-- populated by JS -->
+      </div>
+      <button id="resetBtn" class="btn" style="margin-top:1.25rem;">Reset Progress</button>
+    </div>
+  </div>
+
+  <script src="progress.js"></script>
+  <script>
+    function render() {
+      var p = loadProgress();
+      var accuracy = p.totalAttempted ? ((p.totalCorrect / p.totalAttempted) * 100).toFixed(1) : '0';
+      document.getElementById('statsGrid').innerHTML =
+        '<div class="stat-card"><div class="value">' + p.totalAttempted + '</div><div class="label">Questions Attempted</div></div>' +
+        '<div class="stat-card"><div class="value">' + p.totalCorrect + '</div><div class="label">Correct Answers</div></div>' +
+        '<div class="stat-card"><div class="value">' + accuracy + '%</div><div class="label">Accuracy</div></div>' +
+        '<div class="stat-card"><div class="value">' + p.bestStreak + '</div><div class="label">Best Streak</div></div>';
+    }
+    render();
+    document.getElementById('resetBtn').addEventListener('click', function () {
+      if (confirm('Reset all progress?')) { resetProgress(); render(); }
+    });
+  </script>
+  <script src="app.js"></script>
+</body>
+</html>
