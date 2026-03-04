@@ -50,27 +50,12 @@
       </div>
 
       <!-- Quick Study Cards -->
-      <h3 style="margin:1rem 0 .5rem;color:#64748b;font-size:.9rem;">QUICK STUDY</h3>
+      <div style="display:flex;justify-content:space-between;align-items:center;margin:1rem 0 .5rem;">
+        <h3 style="color:#64748b;font-size:.9rem;margin:0;">QUICK STUDY</h3>
+        <button id="editQuickLinks" class="quick-links-edit-btn" title="Customize">✏️</button>
+      </div>
 
-      <a href="#learn" data-learn-section="fractionTable" class="study-card">
-        <h3>📐 Fraction → Percentage</h3>
-        <p>Master common fraction-to-percentage conversions.</p>
-      </a>
-
-      <a href="#learn" data-learn-section="tablesContainer" class="study-card">
-        <h3>✖️ Multiplication Tables</h3>
-        <p>Review tables from 1 to 30.</p>
-      </a>
-
-      <a href="#learn" data-learn-section="formulaSections" class="study-card">
-        <h3>📝 Quant Formulas</h3>
-        <p>Profit &amp; Loss, Ratios, Averages, TSD formulas.</p>
-      </a>
-
-      <a href="#learn" data-learn-section="mentalTricks" class="study-card">
-        <h3>💡 Shortcut Tricks</h3>
-        <p>Mental math tricks for faster calculations.</p>
-      </a>
+      <div id="quickStudyContainer"></div>
 
       <!-- Quick Drill -->
       <a href="#practice" id="goToPractice" class="study-card" style="border-left:3px solid #2563eb;">
@@ -84,7 +69,7 @@
       <header><h1>🎯 Practice</h1></header>
 
       <!-- Mode selection -->
-      <div id="modeSelect">
+      <div id="modeSelect" class="card practice-container">
         <div class="mode-card" data-mode="quick">
           <h3>⚡ Quick Drill</h3>
           <p>5 questions · No timer · Quick warmup</p>
@@ -146,6 +131,7 @@
         <button class="learn-jump-btn" data-jump="bookmarksSection">⭐ Starred</button>
         <button class="learn-jump-btn" data-jump="generalMath">📚 General</button>
         <button class="learn-jump-btn" data-jump="tablesContainer">✖️ Tables</button>
+        <button class="learn-jump-btn" data-jump="fractionTable">📐 Fractions</button>
         <button class="learn-jump-btn" data-jump="squaresSection">🔢 Squares</button>
         <button class="learn-jump-btn" data-jump="cubesSection">🧊 Cubes</button>
         <button class="learn-jump-btn" data-jump="formulaSections">📝 Formulas</button>
@@ -162,6 +148,18 @@
       <!-- SECTION 1: General Maths -->
       <h2 class="learn-group-title" id="generalMath">📚 General Maths</h2>
       <p class="secondary-text" style="margin-bottom:1rem;">Calculation foundations every student must memorize.</p>
+
+      <!-- Multiplication Tables (collapsible — large section with selector) -->
+      <div class="card collapsible-card learn-searchable" id="tablesContainer">
+        <div class="collapsible-header" onclick="toggleSection(this)">
+          <h3 class="section-title">✖️ Multiplication Tables (1 – 30)</h3>
+          <span class="collapse-icon">▼</span>
+        </div>
+        <div class="collapsible-content" style="display:none;">
+          <div class="table-selector" id="tableSelector"></div>
+          <div id="tableDisplay" class="tables-container"></div>
+        </div>
+      </div>
 
       <!-- Fraction → Percentage -->
       <div class="card learn-searchable" id="fractionTable">
@@ -190,6 +188,11 @@
           <tr><td>7/9</td><td>77.77%</td></tr>
           <tr><td>8/9</td><td>88.88%</td></tr>
           <tr><td>1/10</td><td>10%</td></tr>
+          <tr><td>1/11</td><td>9.09%</td></tr>
+          <tr><td>2/11</td><td>18.18%</td></tr>
+          <tr><td>3/11</td><td>27.27%</td></tr>
+          <tr><td>5/11</td><td>45.45%</td></tr>
+          <tr><td>9/11</td><td>81.81%</td></tr>
           <tr><td>1/12</td><td>8.33%</td></tr>
           <tr><td>1/15</td><td>6.66%</td></tr>
           <tr><td>1/20</td><td>5%</td></tr>
@@ -197,18 +200,6 @@
           <tr><td>1/40</td><td>2.5%</td></tr>
           <tr><td>1/50</td><td>2%</td></tr>
         </table>
-      </div>
-
-      <!-- Multiplication Tables (collapsible — large section with selector) -->
-      <div class="card collapsible-card learn-searchable" id="tablesContainer">
-        <div class="collapsible-header" onclick="toggleSection(this)">
-          <h3 class="section-title">✖️ Multiplication Tables (1 – 30)</h3>
-          <span class="collapse-icon">▼</span>
-        </div>
-        <div class="collapsible-content" style="display:none;">
-          <div class="table-selector" id="tableSelector"></div>
-          <div id="tableDisplay" class="tables-container"></div>
-        </div>
       </div>
 
       <!-- Squares -->
@@ -363,6 +354,7 @@
   <script src="js/formulas.js"></script>
   <script src="js/learn-manager.js"></script>
   <script src="js/settings.js"></script>
+  <script src="js/soundEngine.js"></script>
   <script src="js/drill-engine.js"></script>
   <script src="js/router.js"></script>
   <script src="js/app.js"></script>

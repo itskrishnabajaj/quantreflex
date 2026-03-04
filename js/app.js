@@ -7,6 +7,8 @@
  *   3. Apply saved dark mode setting
  *   4. Initialize the SPA router
  *   5. Set up view initialization callbacks
+ *   6. Manage swipe gesture navigation
+ *   7. Manage customizable quick study links
  */
 
 /* ---- Apply dark mode from settings immediately ---- */
@@ -43,6 +45,231 @@ window.addEventListener('beforeinstallprompt', function (e) {
 /* ---- Active drill engine reference for cleanup ---- */
 var _activeDrillEngine = null;
 
+/* ---- Quick Study Links Configuration ---- */
+var QUICK_LINKS_KEY = 'quant_quick_links';
+var AVAILABLE_QUICK_LINKS = [
+  { id: 'fractionTable', icon: '📐', title: 'Fraction → Percentage', desc: 'Master common fraction-to-percentage conversions.', type: 'learn' },
+  { id: 'tablesContainer', icon: '✖️', title: 'Multiplication Tables', desc: 'Review tables from 1 to 30.', type: 'learn' },
+  { id: 'formulaSections', icon: '📝', title: 'Quant Formulas', desc: 'Profit & Loss, Ratios, Averages, TSD formulas.', type: 'learn' },
+  { id: 'mentalTricks', icon: '💡', title: 'Shortcut Tricks', desc: 'Mental math tricks for faster calculations.', type: 'learn' },
+  { id: 'squaresSection', icon: '🔢', title: 'Squares & Cubes', desc: 'Quick reference for squares and cubes.', type: 'learn' },
+  { id: 'practice', icon: '🎯', title: 'Practice Drills', desc: 'Jump into practice drills and tests.', type: 'nav' },
+  { id: 'stats', icon: '📊', title: 'Stats', desc: 'View your performance statistics.', type: 'nav' },
+  { id: 'bookmarksSection', icon: '⭐', title: 'Starred Formulas', desc: 'View your bookmarked formulas.', type: 'learn' }
+];
+var DEFAULT_QUICK_LINKS = ['fractionTable', 'tablesContainer', 'formulaSections', 'mentalTricks'];
+
+function loadQuickLinks() {
+  try {
+    var raw = localStorage.getItem(QUICK_LINKS_KEY);
+    if (raw) {
+      var data = JSON.parse(raw);
+      if (Array.isArray(data) && data.length > 0) return data.slice(0, 4);
+    }
+  } catch (_) { /* ignore */ }
+  return DEFAULT_QUICK_LINKS.slice();
+}
+
+function saveQuickLinks(links) {
+  try { localStorage.setItem(QUICK_LINKS_KEY, JSON.stringify(links.slice(0, 4))); } catch (_) { /* ignore */ }
+}
+
+function renderQuickStudyLinks() {
+  var container = document.getElementById('quickStudyContainer');
+  if (!container) return;
+  container.innerHTML = '';
+  var selectedIds = loadQuickLinks();
+
+  for (var i = 0; i < selectedIds.length; i++) {
+    var linkData = null;
+    for (var j = 0; j < AVAILABLE_QUICK_LINKS.length; j++) {
+      if (AVAILABLE_QUICK_LINKS[j].id === selectedIds[i]) {
+        linkData = AVAILABLE_QUICK_LINKS[j];
+        break;
+      }
+    }
+    if (!linkData) continue;
+
+    var card = document.createElement('a');
+    card.className = 'study-card';
+
+    if (linkData.type === 'learn') {
+      card.href = '#learn';
+      card.setAttribute('data-learn-section', linkData.id);
+    } else {
+      card.href = '#' + linkData.id;
+    }
+
+    card.innerHTML = '<h3>' + linkData.icon + ' ' + linkData.title + '</h3><p>' + linkData.desc + '</p>';
+    container.appendChild(card);
+  }
+
+  /* Re-bind click handlers for learn section links */
+  var studyLinks = container.querySelectorAll('[data-learn-section]');
+  for (var s = 0; s < studyLinks.length; s++) {
+    studyLinks[s].addEventListener('click', function (e) {
+      e.preventDefault();
+      var section = this.getAttribute('data-learn-section');
+      Router.showView('learn');
+      setTimeout(function () {
+        var target = document.getElementById(section);
+        if (target) {
+          var header = target.querySelector('.collapsible-header');
+          if (header) {
+            var content = header.nextElementSibling;
+            if (content && window.getComputedStyle(content).display === 'none') {
+              toggleSection(header);
+            }
+          }
+          target.scrollIntoView({ behavior: 'smooth' });
+        }
+      }, 100);
+    });
+  }
+
+  /* Bind nav-type links */
+  var navLinks = container.querySelectorAll('a[href^="#"]:not([data-learn-section])');
+  for (var n = 0; n < navLinks.length; n++) {
+    navLinks[n].addEventListener('click', function (e) {
+      e.preventDefault();
+      var view = this.getAttribute('href').replace('#', '');
+      Router.showView(view);
+    });
+  }
+}
+
+function openQuickLinksEditor() {
+  var selectedIds = loadQuickLinks();
+
+  var overlay = document.createElement('div');
+  overlay.className = 'modal-overlay';
+  var modal = document.createElement('div');
+  modal.className = 'modal-content';
+
+  var html = '<h3 class="modal-title">Customize Quick Links</h3>';
+  html += '<p class="secondary-text" style="margin-bottom:.75rem;">Select up to 4 quick links for your home screen.</p>';
+
+  for (var i = 0; i < AVAILABLE_QUICK_LINKS.length; i++) {
+    var link = AVAILABLE_QUICK_LINKS[i];
+    var isChecked = selectedIds.indexOf(link.id) !== -1;
+    html += '<label class="quick-link-option' + (isChecked ? ' selected' : '') + '">';
+    html += '<input type="checkbox" value="' + link.id + '"' + (isChecked ? ' checked' : '') + ' />';
+    html += '<span>' + link.icon + ' ' + link.title + '</span>';
+    html += '</label>';
+  }
+
+  html += '<div class="modal-actions">';
+  html += '<button class="btn modal-cancel">Cancel</button>';
+  html += '<button class="btn accent modal-save">Save</button>';
+  html += '</div>';
+
+  modal.innerHTML = html;
+  overlay.appendChild(modal);
+  document.body.appendChild(overlay);
+
+  /* Limit to 4 selections */
+  var checkboxes = modal.querySelectorAll('input[type="checkbox"]');
+  function updateCheckboxStates() {
+    var checkedCount = 0;
+    for (var c = 0; c < checkboxes.length; c++) {
+      if (checkboxes[c].checked) checkedCount++;
+    }
+    for (var d = 0; d < checkboxes.length; d++) {
+      var label = checkboxes[d].closest('.quick-link-option');
+      if (checkboxes[d].checked) {
+        label.classList.add('selected');
+        checkboxes[d].disabled = false;
+      } else {
+        label.classList.remove('selected');
+        checkboxes[d].disabled = checkedCount >= 4;
+      }
+    }
+  }
+
+  for (var k = 0; k < checkboxes.length; k++) {
+    checkboxes[k].addEventListener('change', updateCheckboxStates);
+  }
+  updateCheckboxStates();
+
+  overlay.querySelector('.modal-cancel').addEventListener('click', function () {
+    document.body.removeChild(overlay);
+  });
+  overlay.addEventListener('click', function (e) {
+    if (e.target === overlay) document.body.removeChild(overlay);
+  });
+  overlay.querySelector('.modal-save').addEventListener('click', function () {
+    var newLinks = [];
+    for (var m = 0; m < checkboxes.length; m++) {
+      if (checkboxes[m].checked) newLinks.push(checkboxes[m].value);
+    }
+    if (newLinks.length === 0) newLinks = DEFAULT_QUICK_LINKS.slice();
+    saveQuickLinks(newLinks);
+    renderQuickStudyLinks();
+    document.body.removeChild(overlay);
+  });
+}
+
+/* ---- Swipe Navigation ---- */
+function initSwipeNavigation() {
+  var viewOrder = ['home', 'practice', 'learn', 'stats', 'settings'];
+  var touchStartX = 0;
+  var touchStartY = 0;
+  var touchStartTime = 0;
+  var isSwiping = false;
+  var SWIPE_THRESHOLD = 50;
+  var SWIPE_VELOCITY_THRESHOLD = 0.3;
+  var VERTICAL_THRESHOLD_RATIO = 1.5;
+
+  document.addEventListener('touchstart', function (e) {
+    /* Don't capture swipes on inputs or inside modals */
+    if (e.target.closest('.modal-overlay, .table-modal-overlay, input, textarea, select')) return;
+    touchStartX = e.touches[0].clientX;
+    touchStartY = e.touches[0].clientY;
+    touchStartTime = Date.now();
+    isSwiping = true;
+  }, { passive: true });
+
+  document.addEventListener('touchend', function (e) {
+    if (!isSwiping) return;
+    isSwiping = false;
+
+    var touchEndX = e.changedTouches[0].clientX;
+    var touchEndY = e.changedTouches[0].clientY;
+    var deltaX = touchEndX - touchStartX;
+    var deltaY = touchEndY - touchStartY;
+    var elapsed = Date.now() - touchStartTime;
+
+    /* Must be primarily horizontal */
+    if (Math.abs(deltaY) * VERTICAL_THRESHOLD_RATIO > Math.abs(deltaX)) return;
+    /* Must exceed minimum distance */
+    if (Math.abs(deltaX) < SWIPE_THRESHOLD) return;
+    /* Check velocity */
+    var velocity = Math.abs(deltaX) / elapsed;
+    if (velocity < SWIPE_VELOCITY_THRESHOLD) return;
+
+    var currentView = Router.getCurrentView();
+    var currentIndex = viewOrder.indexOf(currentView);
+    if (currentIndex === -1) return;
+
+    /* Don't navigate during active drill */
+    if (_activeDrillEngine) return;
+
+    var nextIndex;
+    if (deltaX > 0) {
+      /* Swipe right → go to previous tab */
+      nextIndex = currentIndex - 1;
+    } else {
+      /* Swipe left → go to next tab */
+      nextIndex = currentIndex + 1;
+    }
+
+    if (nextIndex >= 0 && nextIndex < viewOrder.length) {
+      SoundEngine.play('tabSwitch');
+      Router.showView(viewOrder[nextIndex]);
+    }
+  }, { passive: true });
+}
+
 /* ---- Initialize SPA when DOM is ready ---- */
 document.addEventListener('DOMContentLoaded', function () {
   document.body.classList.add('loaded');
@@ -58,6 +285,7 @@ document.addEventListener('DOMContentLoaded', function () {
         _activeDrillEngine.cleanup();
         _activeDrillEngine = null;
       }
+      SoundEngine.play('tabSwitch');
       Router.showView(view);
     });
   }
@@ -106,43 +334,30 @@ document.addEventListener('DOMContentLoaded', function () {
       else if (pct >= 50) goalStatus.textContent = '💪 Halfway done!';
       else goalStatus.textContent = 'Keep going!';
     }
+
+    /* Render customizable quick study links */
+    renderQuickStudyLinks();
   });
 
-  /* ---- HOME VIEW: study card and warmup click handlers ---- */
+  /* ---- HOME VIEW: warmup and quick drill handlers ---- */
   document.getElementById('startWarmup').addEventListener('click', function (e) {
     e.preventDefault();
     Router.showView('practice');
     startDrillFromPractice('quick');
   });
 
-  var studyLinks = document.querySelectorAll('[data-learn-section]');
-  for (var s = 0; s < studyLinks.length; s++) {
-    studyLinks[s].addEventListener('click', function (e) {
-      e.preventDefault();
-      var section = this.getAttribute('data-learn-section');
-      Router.showView('learn');
-      /* Scroll to section after view is shown */
-      setTimeout(function () {
-        var target = document.getElementById(section);
-        if (target) {
-          /* Expand collapsible if needed */
-          var header = target.querySelector('.collapsible-header');
-          if (header) {
-            var content = header.nextElementSibling;
-            if (content && window.getComputedStyle(content).display === 'none') {
-              toggleSection(header);
-            }
-          }
-          target.scrollIntoView({ behavior: 'smooth' });
-        }
-      }, 100);
-    });
-  }
-
   document.getElementById('goToPractice').addEventListener('click', function (e) {
     e.preventDefault();
     Router.showView('practice');
   });
+
+  /* Edit quick links button */
+  var editBtn = document.getElementById('editQuickLinks');
+  if (editBtn) {
+    editBtn.addEventListener('click', function () {
+      openQuickLinksEditor();
+    });
+  }
 
   /* ---- PRACTICE VIEW ---- */
   Router.onShow('practice', function () {
@@ -214,6 +429,9 @@ document.addEventListener('DOMContentLoaded', function () {
 
   /* ---- SETTINGS VIEW: init on every show ---- */
   Router.onShow('settings', initSettingsView);
+
+  /* ---- Initialize swipe navigation ---- */
+  initSwipeNavigation();
 
   /* ---- Initialize router ---- */
   Router.init();

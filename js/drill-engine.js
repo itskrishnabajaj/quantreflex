@@ -166,6 +166,9 @@ function createDrillEngine(container, opts) {
         if (settings.vibration !== false) navigator.vibrate(50);
       } catch (_) { /* ignore */ }
     }
+    if (!correct) {
+      SoundEngine.play('wrongAnswer');
+    }
 
     var feedback = container.querySelector('#feedback');
     feedback.textContent = correct ? '✓ Correct!' : '✗ Answer: ' + expected;
@@ -204,6 +207,7 @@ function createDrillEngine(container, opts) {
 
   function finish() {
     cleanup();
+    SoundEngine.play('drillEnd');
 
     /* Record session type */
     if (timeLimit) {

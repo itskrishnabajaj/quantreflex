@@ -162,6 +162,8 @@ function _openTableModal(n) {
   /* Prevent duplicate modals */
   if (document.querySelector('.table-modal-overlay')) return;
 
+  SoundEngine.play('tableModal');
+
   var overlay = document.createElement('div');
   overlay.className = 'table-modal-overlay';
 
@@ -191,6 +193,7 @@ function _openTableModal(n) {
   document.body.appendChild(overlay);
 
   function closeModal() {
+    SoundEngine.play('tableModal');
     overlay.classList.add('closing');
     document.removeEventListener('keydown', handleEscape);
     setTimeout(function () {

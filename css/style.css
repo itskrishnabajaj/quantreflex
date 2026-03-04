@@ -12,7 +12,15 @@
 /* ---- Reset & Base ---- */
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
-html { font-size: 16px; -webkit-tap-highlight-color: transparent; scroll-behavior: smooth; overscroll-behavior-y: contain; }
+html {
+  font-size: 16px;
+  -webkit-tap-highlight-color: transparent;
+  scroll-behavior: smooth;
+  overscroll-behavior-y: contain;
+  /* Hide scrollbar cross-browser */
+  scrollbar-width: none; /* Firefox */
+}
+html::-webkit-scrollbar { display: none; } /* Chrome, Edge, Samsung Internet */
 
 body {
   font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
@@ -26,7 +34,12 @@ body {
   opacity: 0;
   transition: opacity .3s ease;
   overscroll-behavior-y: contain;
+  -webkit-overflow-scrolling: touch;
 }
+
+/* Global scrollbar hiding for all scrollable elements */
+*::-webkit-scrollbar { display: none; }
+* { scrollbar-width: none; }
 body.loaded { opacity: 1; }
 
 a { color: inherit; text-decoration: none; }
@@ -489,23 +502,7 @@ header h1 {
   }
 }
 
-/* ---- Progress/Stats Page ---- */
-.stat-grid {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: .75rem;
-  margin-top: 1rem;
-}
-.stat-card {
-  background: #f1f5f9;
-  border-radius: 1rem;
-  padding: 1.25rem;
-  text-align: center;
-}
-.stat-card .value { font-size: 1.75rem; font-weight: 700; color: #2563eb; }
-.stat-card .label { font-size: .8rem; color: #64748b; margin-top: .25rem; }
-.stat-card.highlight { border-left: 3px solid #2563eb; }
-.stat-card .value-sm { font-size: 1rem; }
+/* ---- Progress/Stats Page — styles moved to Stats Grid Improvements section ---- */
 
 /* ---- Bottom Navigation ---- */
 .bottom-nav {
@@ -522,6 +519,12 @@ header h1 {
   padding-bottom: env(safe-area-inset-bottom, 0px);
   z-index: 100;
   box-shadow: 0 -2px 12px rgba(0,0,0,.06);
+  /* Prevent bouncy scroll from affecting navbar */
+  transform: translateZ(0);
+  -webkit-transform: translateZ(0);
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
+  overscroll-behavior: none;
 }
 .bottom-nav a {
   display: flex;
@@ -1144,6 +1147,120 @@ body.dark-mode .table-modal-close {
 }
 body.dark-mode .table-modal-title {
   color: #60a5fa;
+}
+
+/* ---- Practice Container ---- */
+.practice-container {
+  padding: 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+.practice-container .mode-card {
+  margin-bottom: .65rem;
+}
+.practice-container .mode-card:last-child {
+  margin-bottom: 0;
+}
+
+/* ---- Stats Grid Improvements ---- */
+.stat-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: .65rem;
+  margin-top: .75rem;
+}
+.stat-card {
+  background: #f1f5f9;
+  border-radius: .85rem;
+  padding: 1rem .75rem;
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 4.5rem;
+}
+.stat-card .value {
+  font-size: 1.6rem;
+  font-weight: 700;
+  color: #2563eb;
+  line-height: 1.2;
+}
+.stat-card .label {
+  font-size: .75rem;
+  color: #64748b;
+  margin-top: .3rem;
+  line-height: 1.3;
+}
+.stat-card .value-sm {
+  font-size: .95rem;
+  word-break: break-word;
+}
+.stat-card.highlight { border-left: 3px solid #2563eb; }
+
+/* ---- Quick Links Edit Button ---- */
+.quick-links-edit-btn {
+  background: none;
+  border: 1.5px solid #e2e8f0;
+  border-radius: .5rem;
+  padding: .25rem .5rem;
+  font-size: .85rem;
+  cursor: pointer;
+  color: #64748b;
+  transition: background .15s, border-color .15s;
+  line-height: 1;
+}
+.quick-links-edit-btn:active {
+  background: #eff6ff;
+  border-color: #2563eb;
+}
+
+/* Quick Link Option (modal) */
+.quick-link-option {
+  display: flex;
+  align-items: center;
+  gap: .6rem;
+  padding: .65rem .75rem;
+  border: 1.5px solid #e2e8f0;
+  border-radius: .75rem;
+  margin-bottom: .5rem;
+  cursor: pointer;
+  transition: background .15s, border-color .15s;
+  font-size: .9rem;
+  color: #0f172a;
+}
+.quick-link-option.selected {
+  background: #eff6ff;
+  border-color: #2563eb;
+}
+.quick-link-option input[type="checkbox"] {
+  accent-color: #2563eb;
+  width: 1.1rem;
+  height: 1.1rem;
+  flex-shrink: 0;
+}
+
+/* Dark mode additions for new elements */
+body.dark-mode .quick-links-edit-btn {
+  border-color: #334155;
+  color: #94a3b8;
+}
+body.dark-mode .quick-links-edit-btn:active {
+  background: #334155;
+  border-color: #60a5fa;
+}
+body.dark-mode .quick-link-option {
+  border-color: #334155;
+  color: #e2e8f0;
+}
+body.dark-mode .quick-link-option.selected {
+  background: #334155;
+  border-color: #60a5fa;
+}
+body.dark-mode .practice-container {
+  background: rgba(30,41,59,.88);
+  border-color: rgba(51,65,85,.6);
 }
 
 /* ---- Responsive ---- */
