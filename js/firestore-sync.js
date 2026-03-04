@@ -198,6 +198,13 @@ var FirestoreSync = (function () {
     queueUpdate('bookmarks', bookmarks);
   }
 
+  /* Flush pending updates when the page is closing */
+  window.addEventListener('beforeunload', function () {
+    if (Object.keys(_pendingUpdates).length > 0) {
+      _flushUpdates();
+    }
+  });
+
   return {
     loadFromFirestore: loadFromFirestore,
     pushAllToFirestore: pushAllToFirestore,

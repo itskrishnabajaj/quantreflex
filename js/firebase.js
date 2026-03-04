@@ -16,8 +16,9 @@ var FirebaseApp = (function () {
 
   /**
    * Firebase project configuration.
-   * Replace these placeholder values with your actual Firebase config
-   * from the Firebase Console → Project Settings → Your apps → Config.
+   * NOTE: Firebase client-side API keys are designed to be public.
+   * Access is controlled by Firebase Security Rules, not by hiding the key.
+   * See FIREBASE_SETUP.md for security rules configuration.
    */
   var firebaseConfig = {
     apiKey: 'AIzaSyDHTnIhjlyLy6CGOeLHfAIjIX_Bd4kSfco',
@@ -55,15 +56,14 @@ var FirebaseApp = (function () {
    */
   function _generateId() {
     if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
-      return crypto.randomUUID().replace(/-/g, '').substring(0, 12);
+      return crypto.randomUUID();
     }
-    /* Fallback for older browsers */
-    var chars = 'abcdefghijklmnopqrstuvwxyz0123456789';
-    var id = '';
-    for (var i = 0; i < 12; i++) {
-      id += chars.charAt(Math.floor(Math.random() * chars.length));
-    }
-    return id;
+    /* Fallback for older browsers — generates UUID v4 format */
+    return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function (c) {
+      var r = Math.random() * 16 | 0;
+      var v = c === 'x' ? r : (r & 0x3 | 0x8);
+      return v.toString(16);
+    });
   }
 
   /**
