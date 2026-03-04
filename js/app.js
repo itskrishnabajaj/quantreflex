@@ -34,6 +34,79 @@ document.addEventListener('contextmenu', function (e) {
   e.preventDefault();
 });
 
+/* ---- Prevent accidental image/element dragging ---- */
+document.addEventListener('dragstart', function (e) {
+  e.preventDefault();
+});
+
+/* ---- Ripple effect on interactive elements ---- */
+(function () {
+  var RIPPLE_SELECTORS = '.btn, .mode-card, .category-btn, .study-card, .learn-jump-btn, .table-select-btn, .clear-option-btn, .quick-link-option, .bottom-nav a';
+
+  document.addEventListener('pointerdown', function (e) {
+    var target = e.target.closest(RIPPLE_SELECTORS);
+    if (!target) return;
+
+    /* Ensure ripple container setup */
+    var style = window.getComputedStyle(target);
+    if (style.position === 'static') {
+      target.style.position = 'relative';
+    }
+    if (style.overflow !== 'hidden') {
+      target.style.overflow = 'hidden';
+    }
+
+    var rect = target.getBoundingClientRect();
+    var size = Math.max(rect.width, rect.height) * 1.4;
+    var ripple = document.createElement('span');
+    ripple.className = 'ripple-effect';
+    ripple.style.width = size + 'px';
+    ripple.style.height = size + 'px';
+    ripple.style.left = (e.clientX - rect.left - size / 2) + 'px';
+    ripple.style.top = (e.clientY - rect.top - size / 2) + 'px';
+    target.appendChild(ripple);
+
+    /* Remove ripple after animation */
+    setTimeout(function () {
+      if (ripple.parentNode) ripple.parentNode.removeChild(ripple);
+    }, 500);
+  }, { passive: true });
+})();
+
+/* ---- Haptic feedback utility ---- */
+function triggerHaptic(pattern) {
+  try {
+    var settings = JSON.parse(localStorage.getItem('quant_reflex_settings') || '{}');
+    if (settings.vibration === false) return;
+    if (typeof navigator.vibrate !== 'function') return;
+    navigator.vibrate(pattern || 10);
+  } catch (_) { /* ignore */ }
+}
+
+/* ---- Numpad key press visual feedback ---- */
+(function () {
+  document.addEventListener('pointerdown', function (e) {
+    var btn = e.target.closest('.numpad-btn');
+    if (!btn) return;
+    btn.classList.add('pressed');
+    triggerHaptic(8);
+  }, { passive: true });
+
+  document.addEventListener('pointerup', function (e) {
+    var pressed = document.querySelectorAll('.numpad-btn.pressed');
+    for (var i = 0; i < pressed.length; i++) {
+      pressed[i].classList.remove('pressed');
+    }
+  }, { passive: true });
+
+  document.addEventListener('pointercancel', function () {
+    var pressed = document.querySelectorAll('.numpad-btn.pressed');
+    for (var i = 0; i < pressed.length; i++) {
+      pressed[i].classList.remove('pressed');
+    }
+  }, { passive: true });
+})();
+
 /* ---- Global error handling for unhandled promise rejections ---- */
 window.addEventListener('unhandledrejection', function (event) {
   console.warn('Unhandled promise rejection:', event.reason);
@@ -316,6 +389,7 @@ function initSwipeNavigation() {
 
     if (nextIndex >= 0 && nextIndex < viewOrder.length) {
       SoundEngine.play('tabSwitch');
+      triggerHaptic(10);
       Router.showView(viewOrder[nextIndex]);
     }
   }, { passive: true });
@@ -531,6 +605,7 @@ document.addEventListener('DOMContentLoaded', function () {
       /* Hide numpad when navigating */
       hideCustomNumpad();
       SoundEngine.play('tabSwitch');
+      triggerHaptic(10);
       Router.showView(view);
     });
   }

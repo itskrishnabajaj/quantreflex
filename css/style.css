@@ -70,10 +70,10 @@ a { color: inherit; text-decoration: none; }
 }
 .spa-view-active {
   display: block;
-  animation: viewFadeIn .3s ease;
+  animation: viewSlideIn .2s cubic-bezier(.25,.46,.45,.94);
 }
-@keyframes viewFadeIn {
-  from { opacity: 0; transform: translateY(4px); }
+@keyframes viewSlideIn {
+  from { opacity: 0; transform: translateY(6px); }
   to   { opacity: 1; transform: translateY(0); }
 }
 
@@ -573,19 +573,23 @@ a, button, input, select, textarea, label, .btn, .mode-card, .category-btn,
   position: relative;
 }
 .bottom-nav a:active { transform: scale(.88); }
-.bottom-nav a .nav-icon { font-size: 1.25rem; margin-bottom: .2rem; transition: transform .2s; }
+.bottom-nav a .nav-icon { font-size: 1.25rem; margin-bottom: .2rem; transition: transform .2s cubic-bezier(.25,.46,.45,.94); }
 .bottom-nav a.active { color: #2563eb; }
 .bottom-nav a.active .nav-icon { transform: scale(1.15); }
-.bottom-nav a.active::after {
+.bottom-nav a::after {
   content: '';
   position: absolute;
   top: 0;
   left: 50%;
-  transform: translateX(-50%);
+  transform: translateX(-50%) scaleX(0);
   width: 1.5rem;
   height: 2.5px;
   background: linear-gradient(90deg, #2563eb, #3b82f6);
   border-radius: 0 0 2px 2px;
+  transition: transform .2s cubic-bezier(.25,.46,.45,.94);
+}
+.bottom-nav a.active::after {
+  transform: translateX(-50%) scaleX(1);
 }
 
 /* ---- Collapsible Sections ---- */
@@ -1533,10 +1537,12 @@ body.dark-mode .clear-option-info span {
   border-top: 1px solid #e2e8f0;
   padding: .5rem;
   z-index: 99;
-  display: none;
+  transform: translateY(100%);
+  transition: transform .2s cubic-bezier(.25,.46,.45,.94);
+  will-change: transform;
 }
 .custom-numpad.visible {
-  display: block;
+  transform: translateY(0);
 }
 .numpad-grid {
   display: grid;
@@ -1599,4 +1605,80 @@ body.dark-mode .numpad-btn.numpad-submit {
 /* When numpad is visible, add bottom padding to body to prevent content overlap */
 body.numpad-active {
   padding-bottom: calc(4.5rem + env(safe-area-inset-bottom, 0px) + 14rem);
+}
+
+/* ---- Native App Feel Enhancements ---- */
+
+/* Prevent image dragging throughout the app */
+img, svg {
+  -webkit-user-drag: none;
+  user-drag: none;
+  pointer-events: none;
+}
+
+/* Ripple effect for interactive elements */
+.ripple-container {
+  position: relative;
+  overflow: hidden;
+}
+.ripple-effect {
+  position: absolute;
+  border-radius: 50%;
+  background: rgba(37, 99, 235, 0.15);
+  transform: scale(0);
+  animation: rippleAnim .4s ease-out forwards;
+  pointer-events: none;
+  z-index: 1;
+}
+body.dark-mode .ripple-effect {
+  background: rgba(96, 165, 250, 0.12);
+}
+@keyframes rippleAnim {
+  to {
+    transform: scale(2.5);
+    opacity: 0;
+  }
+}
+
+/* Enhanced press feedback for buttons */
+.btn, .mode-card, .category-btn, .study-card, .learn-jump-btn,
+.table-select-btn, .clear-option-btn, .quick-link-option,
+.numpad-btn, .formula-action-btn {
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* Numpad key press animation */
+.numpad-btn.pressed {
+  transform: scale(.9);
+  background: #dbeafe;
+}
+body.dark-mode .numpad-btn.pressed {
+  background: #475569;
+}
+
+/* Feedback card bounce for correct/wrong answers */
+.feedback-shake {
+  animation: feedbackShake .35s ease;
+}
+@keyframes feedbackShake {
+  0%, 100% { transform: translateX(0); }
+  20% { transform: translateX(-4px); }
+  40% { transform: translateX(4px); }
+  60% { transform: translateX(-3px); }
+  80% { transform: translateX(2px); }
+}
+
+/* Drill progress bar pulse on completion */
+.drill-progress-fill.completed {
+  animation: progressPulse .6s ease;
+}
+@keyframes progressPulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.7; }
+}
+
+/* Smooth scrolling for content area */
+.container {
+  scroll-behavior: smooth;
+  -webkit-overflow-scrolling: touch;
 }

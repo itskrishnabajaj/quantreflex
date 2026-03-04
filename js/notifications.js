@@ -19,12 +19,19 @@ var NotificationManager = (function () {
     { title: '🔥 Streak Alert!', body: 'Don\'t break your streak! Solve a few questions today.' },
     { title: '💪 You\'re Getting Better!', body: 'Consistent practice leads to exam success. Start now!' },
     { title: '🎯 Daily Goal Reminder', body: 'Have you hit your daily question target yet?' },
-    { title: '🧠 Train Your Brain', body: 'Mental math gets easier with daily practice.' },
+    { title: '🧠 Train Your Brain', body: 'Train your brain. 5 minutes of mental math now.' },
     { title: '⚡ Quick Drill Time', body: 'Just 5 questions can make a difference. Ready?' },
     { title: '📊 Check Your Progress', body: 'See how much you\'ve improved this week!' },
     { title: '🏆 Challenge Yourself', body: 'Try the timed test mode and beat your best score.' },
-    { title: '✨ Stay Consistent', body: 'Top scorers practice daily. Join them!' }
+    { title: '✨ Stay Consistent', body: 'Your quant reflex improves with daily practice.' },
+    { title: '📈 Build Your Percentile', body: 'Today\'s 5 drills build tomorrow\'s CAT percentile.' },
+    { title: '🔢 Numbers Reward Consistency', body: 'Numbers reward consistency. Open the app and prove it.' },
+    { title: '📱 Your Streak is Waiting', body: 'Your daily math streak is waiting.' },
+    { title: '🎯 Ready for Another?', body: 'Ready for another quick challenge?' }
   ];
+
+  /* Track last shown message index to avoid immediate repeats */
+  var _lastMessageIndex = -1;
 
   /**
    * Check if notifications are enabled in local storage.
@@ -165,13 +172,20 @@ var NotificationManager = (function () {
   }
 
   /**
-   * Show a local notification with a random motivational message.
+   * Show a local notification with a rotating motivational message.
+   * Avoids repeating the same message consecutively.
    */
   function _showLocalNotification() {
     if (!isEnabled()) return;
     if (Notification.permission !== 'granted') return;
 
-    var msg = MOTIVATIONAL_MESSAGES[Math.floor(Math.random() * MOTIVATIONAL_MESSAGES.length)];
+    /* Pick a random message, avoiding the last one shown */
+    var idx;
+    do {
+      idx = Math.floor(Math.random() * MOTIVATIONAL_MESSAGES.length);
+    } while (idx === _lastMessageIndex && MOTIVATIONAL_MESSAGES.length > 1);
+    _lastMessageIndex = idx;
+    var msg = MOTIVATIONAL_MESSAGES[idx];
 
     /* Use service worker for notifications when available (works in background) */
     if ('serviceWorker' in navigator && navigator.serviceWorker.controller) {

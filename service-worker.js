@@ -3,7 +3,7 @@
  * Caches all assets for offline use.
  */
 
-var CACHE_NAME = 'quant-reflex-v21';
+var CACHE_NAME = 'quant-reflex-v22';
 
 var ASSETS = [
   './',
@@ -120,7 +120,10 @@ var PUSH_MESSAGES = [
   { title: '📐 Math Reflex Check', body: 'Keep your calculation speed sharp — practice now!' },
   { title: '🔥 Streak Alert!', body: 'Don\'t break your streak! Solve a few questions today.' },
   { title: '💪 You\'re Getting Better!', body: 'Consistent practice leads to exam success. Start now!' },
-  { title: '🎯 Daily Goal Reminder', body: 'Have you hit your daily question target yet?' }
+  { title: '🎯 Daily Goal Reminder', body: 'Have you hit your daily question target yet?' },
+  { title: '🧠 Train Your Brain', body: 'Train your brain. 5 minutes of mental math now.' },
+  { title: '✨ Stay Consistent', body: 'Your quant reflex improves with daily practice.' },
+  { title: '📈 Build Your Percentile', body: 'Today\'s 5 drills build tomorrow\'s CAT percentile.' }
 ];
 
 /* Handle push events (background notifications from FCM) */

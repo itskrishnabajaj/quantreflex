@@ -58,6 +58,7 @@ function initSettingsView() {
     document.body.classList.toggle('dark-mode', this.checked);
     saveSettings(settings);
     SoundEngine.play('settingsToggle');
+    if (typeof triggerHaptic === 'function') triggerHaptic(15);
   });
   darkToggle.checked = settings.darkMode || false;
 
@@ -68,6 +69,7 @@ function initSettingsView() {
     if (this.checked) {
       SoundEngine.play('settingsToggle');
     }
+    if (typeof triggerHaptic === 'function') triggerHaptic(15);
   });
   soundToggle.checked = settings.sound !== false;
 
@@ -75,6 +77,8 @@ function initSettingsView() {
     settings.vibration = this.checked;
     saveSettings(settings);
     SoundEngine.play('settingsToggle');
+    /* Provide feedback vibration when turning on; skip check since user is toggling this */
+    if (this.checked && typeof navigator.vibrate === 'function') navigator.vibrate(15);
   });
   vibrationToggle.checked = settings.vibration !== false;
 

@@ -177,22 +177,24 @@ function createDrillEngine(container, opts) {
     recordAnswer(correct, q.category, q, elapsedRounded);
 
     /* Provide optional haptic/sound feedback */
-    if (correct && typeof navigator.vibrate === 'function') {
-      try {
-        var settings = JSON.parse(localStorage.getItem('quant_reflex_settings') || '{}');
-        if (settings.vibration !== false) navigator.vibrate(50);
-      } catch (_) { /* ignore */ }
-    }
-    if (!correct) {
+    if (correct) {
+      if (typeof triggerHaptic === 'function') triggerHaptic(50);
+    } else {
       SoundEngine.play('wrongAnswer');
+      if (typeof triggerHaptic === 'function') triggerHaptic([40, 30, 40]);
     }
 
     var feedback = container.querySelector('#feedback');
     feedback.textContent = correct ? '✓ Correct!' : '✗ Answer: ' + expected;
     feedback.className = 'feedback ' + (correct ? 'correct' : 'wrong');
 
-    /* Add animation class */
+    /* Add animation class — shake on wrong, pop on correct */
     feedback.classList.add('feedback-anim');
+    if (!correct) {
+      var card = container.querySelector('.card');
+      if (card) card.classList.add('feedback-shake');
+      setTimeout(function () { if (card) card.classList.remove('feedback-shake'); }, 400);
+    }
 
     /* Replace submit with next */
     var submitBtn = container.querySelector('#submitBtn');
@@ -228,6 +230,8 @@ function createDrillEngine(container, opts) {
     cleanup();
     hideCustomNumpad();
     SoundEngine.play('drillEnd');
+    /* Haptic feedback on drill completion */
+    if (typeof triggerHaptic === 'function') triggerHaptic([50, 50, 100]);
 
     /* Record session type */
     if (timeLimit) {
