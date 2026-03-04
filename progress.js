@@ -2,7 +2,7 @@
  * progress.js — localStorage-based progress tracking
  *
  * Stores:
- *   totalAttempted, totalCorrect, bestStreak, currentStreak
+ *   totalAttempted, totalCorrect, bestStreak, currentStreak, drillSessions
  */
 
 const PROGRESS_KEY = 'quant_reflex_progress';
@@ -15,7 +15,7 @@ function loadProgress() {
   } catch (_) {
     /* ignore parse errors */
   }
-  return { totalAttempted: 0, totalCorrect: 0, bestStreak: 0, currentStreak: 0 };
+  return { totalAttempted: 0, totalCorrect: 0, bestStreak: 0, currentStreak: 0, drillSessions: 0 };
 }
 
 /** Persist progress to localStorage */
@@ -40,7 +40,14 @@ function recordAnswer(correct) {
   saveProgress(p);
 }
 
+/** Record completion of a drill session */
+function recordDrillSession() {
+  const p = loadProgress();
+  p.drillSessions = (p.drillSessions || 0) + 1;
+  saveProgress(p);
+}
+
 /** Reset all progress */
 function resetProgress() {
-  saveProgress({ totalAttempted: 0, totalCorrect: 0, bestStreak: 0, currentStreak: 0 });
+  saveProgress({ totalAttempted: 0, totalCorrect: 0, bestStreak: 0, currentStreak: 0, drillSessions: 0 });
 }
