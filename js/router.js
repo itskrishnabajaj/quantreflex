@@ -9,6 +9,7 @@ var Router = (function () {
   var currentView = null;
   var viewInitCallbacks = {};
   var afterShowCallbacks = {};
+  var _navigatingFromPopstate = false;
 
   /**
    * Register an initialization callback for a view.
@@ -66,8 +67,10 @@ var Router = (function () {
 
     currentView = viewId;
 
-    /* Update hash — use pushState to enable back button navigation */
-    if (window.location.hash !== '#' + viewId) {
+    /* Update hash — only pushState for user-initiated navigation,
+       skip when restoring from popstate to avoid duplicate history entries
+       that would break swipe-back / browser back button behavior */
+    if (!_navigatingFromPopstate && window.location.hash !== '#' + viewId) {
       history.pushState({ view: viewId }, '', '#' + viewId);
     }
 
@@ -86,14 +89,17 @@ var Router = (function () {
    * Initialize router: read hash and show the correct view.
    */
   function init() {
-    /* Handle hash-based navigation */
+    /* Set initial history state so first back press works correctly */
     var hash = window.location.hash.replace('#', '') || 'home';
-    showView(hash);
+    history.replaceState({ view: hash }, '', '#' + hash);
+    _navigatingFromPopstate = true;
+    try { showView(hash); } finally { _navigatingFromPopstate = false; }
 
-    /* Listen for back/forward button navigation */
+    /* Listen for back/forward button and swipe-back navigation */
     window.addEventListener('popstate', function () {
       var hash = window.location.hash.replace('#', '') || 'home';
-      showView(hash);
+      _navigatingFromPopstate = true;
+      try { showView(hash); } finally { _navigatingFromPopstate = false; }
     });
   }
 

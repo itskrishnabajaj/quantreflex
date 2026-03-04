@@ -192,15 +192,21 @@ function _openTableModal(n) {
 
   function closeModal() {
     overlay.classList.add('closing');
+    document.removeEventListener('keydown', handleEscape);
     setTimeout(function () {
       if (overlay.parentNode) overlay.remove();
     }, 200);
+  }
+
+  function handleEscape(e) {
+    if (e.key === 'Escape') closeModal();
   }
 
   closeBtn.addEventListener('click', closeModal);
   overlay.addEventListener('click', function (e) {
     if (e.target === overlay) closeModal();
   });
+  document.addEventListener('keydown', handleEscape);
 }
 
 /**
