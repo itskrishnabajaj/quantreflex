@@ -238,6 +238,17 @@ function genAverage() {
     sum = nums.reduce(function (a, b) { return a + b; }, 0);
     avg = sum / count;
   }
+  /* Final safety: ensure all numbers are positive and average is integer */
+  var allPositive = true;
+  for (var j = 0; j < nums.length; j++) {
+    if (nums[j] <= 0) { allPositive = false; break; }
+  }
+  if (!allPositive || avg !== Math.floor(avg)) {
+    avg = randInt(15, 60);
+    nums = [];
+    for (var s = 0; s < count; s++) nums.push(avg);
+    sum = avg * count;
+  }
   return {
     question: 'Average of ' + nums.join(', ') + ' = ?',
     answer: avg,
@@ -270,6 +281,10 @@ function genAverageMissing() {
     if (missing <= 0 || missing > 200) {
       return genAverage();
     }
+  }
+  /* Safety: ensure all displayed numbers are positive */
+  for (var c = 0; c < nums.length; c++) {
+    if (nums[c] <= 0) return genAverage();
   }
   return {
     question: 'Average of ' + nums.join(', ') + ', x is ' + avg + '. x = ?',

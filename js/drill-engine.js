@@ -49,6 +49,7 @@ function createDrillEngine(container, opts) {
   var overallStart = 0;
   var overallTimer = null;
   var perQTimer = null;
+  var autoAdvanceTimer = null;
   var answered = false; /* prevents double-counting */
 
   /* ---- render helpers ---- */
@@ -86,7 +87,8 @@ function createDrillEngine(container, opts) {
 
     var input = container.querySelector('#answerInput');
     var submitBtn = container.querySelector('#submitBtn');
-    input.focus();
+    /* Auto-focus input with delay to ensure DOM is ready */
+    setTimeout(function () { input.focus(); }, 50);
 
     function submit() {
       if (!answered) checkAnswer(input.value.trim());
@@ -122,7 +124,10 @@ function createDrillEngine(container, opts) {
 
     /* Normalize both values for comparison:
        - trim whitespace
-       - handle numeric equivalence (e.g. "57.0" == "57", "3234.00" == "3234") */
+       - handle numeric equivalence (e.g. "57.0" == "57", "3234.00" == "3234")
+       - answer tolerance for decimal precision (33.33 matches 33.333, 33.3)
+       Tolerance: allow rounding differences up to 0.5% of the expected value
+       (min 0.05) to accept reasonable decimal approximations without being too lenient */
     var normalizedRaw = raw.replace(/\s/g, '');
     var normalizedExpected = expected.replace(/\s/g, '');
     var correct = false;
@@ -130,7 +135,17 @@ function createDrillEngine(container, opts) {
     if (normalizedRaw === normalizedExpected) {
       correct = true;
     } else if (normalizedRaw !== '' && !isNaN(normalizedRaw) && !isNaN(normalizedExpected)) {
-      correct = parseFloat(normalizedRaw) === parseFloat(normalizedExpected);
+      var rawNum = parseFloat(normalizedRaw);
+      var expNum = parseFloat(normalizedExpected);
+      if (rawNum === expNum) {
+        correct = true;
+      } else {
+        /* Tolerance: allow rounding differences up to 0.05 for decimal answers */
+        var tolerance = Math.abs(expNum) > 0 ? Math.max(0.05, Math.abs(expNum) * 0.005) : 0.05;
+        if (Math.abs(rawNum - expNum) <= tolerance) {
+          correct = true;
+        }
+      }
     }
 
     if (correct) {
@@ -168,6 +183,14 @@ function createDrillEngine(container, opts) {
     submitBtn.focus();
 
     container.querySelector('#answerInput').disabled = true;
+
+    /* Auto-advance on correct answer after a short delay for feedback visibility */
+    if (correct && current + 1 < count) {
+      autoAdvanceTimer = setTimeout(function () {
+        autoAdvanceTimer = null;
+        if (answered) nextQuestion();
+      }, 600);
+    }
   }
 
   function nextQuestion() {
@@ -273,6 +296,7 @@ function createDrillEngine(container, opts) {
   function cleanup() {
     if (overallTimer) { clearInterval(overallTimer); overallTimer = null; }
     if (perQTimer) { clearInterval(perQTimer); perQTimer = null; }
+    if (autoAdvanceTimer) { clearTimeout(autoAdvanceTimer); autoAdvanceTimer = null; }
   }
 
   /* ---- begin drill ---- */
