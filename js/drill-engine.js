@@ -90,7 +90,12 @@ function createDrillEngine(container, opts) {
       if (!answered) checkAnswer(input.value.trim());
     }
     submitBtn.addEventListener('click', submit);
-    input.addEventListener('keydown', function (e) { if (e.key === 'Enter') submit(); });
+    input.addEventListener('keydown', function (e) {
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        submit();
+      }
+    });
 
     qStart = performance.now();
 
