@@ -51,6 +51,7 @@ function createDrillEngine(container, opts) {
   var perQTimer = null;
   var autoAdvanceTimer = null;
   var answered = false; /* prevents double-counting */
+  var reviewOriginalCount = 0; /* track original count for review mode cap */
 
   /* ---- render helpers ---- */
 
@@ -160,6 +161,13 @@ function createDrillEngine(container, opts) {
       if (currentSessionStreak > bestSessionStreak) bestSessionStreak = currentSessionStreak;
     } else {
       currentSessionStreak = 0;
+      /* In review mode, re-queue incorrect questions at the end so users
+         cycle through remaining mistakes before seeing the same one again.
+         Cap at 2x original count to prevent infinite loops. */
+      if (reviewMode && count < reviewOriginalCount * 2) {
+        questions.push({ question: q.question, answer: q.answer, category: q.category });
+        count++;
+      }
     }
 
     /* Record answer with response time and question data for mistake tracking */
@@ -343,6 +351,7 @@ function createDrillEngine(container, opts) {
         return;
       }
       count = questions.length; /* May be less than requested */
+      reviewOriginalCount = count;
     } else {
       questions = generateQuestions(count, category); /* questions.js */
     }

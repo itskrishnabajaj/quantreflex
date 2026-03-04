@@ -355,12 +355,14 @@ var FirestoreSync = (function () {
     } else if (type === 'formulas') {
       try { localStorage.setItem('quant_custom_formulas', '{}'); } catch (_) {}
       try { localStorage.setItem('quant_custom_topics', '[]'); } catch (_) {}
+      try { localStorage.setItem('quant_bookmarks', '[]'); } catch (_) {}
       if (_memoryCache) {
         _memoryCache.customFormulas = {};
         _memoryCache.customTopics = [];
+        _memoryCache.bookmarks = [];
       }
       if (docRef) {
-        docRef.update({ customFormulas: {}, customTopics: [] }).then(function () {
+        docRef.update({ customFormulas: {}, customTopics: [], bookmarks: [] }).then(function () {
           if (callback) callback(null);
         }).catch(function (err) {
           if (callback) callback(err.message);

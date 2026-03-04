@@ -98,6 +98,28 @@ function initSettingsView() {
     });
   }
 
+  /* Notifications toggle */
+  var notifToggle = document.getElementById('notificationsToggle');
+  if (notifToggle) {
+    var notifEnabled = typeof NotificationManager !== 'undefined' && NotificationManager.isEnabled();
+    notifToggle = rebind(notifToggle, 'change', function () {
+      var toggle = this;
+      if (typeof NotificationManager === 'undefined') return;
+      if (toggle.checked) {
+        NotificationManager.enable(function (err) {
+          if (err) {
+            toggle.checked = false;
+            console.warn('Notifications could not be enabled:', err);
+          }
+        });
+      } else {
+        NotificationManager.disable();
+      }
+      SoundEngine.play('settingsToggle');
+    });
+    notifToggle.checked = notifEnabled;
+  }
+
   /* Clear Data button — opens modal */
   var clearDataBtn = document.getElementById('clearDataBtn');
   if (clearDataBtn) {
@@ -229,14 +251,16 @@ function openClearConfirmModal(type) {
         try {
           localStorage.setItem('quant_custom_formulas', '{}');
           localStorage.setItem('quant_custom_topics', '[]');
+          localStorage.setItem('quant_bookmarks', '[]');
         } catch (_) {}
       } else if (type === 'all') {
         resetProgress();
         try {
+          localStorage.setItem('quant_reflex_settings', JSON.stringify({ darkMode: false, sound: true, vibration: true, difficulty: 'medium', dailyGoal: 50 }));
           localStorage.setItem('quant_custom_formulas', '{}');
           localStorage.setItem('quant_custom_topics', '[]');
           localStorage.setItem('quant_bookmarks', '[]');
-          localStorage.removeItem('quant_reflex_settings');
+          localStorage.setItem('quant_quick_links', JSON.stringify(['fractionTable', 'tablesContainer', 'formulaSections', 'mentalTricks']));
         } catch (_) {}
       }
       if (type === 'stats') {

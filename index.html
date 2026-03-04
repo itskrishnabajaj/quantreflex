@@ -386,6 +386,18 @@
         </select>
       </div>
 
+      <!-- Notifications -->
+      <div class="card settings-row">
+        <div class="settings-label">
+          <h3>🔔 Notifications</h3>
+          <p>Receive daily motivational reminders</p>
+        </div>
+        <label class="toggle">
+          <input type="checkbox" id="notificationsToggle" />
+          <span class="toggle-slider"></span>
+        </label>
+      </div>
+
       <!-- Daily Goal -->
       <div class="card settings-row">
         <div class="settings-label">
@@ -447,6 +459,7 @@
   <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-messaging-compat.js"></script>
 
   <!-- Load modules in dependency order -->
   <script src="js/firebase.js"></script>
@@ -458,6 +471,7 @@
   <script src="js/formulas.js"></script>
   <script src="js/learn-manager.js"></script>
   <script src="js/settings.js"></script>
+  <script src="js/notifications.js"></script>
   <script src="js/soundEngine.js"></script>
   <script src="js/drill-engine.js"></script>
   <script src="js/router.js"></script>

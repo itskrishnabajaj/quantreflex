@@ -390,6 +390,11 @@ document.addEventListener('DOMContentLoaded', function () {
         }
       });
     }
+
+    /* Initialize notification scheduling if enabled */
+    if (typeof NotificationManager !== 'undefined') {
+      NotificationManager.init();
+    }
   }
 
   /**
