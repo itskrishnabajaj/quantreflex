@@ -61,7 +61,10 @@ function initSettingsView() {
   soundToggle = rebind(soundToggle, 'change', function () {
     settings.sound = this.checked;
     saveSettings(settings);
-    SoundEngine.play('settingsToggle');
+    /* Only play confirmation sound when enabling sound */
+    if (this.checked) {
+      SoundEngine.play('settingsToggle');
+    }
   });
   soundToggle.checked = settings.sound !== false;
 

@@ -64,7 +64,18 @@ function loadQuickLinks() {
     var raw = localStorage.getItem(QUICK_LINKS_KEY);
     if (raw) {
       var data = JSON.parse(raw);
-      if (Array.isArray(data) && data.length > 0) return data.slice(0, 4);
+      if (Array.isArray(data) && data.length > 0) {
+        /* Deduplicate and validate */
+        var seen = {};
+        var unique = [];
+        for (var i = 0; i < data.length && unique.length < 4; i++) {
+          if (typeof data[i] === 'string' && !seen[data[i]]) {
+            seen[data[i]] = true;
+            unique.push(data[i]);
+          }
+        }
+        return unique.length > 0 ? unique : DEFAULT_QUICK_LINKS.slice();
+      }
     }
   } catch (_) { /* ignore */ }
   return DEFAULT_QUICK_LINKS.slice();
@@ -216,9 +227,10 @@ function initSwipeNavigation() {
   var touchStartY = 0;
   var touchStartTime = 0;
   var isSwiping = false;
-  var SWIPE_THRESHOLD = 50;
-  var SWIPE_VELOCITY_THRESHOLD = 0.3;
-  var VERTICAL_THRESHOLD_RATIO = 1.5;
+  var swipeLocked = false;
+  var SWIPE_THRESHOLD = 40;
+  var SWIPE_VELOCITY_THRESHOLD = 0.25;
+  var VERTICAL_LOCK_RATIO = 1.2;
 
   document.addEventListener('touchstart', function (e) {
     /* Don't capture swipes on inputs or inside modals */
@@ -227,6 +239,18 @@ function initSwipeNavigation() {
     touchStartY = e.touches[0].clientY;
     touchStartTime = Date.now();
     isSwiping = true;
+    swipeLocked = false;
+  }, { passive: true });
+
+  document.addEventListener('touchmove', function (e) {
+    if (!isSwiping || swipeLocked) return;
+    var dx = e.touches[0].clientX - touchStartX;
+    var dy = e.touches[0].clientY - touchStartY;
+    /* If vertical movement dominates early, cancel swipe detection */
+    if (Math.abs(dy) > 10 && Math.abs(dy) > Math.abs(dx) * VERTICAL_LOCK_RATIO) {
+      isSwiping = false;
+      swipeLocked = true;
+    }
   }, { passive: true });
 
   document.addEventListener('touchend', function (e) {
@@ -240,7 +264,7 @@ function initSwipeNavigation() {
     var elapsed = Date.now() - touchStartTime;
 
     /* Must be primarily horizontal */
-    if (Math.abs(deltaY) * VERTICAL_THRESHOLD_RATIO > Math.abs(deltaX)) return;
+    if (Math.abs(deltaY) * VERTICAL_LOCK_RATIO > Math.abs(deltaX)) return;
     /* Must exceed minimum distance */
     if (Math.abs(deltaX) < SWIPE_THRESHOLD) return;
     /* Check velocity */

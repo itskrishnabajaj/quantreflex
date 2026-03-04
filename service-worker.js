@@ -3,7 +3,7 @@
  * Caches all assets for offline use.
  */
 
-var CACHE_NAME = 'quant-reflex-v14';
+var CACHE_NAME = 'quant-reflex-v15';
 
 var ASSETS = [
   './',
@@ -21,7 +21,12 @@ var ASSETS = [
   './js/soundEngine.js',
   './manifest.json',
   './icons/icon-192.svg',
-  './icons/icon-512.svg'
+  './icons/icon-512.svg',
+  './sounds/drillend.mp3',
+  './sounds/settingstoggle.mp3',
+  './sounds/tablemodalopeningandclosing.mp3',
+  './sounds/tabswitching.mp3',
+  './sounds/wronganswer.mp3'
 ];
 
 /* Install: pre-cache all assets */
