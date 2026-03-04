@@ -114,9 +114,14 @@ var FirestoreSync = (function () {
     if (!docRef) return;
 
     var userId = FirebaseApp.getUserId();
+    var username = userId || 'user';
+    /* Extract display username from Firebase Auth email */
+    if (typeof Auth !== 'undefined' && Auth.getCurrentUser() && Auth.getCurrentUser().email) {
+      username = Auth.getCurrentUser().email.split('@')[0];
+    }
     var defaults = {
       profile: {
-        username: userId || 'user',
+        username: username,
         createdAt: new Date().toISOString()
       },
       settings: { darkMode: false, sound: true, vibration: true, difficulty: 'medium', dailyGoal: 50 },

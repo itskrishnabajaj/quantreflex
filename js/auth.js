@@ -20,7 +20,7 @@ var Auth = (function () {
    * @returns {string}
    */
   function _usernameToEmail(username) {
-    return username.toLowerCase().trim() + '@' + EMAIL_DOMAIN;
+    return sanitizeUsername(username) + '@' + EMAIL_DOMAIN;
   }
 
   /**
