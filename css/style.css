@@ -22,7 +22,7 @@ body {
   display: flex;
   flex-direction: column;
   align-items: center;
-  padding-bottom: 4.5rem; /* space for bottom nav */
+  padding-bottom: calc(4.5rem + env(safe-area-inset-bottom, 0px)); /* space for bottom nav */
   opacity: 0;
   transition: opacity .3s ease;
 }
@@ -178,10 +178,11 @@ header h1 {
 }
 
 .question-text {
-  font-size: 1.75rem;
+  font-size: 2rem;
   font-weight: 700;
-  margin-bottom: .5rem;
+  margin-bottom: .75rem;
   letter-spacing: .02em;
+  line-height: 1.3;
 }
 
 .feedback {
@@ -304,12 +305,13 @@ header h1 {
 /* Quick jump nav */
 .learn-jump-nav {
   display: flex;
-  gap: .4rem;
+  gap: .5rem;
   flex-wrap: wrap;
+  justify-content: center;
   margin-bottom: 1rem;
 }
 .learn-jump-btn {
-  padding: .4rem .75rem;
+  padding: .5rem .85rem;
   border: 1.5px solid #e2e8f0;
   border-radius: 2rem;
   background: #ffffff;
@@ -319,6 +321,9 @@ header h1 {
   cursor: pointer;
   transition: background .15s, border-color .15s;
   white-space: nowrap;
+  min-height: 2.25rem;
+  display: inline-flex;
+  align-items: center;
 }
 .learn-jump-btn:active {
   background: #eff6ff;
@@ -438,14 +443,12 @@ header h1 {
 }
 .table-card .math-table {
   width: 100%;
-  table-layout: fixed;
 }
 .table-card .math-table td,
 .table-card .shortcut-table td {
   font-size: .8rem;
   padding: .25rem .4rem;
-  overflow: hidden;
-  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 @media (max-width: 360px) {
   .tables-container {
@@ -483,6 +486,7 @@ header h1 {
   justify-content: space-around;
   align-items: center;
   height: 3.75rem;
+  padding-bottom: env(safe-area-inset-bottom, 0px);
   z-index: 100;
   box-shadow: 0 -2px 12px rgba(0,0,0,.06);
 }
@@ -490,7 +494,8 @@ header h1 {
   display: flex;
   flex-direction: column;
   align-items: center;
-  font-size: .65rem;
+  font-size: .7rem;
+  font-weight: 600;
   color: #94a3b8;
   padding: .4rem 0;
   flex: 1;
@@ -502,8 +507,8 @@ header h1 {
   position: relative;
 }
 .bottom-nav a:active { transform: scale(.9); }
-.bottom-nav a .nav-icon { font-size: 1.25rem; margin-bottom: .15rem; transition: transform .2s; }
-.bottom-nav a.active { color: #2563eb; font-weight: 700; }
+.bottom-nav a .nav-icon { font-size: 1.25rem; margin-bottom: .2rem; transition: transform .2s; }
+.bottom-nav a.active { color: #2563eb; }
 .bottom-nav a.active .nav-icon { transform: scale(1.15); }
 .bottom-nav a.active::after {
   content: '';
@@ -982,5 +987,5 @@ body.dark-mode mark.search-highlight { background: #854d0e; color: #fef08a; }
 /* ---- Responsive ---- */
 @media (min-width: 600px) {
   header h1 { font-size: 2rem; }
-  .question-text { font-size: 2rem; }
+  .question-text { font-size: 2.25rem; }
 }
