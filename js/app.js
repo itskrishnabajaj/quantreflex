@@ -5,10 +5,11 @@
  *   1. Register the service worker
  *   2. Handle the PWA install prompt
  *   3. Apply saved dark mode setting
- *   4. Initialize the SPA router
- *   5. Set up view initialization callbacks
- *   6. Manage swipe gesture navigation
- *   7. Manage customizable quick study links
+ *   4. Initialize Firebase and authentication
+ *   5. Initialize the SPA router
+ *   6. Set up view initialization callbacks
+ *   7. Manage swipe gesture navigation
+ *   8. Manage customizable quick study links
  */
 
 /* ---- Apply dark mode from settings immediately ---- */
@@ -19,7 +20,7 @@
   } catch (_) { /* ignore */ }
 })();
 
-/* ---- Initialize Firebase and device ID ---- */
+/* ---- Initialize Firebase ---- */
 (function () {
   if (typeof FirebaseApp !== 'undefined') {
     FirebaseApp.init();
@@ -318,17 +319,145 @@ function initSwipeNavigation() {
 document.addEventListener('DOMContentLoaded', function () {
   document.body.classList.add('loaded');
 
-  /* ---- Load data from Firestore on startup ---- */
-  if (typeof FirestoreSync !== 'undefined' && typeof FirebaseApp !== 'undefined' && FirebaseApp.isReady()) {
-    FirestoreSync.loadFromFirestore(function (success) {
-      if (success) {
-        /* Re-apply dark mode in case Firestore had updated settings */
-        try {
-          var s = JSON.parse(localStorage.getItem('quant_reflex_settings') || '{}');
-          document.body.classList.toggle('dark-mode', !!s.darkMode);
-        } catch (_) { /* ignore */ }
+  var loginScreen = document.getElementById('loginScreen');
+  var container = document.querySelector('.container');
+  var bottomNav = document.querySelector('.bottom-nav');
+
+  /**
+   * Show the main app and hide the login screen.
+   * Loads data from Firestore and initializes the app.
+   */
+  function showApp() {
+    if (loginScreen) loginScreen.style.display = 'none';
+    if (container) container.style.display = '';
+    if (bottomNav) bottomNav.style.display = '';
+
+    /* Load data from Firestore after authentication */
+    if (typeof FirestoreSync !== 'undefined' && typeof FirebaseApp !== 'undefined' && FirebaseApp.isReady() && FirebaseApp.getUserId()) {
+      FirestoreSync.loadFromFirestore(function (success) {
+        if (success) {
+          /* Re-apply dark mode in case Firestore had updated settings */
+          try {
+            var s = JSON.parse(localStorage.getItem('quant_reflex_settings') || '{}');
+            document.body.classList.toggle('dark-mode', !!s.darkMode);
+          } catch (_) { /* ignore */ }
+          /* Re-render current view to reflect loaded data */
+          var currentView = Router.getCurrentView();
+          if (currentView) Router.showView(currentView);
+        }
+      });
+    }
+  }
+
+  /**
+   * Show the login screen and hide the main app.
+   */
+  function showLogin() {
+    if (loginScreen) loginScreen.style.display = 'flex';
+    if (container) container.style.display = 'none';
+    if (bottomNav) bottomNav.style.display = 'none';
+  }
+
+  /* ---- Auth Gate ---- */
+  if (typeof Auth !== 'undefined' && typeof FirebaseApp !== 'undefined' && FirebaseApp.isReady()) {
+    /* Initially hide app and show login screen */
+    showLogin();
+
+    Auth.onAuthReady(function (user) {
+      if (user) {
+        showApp();
+      } else {
+        showLogin();
       }
     });
+
+    /* Login form handlers */
+    var loginBtn = document.getElementById('loginBtn');
+    var signupBtn = document.getElementById('signupBtn');
+    var loginUsername = document.getElementById('loginUsername');
+    var loginPassword = document.getElementById('loginPassword');
+    var loginError = document.getElementById('loginError');
+
+    function showError(msg) {
+      if (loginError) {
+        loginError.textContent = msg;
+        loginError.style.display = 'block';
+      }
+    }
+
+    function hideError() {
+      if (loginError) {
+        loginError.style.display = 'none';
+      }
+    }
+
+    function setButtonsDisabled(disabled) {
+      if (loginBtn) loginBtn.disabled = disabled;
+      if (signupBtn) signupBtn.disabled = disabled;
+    }
+
+    if (loginBtn) {
+      loginBtn.addEventListener('click', function () {
+        hideError();
+        var username = loginUsername ? loginUsername.value : '';
+        var password = loginPassword ? loginPassword.value : '';
+        setButtonsDisabled(true);
+
+        Auth.login(username, password, function (err) {
+          setButtonsDisabled(false);
+          if (err) {
+            showError(err);
+          } else {
+            /* Clear form fields for security */
+            if (loginUsername) loginUsername.value = '';
+            if (loginPassword) loginPassword.value = '';
+            showApp();
+          }
+        });
+      });
+    }
+
+    if (signupBtn) {
+      signupBtn.addEventListener('click', function () {
+        hideError();
+        var username = loginUsername ? loginUsername.value : '';
+        var password = loginPassword ? loginPassword.value : '';
+        setButtonsDisabled(true);
+
+        Auth.signup(username, password, function (err) {
+          setButtonsDisabled(false);
+          if (err) {
+            showError(err);
+          } else {
+            /* Clear form fields for security */
+            if (loginUsername) loginUsername.value = '';
+            if (loginPassword) loginPassword.value = '';
+            showApp();
+          }
+        });
+      });
+    }
+
+    /* Allow Enter key to submit login */
+    if (loginPassword) {
+      loginPassword.addEventListener('keydown', function (e) {
+        if (e.key === 'Enter') {
+          e.preventDefault();
+          if (loginBtn) loginBtn.click();
+        }
+      });
+    }
+    if (loginUsername) {
+      loginUsername.addEventListener('keydown', function (e) {
+        if (e.key === 'Enter') {
+          e.preventDefault();
+          if (loginPassword) loginPassword.focus();
+        }
+      });
+    }
+  } else {
+    /* Firebase not available — show app directly (localStorage only mode) */
+    if (loginScreen) loginScreen.style.display = 'none';
   }
 
   /* ---- Bottom nav click handlers ---- */

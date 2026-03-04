@@ -1,17 +1,20 @@
 /**
  * firestore-sync.js — Firestore data synchronization layer
  *
- * Syncs localStorage data with Firestore using device-based user profiles.
+ * Syncs localStorage data with Firestore using authenticated user profiles.
  * Uses local caching for fast access and batched updates for efficiency.
  *
  * Firestore structure:
- *   users/{deviceId}
+ *   users/{userId}
+ *     ├── profile (username, createdAt)
  *     ├── settings
  *     ├── stats (progress data)
  *     ├── quickLinks
  *     ├── customTopics
  *     ├── customFormulas
  *     └── bookmarks
+ *
+ *   users/{userId}/practiceSessions/{sessionId}  (subcollection)
  */
 
 var FirestoreSync = (function () {
@@ -23,20 +26,34 @@ var FirestoreSync = (function () {
   var SYNC_DEBOUNCE_MS = 2000; /* batch updates every 2 seconds */
 
   /**
-   * Get the Firestore document reference for the current user.
+   * Get the Firestore document reference for the current authenticated user.
    * @returns {object|null} Document reference or null
    */
   function _getUserDocRef() {
     if (!FirebaseApp.isReady()) return null;
+    var userId = FirebaseApp.getUserId();
+    if (!userId) return null;
     var db = FirebaseApp.getDb();
-    var deviceId = FirebaseApp.getDeviceId();
-    return db.collection('users').doc(deviceId);
+    return db.collection('users').doc(userId);
+  }
+
+  /**
+   * Reset the sync state when user logs out.
+   */
+  function resetSyncState() {
+    _memoryCache = null;
+    _dataLoaded = false;
+    _pendingUpdates = {};
+    if (_syncTimer) {
+      clearTimeout(_syncTimer);
+      _syncTimer = null;
+    }
   }
 
   /**
    * Load all user data from Firestore and merge into localStorage.
    * Uses in-memory cache to prevent duplicate reads within the same session.
-   * Called on app startup.
+   * Called on app startup after authentication.
    * @param {function} [callback] - Optional callback when done
    */
   function loadFromFirestore(callback) {
@@ -96,7 +113,17 @@ var FirestoreSync = (function () {
     var docRef = _getUserDocRef();
     if (!docRef) return;
 
+    var userId = FirebaseApp.getUserId();
+    var username = userId || 'user';
+    /* Extract display username from Firebase Auth email */
+    if (typeof Auth !== 'undefined' && Auth.getCurrentUser() && Auth.getCurrentUser().email) {
+      username = Auth.getCurrentUser().email.split('@')[0];
+    }
     var defaults = {
+      profile: {
+        username: username,
+        createdAt: new Date().toISOString()
+      },
       settings: { darkMode: false, sound: true, vibration: true, difficulty: 'medium', dailyGoal: 50 },
       stats: {
         totalAttempted: 0, totalCorrect: 0,
@@ -197,7 +224,7 @@ var FirestoreSync = (function () {
    * @param {*} value - Value to write
    */
   function queueUpdate(field, value) {
-    if (!FirebaseApp.isReady()) return;
+    if (!FirebaseApp.isReady() || !FirebaseApp.getUserId()) return;
 
     /* Update in-memory cache */
     if (_memoryCache) {
@@ -282,6 +309,110 @@ var FirestoreSync = (function () {
   }
 
   /**
+   * Save a practice session to the subcollection.
+   * @param {object} sessionData - {mode, category, score, total, duration, date}
+   */
+  function savePracticeSession(sessionData) {
+    var docRef = _getUserDocRef();
+    if (!docRef) return;
+
+    sessionData.timestamp = new Date().toISOString();
+    docRef.collection('practiceSessions').add(sessionData).catch(function (err) {
+      console.warn('Failed to save practice session:', err);
+    });
+  }
+
+  /**
+   * Clear specific data types from Firestore and localStorage.
+   * @param {string} type - 'stats', 'formulas', or 'all'
+   * @param {function} [callback] - optional callback receives (error)
+   */
+  function clearUserData(type, callback) {
+    var docRef = _getUserDocRef();
+
+    if (type === 'stats') {
+      var resetStats = {
+        totalAttempted: 0, totalCorrect: 0,
+        bestStreak: 0, currentStreak: 0,
+        drillSessions: 0, timedTestSessions: 0,
+        dailyStreak: 0, lastActiveDate: null,
+        lastPracticeDate: null,
+        todayAttempted: 0, todayCorrect: 0,
+        categoryStats: {}, mistakes: [],
+        responseTimes: [], dailyHistory: {}
+      };
+      try { localStorage.setItem('quant_reflex_progress', JSON.stringify(resetStats)); } catch (_) {}
+      if (_memoryCache) _memoryCache.stats = resetStats;
+      if (docRef) {
+        docRef.update({ stats: resetStats }).then(function () {
+          if (callback) callback(null);
+        }).catch(function (err) {
+          if (callback) callback(err.message);
+        });
+      } else {
+        if (callback) callback(null);
+      }
+    } else if (type === 'formulas') {
+      try { localStorage.setItem('quant_custom_formulas', '{}'); } catch (_) {}
+      try { localStorage.setItem('quant_custom_topics', '[]'); } catch (_) {}
+      if (_memoryCache) {
+        _memoryCache.customFormulas = {};
+        _memoryCache.customTopics = [];
+      }
+      if (docRef) {
+        docRef.update({ customFormulas: {}, customTopics: [] }).then(function () {
+          if (callback) callback(null);
+        }).catch(function (err) {
+          if (callback) callback(err.message);
+        });
+      } else {
+        if (callback) callback(null);
+      }
+    } else if (type === 'all') {
+      var defaultSettings = { darkMode: false, sound: true, vibration: true, difficulty: 'medium', dailyGoal: 50 };
+      var defaultStats = {
+        totalAttempted: 0, totalCorrect: 0,
+        bestStreak: 0, currentStreak: 0,
+        drillSessions: 0, timedTestSessions: 0,
+        dailyStreak: 0, lastActiveDate: null,
+        lastPracticeDate: null,
+        todayAttempted: 0, todayCorrect: 0,
+        categoryStats: {}, mistakes: [],
+        responseTimes: [], dailyHistory: {}
+      };
+      try {
+        localStorage.setItem('quant_reflex_settings', JSON.stringify(defaultSettings));
+        localStorage.setItem('quant_reflex_progress', JSON.stringify(defaultStats));
+        localStorage.setItem('quant_quick_links', JSON.stringify(['fractionTable', 'tablesContainer', 'formulaSections', 'mentalTricks']));
+        localStorage.setItem('quant_custom_topics', '[]');
+        localStorage.setItem('quant_custom_formulas', '{}');
+        localStorage.setItem('quant_bookmarks', '[]');
+      } catch (_) {}
+      var resetAll = {
+        settings: defaultSettings,
+        stats: defaultStats,
+        quickLinks: ['fractionTable', 'tablesContainer', 'formulaSections', 'mentalTricks'],
+        customTopics: [],
+        customFormulas: {},
+        bookmarks: []
+      };
+      /* Preserve profile data in memory cache (account info should not be cleared) */
+      var existingProfile = _memoryCache ? _memoryCache.profile : null;
+      _memoryCache = resetAll;
+      if (existingProfile) _memoryCache.profile = existingProfile;
+      if (docRef) {
+        docRef.set(resetAll, { merge: true }).then(function () {
+          if (callback) callback(null);
+        }).catch(function (err) {
+          if (callback) callback(err.message);
+        });
+      } else {
+        if (callback) callback(null);
+      }
+    }
+  }
+
+  /**
    * Begin drill mode — defers Firestore writes until drill ends.
    * Reduces write costs during rapid stat updates.
    */
@@ -316,12 +447,15 @@ var FirestoreSync = (function () {
   return {
     loadFromFirestore: loadFromFirestore,
     pushAllToFirestore: pushAllToFirestore,
+    resetSyncState: resetSyncState,
     syncSettings: syncSettings,
     syncStats: syncStats,
     syncQuickLinks: syncQuickLinks,
     syncCustomTopics: syncCustomTopics,
     syncCustomFormulas: syncCustomFormulas,
     syncBookmarks: syncBookmarks,
+    savePracticeSession: savePracticeSession,
+    clearUserData: clearUserData,
     beginDrillBatch: beginDrillBatch,
     endDrillBatch: endDrillBatch
   };

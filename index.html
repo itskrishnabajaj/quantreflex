@@ -11,6 +11,79 @@
   <link rel="stylesheet" href="css/style.css" />
 </head>
 <body>
+
+  <!-- ==================== LOGIN SCREEN ==================== -->
+  <div id="loginScreen" class="login-screen">
+    <div class="login-card">
+      <div class="login-header">
+        <h1 class="login-title">Quant Reflex Trainer</h1>
+        <p class="login-subtitle">Train your mental math speed daily</p>
+      </div>
+      <div id="loginForm">
+        <div class="login-field">
+          <label for="loginUsername" class="login-label">Username</label>
+          <input type="text" id="loginUsername" class="login-input" placeholder="Enter your username" autocomplete="username" autocapitalize="off" />
+        </div>
+        <div class="login-field">
+          <label for="loginPassword" class="login-label">Password</label>
+          <input type="password" id="loginPassword" class="login-input" placeholder="Enter your password" autocomplete="current-password" />
+        </div>
+        <div id="loginError" class="login-error" style="display:none;"></div>
+        <button id="loginBtn" class="btn accent login-btn">Log In</button>
+        <button id="signupBtn" class="btn login-btn login-signup-btn">Create Account</button>
+      </div>
+      <p class="login-footer">Your data syncs securely across devices</p>
+    </div>
+  </div>
+
+  <!-- ==================== CLEAR DATA MODAL ==================== -->
+  <div id="clearDataModal" class="modal-overlay" style="display:none;">
+    <div class="modal-content clear-data-modal">
+      <h3 class="modal-title">🗑️ Clear Data</h3>
+      <p class="secondary-text" style="margin-bottom:1rem;">Choose what data to clear. This action cannot be undone.</p>
+
+      <div id="clearDataOptions">
+        <button class="clear-option-btn" data-clear="stats">
+          <span class="clear-option-icon">📊</span>
+          <div class="clear-option-info">
+            <strong>Clear Statistics</strong>
+            <span>Reset all progress, streaks, and performance history</span>
+          </div>
+        </button>
+        <button class="clear-option-btn" data-clear="formulas">
+          <span class="clear-option-icon">📝</span>
+          <div class="clear-option-info">
+            <strong>Clear Formulas &amp; Tips</strong>
+            <span>Delete all custom topics and added formulas</span>
+          </div>
+        </button>
+        <button class="clear-option-btn clear-option-danger" data-clear="all">
+          <span class="clear-option-icon">⚠️</span>
+          <div class="clear-option-info">
+            <strong>Clear Entire App Data</strong>
+            <span>Reset everything: settings, stats, formulas, bookmarks</span>
+          </div>
+        </button>
+      </div>
+
+      <div class="modal-actions">
+        <button class="btn modal-cancel" id="clearDataCancel">Cancel</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==================== CLEAR DATA CONFIRM MODAL ==================== -->
+  <div id="clearConfirmModal" class="modal-overlay" style="display:none;">
+    <div class="modal-content">
+      <h3 class="modal-title">⚠️ Confirm</h3>
+      <p id="clearConfirmText" class="secondary-text" style="margin-bottom:1rem;"></p>
+      <div class="modal-actions">
+        <button class="btn modal-cancel" id="clearConfirmCancel">Cancel</button>
+        <button class="btn" id="clearConfirmOk" style="background:#fee2e2;color:#dc2626;">Delete</button>
+      </div>
+    </div>
+  </div>
+
   <div class="container">
 
     <!-- ==================== HOME VIEW ==================== -->
@@ -324,9 +397,16 @@
 
       <!-- Reset Progress -->
       <div class="card">
-        <h3 style="margin-bottom:.5rem;">🗑️ Reset Progress</h3>
-        <p class="secondary-text" style="margin-bottom:.75rem;">Clear all your statistics and start fresh</p>
-        <button id="resetBtn" class="btn" style="background:#fee2e2;color:#dc2626;">Reset All Data</button>
+        <h3 style="margin-bottom:.5rem;">🗑️ Clear Data</h3>
+        <p class="secondary-text" style="margin-bottom:.75rem;">Clear specific data or reset everything</p>
+        <button id="clearDataBtn" class="btn" style="background:#fee2e2;color:#dc2626;">Clear Data</button>
+      </div>
+
+      <!-- Logout -->
+      <div class="card" id="logoutCard">
+        <h3 style="margin-bottom:.5rem;">🚪 Account</h3>
+        <p class="secondary-text" style="margin-bottom:.75rem;">Log out of your account on this device</p>
+        <button id="logoutBtn" class="btn" style="background:#fef3c7;color:#92400e;">Log Out</button>
       </div>
     </div>
 
@@ -343,10 +423,12 @@
 
   <!-- Firebase SDK (compat for broad browser support) -->
   <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
 
   <!-- Load modules in dependency order -->
   <script src="js/firebase.js"></script>
+  <script src="js/auth.js"></script>
   <script src="js/firestore-sync.js"></script>
   <script src="js/progress.js"></script>
   <script src="js/questions.js"></script>

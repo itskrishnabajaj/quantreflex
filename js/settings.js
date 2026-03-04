@@ -98,14 +98,35 @@ function initSettingsView() {
     });
   }
 
-  /* Reset progress */
-  var resetBtn = document.getElementById('resetBtn');
-  rebind(resetBtn, 'click', function () {
-    if (confirm('Reset all progress? This cannot be undone.')) {
-      resetProgress();
-      alert('Progress has been reset.');
-    }
-  });
+  /* Clear Data button — opens modal */
+  var clearDataBtn = document.getElementById('clearDataBtn');
+  if (clearDataBtn) {
+    rebind(clearDataBtn, 'click', function () {
+      openClearDataModal();
+    });
+  }
+
+  /* Logout button */
+  var logoutBtn = document.getElementById('logoutBtn');
+  if (logoutBtn) {
+    rebind(logoutBtn, 'click', function () {
+      if (typeof Auth !== 'undefined') {
+        Auth.logout(function (err) {
+          if (err) {
+            alert('Logout failed: ' + err);
+          } else {
+            /* Reset sync state before reload */
+            if (typeof FirestoreSync !== 'undefined') {
+              FirestoreSync.resetSyncState();
+            }
+            /* Reload page for clean state — auth persistence keeps
+               the user logged out, and all JS state is reset */
+            window.location.reload();
+          }
+        });
+      }
+    });
+  }
 
   /* PWA install button */
   var installCard = document.getElementById('installCard');
@@ -120,4 +141,113 @@ function initSettingsView() {
       });
     });
   }
+}
+
+/**
+ * Open the Clear Data modal with options.
+ */
+function openClearDataModal() {
+  var modal = document.getElementById('clearDataModal');
+  if (!modal) return;
+  modal.style.display = 'flex';
+
+  var cancelBtn = document.getElementById('clearDataCancel');
+  var optionBtns = modal.querySelectorAll('.clear-option-btn');
+
+  /* Cancel */
+  function closeModal() {
+    modal.style.display = 'none';
+  }
+  cancelBtn.onclick = closeModal;
+  modal.onclick = function (e) {
+    if (e.target === modal) closeModal();
+  };
+
+  /* Option handlers */
+  for (var i = 0; i < optionBtns.length; i++) {
+    optionBtns[i].onclick = function () {
+      var type = this.getAttribute('data-clear');
+      closeModal();
+      openClearConfirmModal(type);
+    };
+  }
+}
+
+/**
+ * Open a confirmation dialog before clearing data.
+ * @param {string} type - 'stats', 'formulas', or 'all'
+ */
+function openClearConfirmModal(type) {
+  var modal = document.getElementById('clearConfirmModal');
+  var textEl = document.getElementById('clearConfirmText');
+  var cancelBtn = document.getElementById('clearConfirmCancel');
+  var okBtn = document.getElementById('clearConfirmOk');
+  if (!modal || !textEl) return;
+
+  var messages = {
+    stats: 'This will permanently reset all your statistics, streaks, and performance history. Continue?',
+    formulas: 'This will permanently delete all your custom topics and added formulas. Continue?',
+    all: 'This will permanently reset ALL your data including settings, statistics, formulas, and bookmarks. Continue?'
+  };
+  textEl.textContent = messages[type] || 'Are you sure?';
+  modal.style.display = 'flex';
+
+  function closeModal() {
+    modal.style.display = 'none';
+  }
+  cancelBtn.onclick = closeModal;
+  modal.onclick = function (e) {
+    if (e.target === modal) closeModal();
+  };
+
+  okBtn.onclick = function () {
+    closeModal();
+    if (typeof FirestoreSync !== 'undefined') {
+      FirestoreSync.clearUserData(type, function (err) {
+        if (err) {
+          alert('Failed to clear data: ' + err);
+        } else {
+          if (type === 'stats') {
+            /* Stats only — re-render settings view without reload */
+            alert('Statistics cleared successfully.');
+            if (typeof Router !== 'undefined') {
+              Router.showView('settings');
+            }
+          } else {
+            /* Formulas or all — reload page for clean DOM state.
+               Auth persistence keeps the user logged in. */
+            alert('Data cleared successfully.');
+            window.location.reload();
+          }
+        }
+      });
+    } else {
+      /* Fallback: clear local data only */
+      if (type === 'stats') {
+        resetProgress();
+      } else if (type === 'formulas') {
+        try {
+          localStorage.setItem('quant_custom_formulas', '{}');
+          localStorage.setItem('quant_custom_topics', '[]');
+        } catch (_) {}
+      } else if (type === 'all') {
+        resetProgress();
+        try {
+          localStorage.setItem('quant_custom_formulas', '{}');
+          localStorage.setItem('quant_custom_topics', '[]');
+          localStorage.setItem('quant_bookmarks', '[]');
+          localStorage.removeItem('quant_reflex_settings');
+        } catch (_) {}
+      }
+      if (type === 'stats') {
+        alert('Statistics cleared successfully.');
+        if (typeof Router !== 'undefined') {
+          Router.showView('settings');
+        }
+      } else {
+        alert('Data cleared successfully.');
+        window.location.reload();
+      }
+    }
+  };
 }

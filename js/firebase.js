@@ -1,8 +1,9 @@
 /**
- * firebase.js — Firebase Firestore initialization and device ID management
+ * firebase.js — Firebase initialization and user identity management
  *
- * Initializes Firebase App and Firestore.
- * Manages device-based user identity (no authentication required).
+ * Initializes Firebase App, Firestore, and Auth.
+ * Manages user identity via Firebase Authentication.
+ * Falls back to device ID for local-only mode when Firebase is not configured.
  * Exports initialized database instance via global FirebaseApp object.
  *
  * IMPORTANT: Replace the firebaseConfig values with your own Firebase project config.
@@ -11,7 +12,6 @@
 
 var FirebaseApp = (function () {
   var _db = null;
-  var _deviceId = null;
   var _initialized = false;
 
   /**
@@ -30,43 +30,6 @@ var FirebaseApp = (function () {
   };
 
   /**
-   * Get or generate a persistent device ID.
-   * Stored in localStorage so it survives page reloads.
-   * @returns {string} The device ID
-   */
-  function getDeviceId() {
-    if (_deviceId) return _deviceId;
-    try {
-      _deviceId = localStorage.getItem('deviceId');
-      if (!_deviceId) {
-        _deviceId = 'device_' + _generateId();
-        localStorage.setItem('deviceId', _deviceId);
-      }
-    } catch (e) {
-      /* Fallback if localStorage is unavailable */
-      _deviceId = 'device_' + _generateId();
-    }
-    return _deviceId;
-  }
-
-  /**
-   * Generate a random ID string.
-   * Uses crypto.randomUUID if available, otherwise falls back to manual generation.
-   * @returns {string}
-   */
-  function _generateId() {
-    if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
-      return crypto.randomUUID();
-    }
-    /* Fallback for older browsers — generates UUID v4 format */
-    return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function (c) {
-      var r = Math.random() * 16 | 0;
-      var v = c === 'x' ? r : (r & 0x3 | 0x8);
-      return v.toString(16);
-    });
-  }
-
-  /**
    * Check if Firebase SDK scripts are loaded and config is set.
    * @returns {boolean}
    */
@@ -77,15 +40,24 @@ var FirebaseApp = (function () {
   }
 
   /**
-   * Initialize Firebase and Firestore.
+   * Get the current user ID from Firebase Auth.
+   * Returns the authenticated user's UID if logged in, null otherwise.
+   * @returns {string|null}
+   */
+  function getUserId() {
+    if (typeof Auth !== 'undefined' && Auth.isLoggedIn()) {
+      return Auth.getUserId();
+    }
+    return null;
+  }
+
+  /**
+   * Initialize Firebase, Firestore, and Auth.
    * Call this once on app startup.
    * @returns {boolean} true if successfully initialized
    */
   function init() {
     if (_initialized) return true;
-
-    /* Ensure device ID is generated on first launch */
-    getDeviceId();
 
     if (!isConfigured()) {
       console.info('Firebase not configured. App will use localStorage only. See FIREBASE_SETUP.md');
@@ -107,6 +79,11 @@ var FirebaseApp = (function () {
           console.warn('Firestore persistence not supported in this browser');
         }
       });
+
+      /* Initialize Auth module */
+      if (typeof Auth !== 'undefined') {
+        Auth.init();
+      }
 
       _initialized = true;
       return true;
@@ -135,7 +112,7 @@ var FirebaseApp = (function () {
   return {
     init: init,
     getDb: getDb,
-    getDeviceId: getDeviceId,
+    getUserId: getUserId,
     isReady: isReady,
     isConfigured: isConfigured
   };
