@@ -41,11 +41,6 @@ function initSettingsView() {
 
   if (!darkToggle) return;
 
-  darkToggle.checked = settings.darkMode || false;
-  soundToggle.checked = settings.sound !== false;
-  vibrationToggle.checked = settings.vibration !== false;
-  difficultySelect.value = settings.difficulty || 'medium';
-
   /* Remove old listeners by cloning */
   function rebind(el, event, handler) {
     if (!el) return null;
@@ -60,21 +55,25 @@ function initSettingsView() {
     document.body.classList.toggle('dark-mode', this.checked);
     saveSettings(settings);
   });
+  darkToggle.checked = settings.darkMode || false;
 
   soundToggle = rebind(soundToggle, 'change', function () {
     settings.sound = this.checked;
     saveSettings(settings);
   });
+  soundToggle.checked = settings.sound !== false;
 
   vibrationToggle = rebind(vibrationToggle, 'change', function () {
     settings.vibration = this.checked;
     saveSettings(settings);
   });
+  vibrationToggle.checked = settings.vibration !== false;
 
   difficultySelect = rebind(difficultySelect, 'change', function () {
     settings.difficulty = this.value;
     saveSettings(settings);
   });
+  difficultySelect.value = settings.difficulty || 'medium';
 
   /* Daily goal input */
   var dailyGoalInput = document.getElementById('dailyGoalInput');

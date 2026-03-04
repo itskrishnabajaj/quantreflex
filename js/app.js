@@ -145,6 +145,11 @@ document.addEventListener('DOMContentLoaded', function () {
 
   /* ---- PRACTICE VIEW ---- */
   Router.onShow('practice', function () {
+    /* Cleanup active drill engine when re-entering practice view */
+    if (_activeDrillEngine) {
+      _activeDrillEngine.cleanup();
+      _activeDrillEngine = null;
+    }
     /* Reset practice view state */
     var modeSelect = document.getElementById('modeSelect');
     var categorySelect = document.getElementById('categorySelect');
@@ -360,12 +365,17 @@ function initLearnView() {
     });
   }
 
-  /* Enhanced search functionality */
+  /* Enhanced search functionality with debouncing */
   var searchInput = document.getElementById('learnSearch');
   if (searchInput) {
+    var _searchDebounce = null;
     searchInput.addEventListener('input', function () {
-      var query = this.value.toLowerCase().trim();
-      performLearnSearch(query);
+      var self = this;
+      if (_searchDebounce) clearTimeout(_searchDebounce);
+      _searchDebounce = setTimeout(function () {
+        var query = self.value.toLowerCase().trim();
+        performLearnSearch(query);
+      }, 200);
     });
   }
 }

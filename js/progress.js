@@ -137,6 +137,16 @@ function recordAnswer(correct, category, questionData, responseTime) {
   p.dailyHistory[today].attempted++;
   if (correct) p.dailyHistory[today].correct++;
 
+  /* Cap dailyHistory to last 90 days to prevent unbounded storage growth */
+  var histKeys = Object.keys(p.dailyHistory);
+  if (histKeys.length > 90) {
+    histKeys.sort();
+    var toRemove = histKeys.slice(0, histKeys.length - 90);
+    for (var h = 0; h < toRemove.length; h++) {
+      delete p.dailyHistory[toRemove[h]];
+    }
+  }
+
   saveProgress(p);
 }
 

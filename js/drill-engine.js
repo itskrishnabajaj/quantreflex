@@ -49,6 +49,7 @@ function createDrillEngine(container, opts) {
   var overallStart = 0;
   var overallTimer = null;
   var perQTimer = null;
+  var autoAdvanceTimer = null;
   var answered = false; /* prevents double-counting */
 
   /* ---- render helpers ---- */
@@ -185,7 +186,8 @@ function createDrillEngine(container, opts) {
 
     /* Auto-advance on correct answer after a short delay for feedback visibility */
     if (correct && current + 1 < count) {
-      setTimeout(function () {
+      autoAdvanceTimer = setTimeout(function () {
+        autoAdvanceTimer = null;
         if (answered) nextQuestion();
       }, 600);
     }
@@ -294,6 +296,7 @@ function createDrillEngine(container, opts) {
   function cleanup() {
     if (overallTimer) { clearInterval(overallTimer); overallTimer = null; }
     if (perQTimer) { clearInterval(perQTimer); perQTimer = null; }
+    if (autoAdvanceTimer) { clearTimeout(autoAdvanceTimer); autoAdvanceTimer = null; }
   }
 
   /* ---- begin drill ---- */

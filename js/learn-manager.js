@@ -17,8 +17,12 @@ var BOOKMARKS_KEY = 'quant_bookmarks';
 function loadCustomTopics() {
   try {
     var raw = localStorage.getItem(CUSTOM_TOPICS_KEY);
-    return raw ? JSON.parse(raw) : [];
-  } catch (_) { return []; }
+    if (raw) {
+      var data = JSON.parse(raw);
+      return Array.isArray(data) ? data : [];
+    }
+  } catch (_) { /* ignore */ }
+  return [];
 }
 
 function saveCustomTopics(topics) {
@@ -28,8 +32,12 @@ function saveCustomTopics(topics) {
 function loadCustomFormulas() {
   try {
     var raw = localStorage.getItem(CUSTOM_FORMULAS_KEY);
-    return raw ? JSON.parse(raw) : {};
-  } catch (_) { return {}; }
+    if (raw) {
+      var data = JSON.parse(raw);
+      return (data && typeof data === 'object' && !Array.isArray(data)) ? data : {};
+    }
+  } catch (_) { /* ignore */ }
+  return {};
 }
 
 function saveCustomFormulas(formulas) {
@@ -39,8 +47,12 @@ function saveCustomFormulas(formulas) {
 function loadBookmarks() {
   try {
     var raw = localStorage.getItem(BOOKMARKS_KEY);
-    return raw ? JSON.parse(raw) : [];
-  } catch (_) { return []; }
+    if (raw) {
+      var data = JSON.parse(raw);
+      return Array.isArray(data) ? data : [];
+    }
+  } catch (_) { /* ignore */ }
+  return [];
 }
 
 function saveBookmarks(bookmarks) {
@@ -150,14 +162,14 @@ function _createModal(title, fields, onSave) {
   overlay.className = 'modal-overlay';
   var modal = document.createElement('div');
   modal.className = 'modal-content';
-  var html = '<h3 class="modal-title">' + title + '</h3>';
+  var html = '<h3 class="modal-title">' + escapeHtml(title) + '</h3>';
   for (var i = 0; i < fields.length; i++) {
     var f = fields[i];
-    html += '<label class="modal-label">' + f.label + '</label>';
+    html += '<label class="modal-label">' + escapeHtml(f.label) + '</label>';
     if (f.type === 'textarea') {
-      html += '<textarea class="modal-input" id="modal_' + f.name + '" placeholder="' + (f.placeholder || '') + '">' + (f.value || '') + '</textarea>';
+      html += '<textarea class="modal-input" id="modal_' + f.name + '"></textarea>';
     } else {
-      html += '<input class="modal-input" type="text" id="modal_' + f.name + '" value="' + (f.value || '') + '" placeholder="' + (f.placeholder || '') + '" />';
+      html += '<input class="modal-input" type="text" id="modal_' + f.name + '" />';
     }
   }
   html += '<div class="modal-actions">';
@@ -165,6 +177,16 @@ function _createModal(title, fields, onSave) {
   html += '<button class="btn accent modal-save">Save</button>';
   html += '</div>';
   modal.innerHTML = html;
+
+  /* Set values and placeholders via DOM to prevent HTML attribute injection */
+  for (var k = 0; k < fields.length; k++) {
+    var fieldEl = modal.querySelector('#modal_' + fields[k].name);
+    if (fieldEl) {
+      fieldEl.value = fields[k].value || '';
+      if (fields[k].placeholder) fieldEl.placeholder = fields[k].placeholder;
+    }
+  }
+
   overlay.appendChild(modal);
   document.body.appendChild(overlay);
 
@@ -496,6 +518,11 @@ function performLearnSearch(query) {
     if (titleEl.nextElementSibling && titleEl.nextElementSibling.classList.contains('secondary-text')) {
       titleEl.nextElementSibling.style.display = hasVisible ? '' : 'none';
     }
+  }
+
+  /* Restore bookmarks section visibility when search is cleared */
+  if (!query) {
+    renderBookmarksSection();
   }
 }
 
