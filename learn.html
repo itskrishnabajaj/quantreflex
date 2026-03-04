@@ -137,10 +137,10 @@
 
       /* Populate cubes table (1–20) */
       var cu = document.getElementById('cubesTable');
-      for (var n2 = 1; n2 <= 20; n2++) {
-        var tr2 = document.createElement('tr');
-        tr2.innerHTML = '<td>' + n2 + '</td><td>' + (n2 * n2 * n2) + '</td>';
-        cu.appendChild(tr2);
+      for (n = 1; n <= 20; n++) {
+        tr = document.createElement('tr');
+        tr.innerHTML = '<td>' + n + '</td><td>' + (n * n * n) + '</td>';
+        cu.appendChild(tr);
       }
 
       /* Render formula sections from formulas.js */
