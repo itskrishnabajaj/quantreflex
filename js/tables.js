@@ -89,10 +89,7 @@ function renderSingleTable(container, n) {
 
   for (var i = 1; i <= 10; i++) {
     var row = document.createElement('tr');
-    var padN = padTableNum(n, 2);
-    var padI = padTableNum(i, 2);
-    var padR = padTableNum(n * i, 4);
-    row.innerHTML = '<td>' + padN + ' × ' + padI + '</td><td>= ' + padR + '</td>';
+    row.innerHTML = '<td>' + n + ' × ' + i + ' = ' + (n * i) + '</td>';
     table.appendChild(row);
   }
 

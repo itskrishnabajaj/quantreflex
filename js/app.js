@@ -70,52 +70,6 @@ document.addEventListener('DOMContentLoaded', function () {
     }
   });
 
-  /* ---- Swipe gesture navigation between views ---- */
-  (function () {
-    var viewOrder = ['home', 'practice', 'learn', 'stats', 'settings'];
-    var MIN_SWIPE_DISTANCE = 70;
-    var HORIZONTAL_VERTICAL_RATIO = 2;
-    var MAX_SWIPE_DURATION = 400;
-    var touchStartX = 0;
-    var touchStartY = 0;
-    var touchStartTime = 0;
-    var swiping = false;
-
-    document.addEventListener('touchstart', function (e) {
-      if (e.touches.length !== 1) return;
-      touchStartX = e.touches[0].clientX;
-      touchStartY = e.touches[0].clientY;
-      touchStartTime = Date.now();
-      swiping = true;
-    }, { passive: true });
-
-    document.addEventListener('touchend', function (e) {
-      if (!swiping) return;
-      swiping = false;
-      var touch = e.changedTouches[0];
-      var dx = touch.clientX - touchStartX;
-      var dy = touch.clientY - touchStartY;
-      var elapsed = Date.now() - touchStartTime;
-
-      if (Math.abs(dx) < MIN_SWIPE_DISTANCE || Math.abs(dx) < Math.abs(dy) * HORIZONTAL_VERTICAL_RATIO || elapsed > MAX_SWIPE_DURATION) return;
-
-      /* Don't swipe during active drill */
-      if (_activeDrillEngine) return;
-
-      var cur = Router.getCurrentView();
-      var idx = viewOrder.indexOf(cur);
-      if (idx === -1) return;
-
-      if (dx < 0 && idx < viewOrder.length - 1) {
-        /* Swipe left → next view */
-        Router.showView(viewOrder[idx + 1]);
-      } else if (dx > 0 && idx > 0) {
-        /* Swipe right → previous view */
-        Router.showView(viewOrder[idx - 1]);
-      }
-    }, { passive: true });
-  })();
-
   /* ---- HOME VIEW: render stats on every show ---- */
   Router.onShow('home', function () {
     var p = loadProgress();
