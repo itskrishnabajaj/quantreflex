@@ -25,6 +25,7 @@ function renderTableSelector(selectorContainer, displayContainer, maxNum) {
     btn.setAttribute('data-table', n);
     btn.addEventListener('click', (function (num) {
       return function () {
+        SoundEngine.play('settingsToggle');
         this.classList.toggle('active');
         toggleTableDisplay(displayContainer, num);
       };
@@ -41,6 +42,7 @@ function renderTableSelector(selectorContainer, displayContainer, maxNum) {
   selectorContainer.appendChild(controls);
 
   controls.querySelector('#showAllTables').addEventListener('click', function () {
+    SoundEngine.play('settingsToggle');
     var btns = selectorContainer.querySelectorAll('.table-select-btn');
     displayContainer.innerHTML = '';
     for (var i = 0; i < btns.length; i++) {
@@ -50,6 +52,7 @@ function renderTableSelector(selectorContainer, displayContainer, maxNum) {
   });
 
   controls.querySelector('#clearAllTables').addEventListener('click', function () {
+    SoundEngine.play('settingsToggle');
     var btns = selectorContainer.querySelectorAll('.table-select-btn');
     for (var i = 0; i < btns.length; i++) btns[i].classList.remove('active');
     displayContainer.innerHTML = '';

@@ -60,10 +60,13 @@ function loadProgress() {
   };
 }
 
-/** Persist progress to localStorage */
+/** Persist progress to localStorage and sync to Firestore */
 function saveProgress(data) {
   try {
     localStorage.setItem(PROGRESS_KEY, JSON.stringify(data));
+    if (typeof FirestoreSync !== 'undefined') {
+      FirestoreSync.syncStats(data);
+    }
   } catch (e) {
     console.warn('Failed to save progress:', e);
   }

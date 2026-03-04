@@ -56,12 +56,6 @@
       </div>
 
       <div id="quickStudyContainer"></div>
-
-      <!-- Quick Drill -->
-      <a href="#practice" id="goToPractice" class="study-card" style="border-left:3px solid #2563eb;">
-        <h3>⚡ Quick Reflex Drill</h3>
-        <p>Jump into a 5-question reflex drill right now.</p>
-      </a>
     </div>
 
     <!-- ==================== PRACTICE VIEW ==================== -->
@@ -347,7 +341,13 @@
     <a href="#settings" data-view="settings"><span class="nav-icon">⚙️</span>Settings</a>
   </nav>
 
+  <!-- Firebase SDK (compat for broad browser support) -->
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+
   <!-- Load modules in dependency order -->
+  <script src="js/firebase.js"></script>
+  <script src="js/firestore-sync.js"></script>
   <script src="js/progress.js"></script>
   <script src="js/questions.js"></script>
   <script src="js/tables.js"></script>

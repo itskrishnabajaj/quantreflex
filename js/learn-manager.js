@@ -26,7 +26,12 @@ function loadCustomTopics() {
 }
 
 function saveCustomTopics(topics) {
-  try { localStorage.setItem(CUSTOM_TOPICS_KEY, JSON.stringify(topics)); } catch (_) { /* ignore */ }
+  try {
+    localStorage.setItem(CUSTOM_TOPICS_KEY, JSON.stringify(topics));
+    if (typeof FirestoreSync !== 'undefined') {
+      FirestoreSync.syncCustomTopics(topics);
+    }
+  } catch (_) { /* ignore */ }
 }
 
 function loadCustomFormulas() {
@@ -41,7 +46,12 @@ function loadCustomFormulas() {
 }
 
 function saveCustomFormulas(formulas) {
-  try { localStorage.setItem(CUSTOM_FORMULAS_KEY, JSON.stringify(formulas)); } catch (_) { /* ignore */ }
+  try {
+    localStorage.setItem(CUSTOM_FORMULAS_KEY, JSON.stringify(formulas));
+    if (typeof FirestoreSync !== 'undefined') {
+      FirestoreSync.syncCustomFormulas(formulas);
+    }
+  } catch (_) { /* ignore */ }
 }
 
 function loadBookmarks() {
@@ -56,7 +66,12 @@ function loadBookmarks() {
 }
 
 function saveBookmarks(bookmarks) {
-  try { localStorage.setItem(BOOKMARKS_KEY, JSON.stringify(bookmarks)); } catch (_) { /* ignore */ }
+  try {
+    localStorage.setItem(BOOKMARKS_KEY, JSON.stringify(bookmarks));
+    if (typeof FirestoreSync !== 'undefined') {
+      FirestoreSync.syncBookmarks(bookmarks);
+    }
+  } catch (_) { /* ignore */ }
 }
 
 /* ---- Bookmark functions ---- */
@@ -197,6 +212,7 @@ function _createModal(title, fields, onSave) {
     if (e.target === overlay) document.body.removeChild(overlay);
   });
   overlay.querySelector('.modal-save').addEventListener('click', function () {
+    SoundEngine.play('settingsToggle');
     var values = {};
     for (var j = 0; j < fields.length; j++) {
       values[fields[j].name] = document.getElementById('modal_' + fields[j].name).value.trim();

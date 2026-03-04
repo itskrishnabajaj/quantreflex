@@ -19,6 +19,13 @@
   } catch (_) { /* ignore */ }
 })();
 
+/* ---- Initialize Firebase and device ID ---- */
+(function () {
+  if (typeof FirebaseApp !== 'undefined') {
+    FirebaseApp.init();
+  }
+})();
+
 /* ---- Service Worker Registration ---- */
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', function () {
@@ -82,7 +89,12 @@ function loadQuickLinks() {
 }
 
 function saveQuickLinks(links) {
-  try { localStorage.setItem(QUICK_LINKS_KEY, JSON.stringify(links.slice(0, 4))); } catch (_) { /* ignore */ }
+  try {
+    localStorage.setItem(QUICK_LINKS_KEY, JSON.stringify(links.slice(0, 4)));
+    if (typeof FirestoreSync !== 'undefined') {
+      FirestoreSync.syncQuickLinks(links.slice(0, 4));
+    }
+  } catch (_) { /* ignore */ }
 }
 
 function renderQuickStudyLinks() {
@@ -299,6 +311,19 @@ function initSwipeNavigation() {
 document.addEventListener('DOMContentLoaded', function () {
   document.body.classList.add('loaded');
 
+  /* ---- Load data from Firestore on startup ---- */
+  if (typeof FirestoreSync !== 'undefined' && typeof FirebaseApp !== 'undefined' && FirebaseApp.isReady()) {
+    FirestoreSync.loadFromFirestore(function (success) {
+      if (success) {
+        /* Re-apply dark mode in case Firestore had updated settings */
+        try {
+          var s = JSON.parse(localStorage.getItem('quant_reflex_settings') || '{}');
+          document.body.classList.toggle('dark-mode', !!s.darkMode);
+        } catch (_) { /* ignore */ }
+      }
+    });
+  }
+
   /* ---- Bottom nav click handlers ---- */
   var navLinks = document.querySelectorAll('.bottom-nav a');
   for (var i = 0; i < navLinks.length; i++) {
@@ -364,16 +389,12 @@ document.addEventListener('DOMContentLoaded', function () {
     renderQuickStudyLinks();
   });
 
-  /* ---- HOME VIEW: warmup and quick drill handlers ---- */
+  /* ---- HOME VIEW: warmup handler ---- */
   document.getElementById('startWarmup').addEventListener('click', function (e) {
     e.preventDefault();
+    SoundEngine.play('settingsToggle');
     Router.showView('practice');
     startDrillFromPractice('quick');
-  });
-
-  document.getElementById('goToPractice').addEventListener('click', function (e) {
-    e.preventDefault();
-    Router.showView('practice');
   });
 
   /* Edit quick links button */
@@ -412,6 +433,7 @@ document.addEventListener('DOMContentLoaded', function () {
     var modeCards = document.querySelectorAll('.mode-card');
     for (var i = 0; i < modeCards.length; i++) {
       modeCards[i].addEventListener('click', function () {
+        SoundEngine.play('settingsToggle');
         var modeKey = this.getAttribute('data-mode');
         if (modeKey === 'focus') {
           modeSelect.style.display = 'none';
@@ -428,6 +450,7 @@ document.addEventListener('DOMContentLoaded', function () {
     var catBtns = document.querySelectorAll('.category-btn');
     for (var j = 0; j < catBtns.length; j++) {
       catBtns[j].addEventListener('click', function () {
+        SoundEngine.play('settingsToggle');
         var cat = this.getAttribute('data-cat');
         startDrillFromPractice('focus', cat, this.textContent);
       });

@@ -18,6 +18,9 @@ function loadSettings() {
 function saveSettings(s) {
   try {
     localStorage.setItem(SETTINGS_KEY, JSON.stringify(s));
+    if (typeof FirestoreSync !== 'undefined') {
+      FirestoreSync.syncSettings(s);
+    }
   } catch (e) {
     console.warn('Failed to save settings:', e);
   }
@@ -78,6 +81,7 @@ function initSettingsView() {
   difficultySelect = rebind(difficultySelect, 'change', function () {
     settings.difficulty = this.value;
     saveSettings(settings);
+    SoundEngine.play('settingsToggle');
   });
   difficultySelect.value = settings.difficulty || 'medium';
 
