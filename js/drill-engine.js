@@ -102,6 +102,10 @@ function createDrillEngine(container, opts) {
         cleanup();
         hideCustomNumpad();
         if (typeof _drillSessionActive !== 'undefined') _drillSessionActive = false;
+        /* End Firestore batch that was started in begin() */
+        if (typeof FirestoreSync !== 'undefined') {
+          FirestoreSync.endDrillBatch();
+        }
         if (onFinish) {
           onFinish('practice');
         } else {

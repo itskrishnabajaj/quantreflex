@@ -615,6 +615,10 @@ document.addEventListener('DOMContentLoaded', function () {
         _activeDrillEngine.cleanup();
         _activeDrillEngine = null;
       }
+      /* End any active Firestore batch */
+      if (_drillSessionActive && typeof FirestoreSync !== 'undefined') {
+        FirestoreSync.endDrillBatch();
+      }
       _drillSessionActive = false;
       /* Hide numpad when navigating */
       hideCustomNumpad();
@@ -634,6 +638,10 @@ document.addEventListener('DOMContentLoaded', function () {
         if (_activeDrillEngine) {
           _activeDrillEngine.cleanup();
           _activeDrillEngine = null;
+        }
+        /* End Firestore batch that was started when session began */
+        if (typeof FirestoreSync !== 'undefined') {
+          FirestoreSync.endDrillBatch();
         }
         hideCustomNumpad();
         Router.showView('practice');
@@ -710,6 +718,10 @@ document.addEventListener('DOMContentLoaded', function () {
     if (_activeDrillEngine) {
       _activeDrillEngine.cleanup();
       _activeDrillEngine = null;
+    }
+    /* End any active Firestore batch */
+    if (_drillSessionActive && typeof FirestoreSync !== 'undefined') {
+      FirestoreSync.endDrillBatch();
     }
     _drillSessionActive = false;
     /* Hide custom numpad when returning to practice mode select */
@@ -811,6 +823,10 @@ function startDrillFromPractice(modeKey, category, categoryLabel) {
     if (_activeDrillEngine) {
       _activeDrillEngine.cleanup();
       _activeDrillEngine = null;
+    }
+    /* End any active Firestore batch */
+    if (_drillSessionActive && typeof FirestoreSync !== 'undefined') {
+      FirestoreSync.endDrillBatch();
     }
     _drillSessionActive = false;
     hideCustomNumpad();
