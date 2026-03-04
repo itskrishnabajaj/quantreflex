@@ -1,27 +1,22 @@
 /**
- * Service Worker for Quant Reflex Trainer
- * Caches all HTML, CSS, and JS files for offline use.
+ * Service Worker for Quant Reflex Trainer (SPA)
+ * Caches all assets for offline use.
  */
 
-var CACHE_NAME = 'quant-reflex-v4';
+var CACHE_NAME = 'quant-reflex-v5';
 
 var ASSETS = [
   './',
   './index.html',
-  './practice.html',
-  './learn.html',
-  './stats.html',
-  './settings.html',
-  './drill.html',
-  './test.html',
-  './progress.html',
-  './style.css',
-  './app.js',
-  './drill-engine.js',
-  './questions.js',
-  './progress.js',
-  './tables.js',
-  './formulas.js',
+  './css/style.css',
+  './js/app.js',
+  './js/router.js',
+  './js/drill-engine.js',
+  './js/questions.js',
+  './js/progress.js',
+  './js/tables.js',
+  './js/formulas.js',
+  './js/settings.js',
   './manifest.json'
 ];
 

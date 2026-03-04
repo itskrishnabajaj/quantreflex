@@ -1,11 +1,14 @@
 /**
- * questions.js — Random question generator
+ * questions.js — Random question generator with difficulty scaling
  *
  * Categories:
  *   squares, cubes, fractions-to-percent, percentage-calculations,
  *   mental-multiplication, ratios, averages, profit-loss, time-speed-distance
  *
  * Each generator returns { question: string, answer: number|string, category: string }
+ *
+ * Difficulty levels: easy, medium, hard
+ * Difficulty is read from settings at generation time.
  */
 
 /* ---- helpers ---- */
@@ -17,17 +20,41 @@ function pick(arr) {
   return arr[Math.floor(Math.random() * arr.length)];
 }
 
+/** Get current difficulty from settings */
+function _getDifficulty() {
+  try {
+    var s = JSON.parse(localStorage.getItem('quant_reflex_settings') || '{}');
+    return s.difficulty || 'medium';
+  } catch (_) { return 'medium'; }
+}
+
 /* ---- category generators ---- */
 
-/** Squares: n² where n ∈ [1, 30] */
+/** Squares: n² */
 function genSquare() {
-  var n = randInt(1, 30);
+  var diff = _getDifficulty();
+  var n;
+  if (diff === 'easy') {
+    n = randInt(1, 15);
+  } else if (diff === 'hard') {
+    n = randInt(10, 50);
+  } else {
+    n = randInt(1, 30);
+  }
   return { question: n + '² = ?', answer: n * n, category: 'squares' };
 }
 
-/** Cubes: n³ where n ∈ [1, 20] */
+/** Cubes: n³ */
 function genCube() {
-  var n = randInt(1, 20);
+  var diff = _getDifficulty();
+  var n;
+  if (diff === 'easy') {
+    n = randInt(1, 10);
+  } else if (diff === 'hard') {
+    n = randInt(5, 25);
+  } else {
+    n = randInt(1, 20);
+  }
   return { question: n + '³ = ?', answer: n * n * n, category: 'cubes' };
 }
 
@@ -63,32 +90,78 @@ function genFraction() {
     { frac: '1/40', pct: '2.5' },
     { frac: '1/50', pct: '2' }
   ];
-  var item = pick(table);
+  var diff = _getDifficulty();
+  var subset;
+  if (diff === 'easy') {
+    /* Only common fractions */
+    subset = table.slice(0, 11);
+  } else {
+    subset = table;
+  }
+  var item = pick(subset);
   return { question: item.frac + ' = ?%', answer: item.pct, category: 'fractions' };
 }
 
 /** Percentage calculations: x% of y with randomized values */
 function genPercentage() {
-  /* Use compatible pairs that always produce whole-number results */
-  var p = pick([5, 10, 12, 15, 20, 25, 30, 40, 50, 60, 75]);
-  var b, result;
-  /* Generate base values until we get a whole-number result */
-  do {
-    b = randInt(2, 20) * pick([10, 20, 25, 50, 100]);
-    result = (p / 100) * b;
-  } while (result !== Math.floor(result));
+  var diff = _getDifficulty();
+  var percentages, bases;
+
+  if (diff === 'easy') {
+    percentages = [5, 10, 20, 25, 50];
+    bases = [100, 200, 400, 500, 1000];
+  } else if (diff === 'hard') {
+    percentages = [5, 8, 12, 15, 18, 20, 25, 30, 37, 40, 50, 60, 75];
+    bases = [120, 160, 200, 240, 300, 360, 400, 480, 500, 600, 720, 840, 960, 1000, 1200];
+  } else {
+    percentages = [5, 10, 12, 15, 20, 25, 30, 40, 50, 60, 75];
+    bases = null; /* use original random logic */
+  }
+
+  var p, b, result;
+  if (bases) {
+    /* Pick from curated lists ensuring whole-number results */
+    var maxAttempts = 50;
+    do {
+      p = pick(percentages);
+      b = pick(bases);
+      result = (p / 100) * b;
+      maxAttempts--;
+    } while (result !== Math.floor(result) && maxAttempts > 0);
+    if (result !== Math.floor(result)) {
+      p = 10; b = 200; result = 20;
+    }
+  } else {
+    p = pick(percentages);
+    do {
+      b = randInt(2, 20) * pick([10, 20, 25, 50, 100]);
+      result = (p / 100) * b;
+    } while (result !== Math.floor(result));
+  }
+
   return { question: p + '% of ' + b + ' = ?', answer: result, category: 'percentages' };
 }
 
-/** Mental multiplication: x × m */
+/** Mental multiplication: x × y */
 function genMultiplication() {
-  var x = randInt(2, 99);
-  var y = randInt(2, 50);
+  var diff = _getDifficulty();
+  var x, y;
+  if (diff === 'easy') {
+    x = randInt(2, 20);
+    y = randInt(2, 12);
+  } else if (diff === 'hard') {
+    x = randInt(11, 999);
+    y = randInt(2, 99);
+  } else {
+    x = randInt(2, 99);
+    y = randInt(2, 50);
+  }
   return { question: x + ' × ' + y + ' = ?', answer: x * y, category: 'multiplication' };
 }
 
 /** Ratio: percentage increase/decrease expressed as ratio */
 function genRatio() {
+  var diff = _getDifficulty();
   var scenarios = [
     { q: 'A is 25% more than B. A:B = ?', a: '5:4' },
     { q: 'A is 20% less than B. A:B = ?', a: '4:5' },
@@ -101,15 +174,47 @@ function genRatio() {
     { q: 'A is 60% more than B. A:B = ?', a: '8:5' },
     { q: 'A is 75% more than B. A:B = ?', a: '7:4' }
   ];
+
+  if (diff === 'hard') {
+    /* Add more CAT-style ratio questions */
+    scenarios = scenarios.concat([
+      { q: 'A is 12.5% more than B. A:B = ?', a: '9:8' },
+      { q: 'A is 16.66% less than B. A:B = ?', a: '5:6' },
+      { q: 'A is 37.5% more than B. A:B = ?', a: '11:8' },
+      { q: 'A is 11.11% less than B. A:B = ?', a: '8:9' },
+      { q: 'A is 66.66% more than B. A:B = ?', a: '5:3' },
+      { q: 'A is 150% more than B. A:B = ?', a: '5:2' }
+    ]);
+  } else if (diff === 'easy') {
+    scenarios = scenarios.slice(0, 6);
+  }
+
   var s = pick(scenarios);
   return { question: s.q, answer: s.a, category: 'ratios' };
 }
 
 /** Average calculations */
 function genAverage() {
-  var count = randInt(3, 6);
+  var diff = _getDifficulty();
+  var count, minVal, maxVal;
+
+  if (diff === 'easy') {
+    count = randInt(3, 4);
+    minVal = 10; maxVal = 50;
+  } else if (diff === 'hard') {
+    /* Include missing number problems */
+    if (randInt(0, 1) === 0) {
+      return genAverageMissing();
+    }
+    count = randInt(4, 7);
+    minVal = 10; maxVal = 200;
+  } else {
+    count = randInt(3, 6);
+    minVal = 10; maxVal = 100;
+  }
+
   var nums = [];
-  for (var i = 0; i < count; i++) nums.push(randInt(10, 100));
+  for (var i = 0; i < count; i++) nums.push(randInt(minVal, maxVal));
   var sum = nums.reduce(function (a, b) { return a + b; }, 0);
   var avg = sum / count;
   /* Use whole-number averages only */
@@ -125,19 +230,45 @@ function genAverage() {
   };
 }
 
+/** Average - find missing number (hard mode) */
+function genAverageMissing() {
+  var count = randInt(4, 6);
+  var avg = randInt(20, 80);
+  var totalSum = avg * count;
+  var nums = [];
+  var partialSum = 0;
+  for (var i = 0; i < count - 1; i++) {
+    var n = randInt(10, 100);
+    nums.push(n);
+    partialSum += n;
+  }
+  var missing = totalSum - partialSum;
+  return {
+    question: 'Average of ' + nums.join(', ') + ', x is ' + avg + '. x = ?',
+    answer: missing,
+    category: 'averages'
+  };
+}
+
 /** Profit and Loss calculations with randomized values */
 function genProfitLoss() {
+  var diff = _getDifficulty();
   var type = randInt(0, 2);
+
   if (type === 0) {
     /* Find SP given CP and profit% */
-    var cp = randInt(1, 10) * pick([50, 100, 200]);
-    var profitPct = pick([5, 10, 15, 20, 25, 30, 40, 50]);
+    var cpMult = diff === 'easy' ? [100, 200] : (diff === 'hard' ? [100, 200, 250, 500] : [50, 100, 200]);
+    var profitOpts = diff === 'easy' ? [10, 20, 25, 50] : (diff === 'hard' ? [5, 8, 10, 12, 15, 20, 25, 30, 40, 50] : [5, 10, 15, 20, 25, 30, 40, 50]);
+    var cp = randInt(1, 10) * pick(cpMult);
+    var profitPct = pick(profitOpts);
     var sp = cp * (1 + profitPct / 100);
     return { question: 'CP = ' + cp + ', Profit = ' + profitPct + '%. SP = ?', answer: sp, category: 'profit-loss' };
   } else if (type === 1) {
     /* Find SP given CP and loss% */
-    var cp2 = randInt(1, 10) * pick([50, 100, 200]);
-    var lossPct = pick([5, 10, 15, 20, 25]);
+    var cpMult2 = diff === 'easy' ? [100, 200] : [50, 100, 200];
+    var lossOpts = diff === 'easy' ? [10, 20, 25] : [5, 10, 15, 20, 25];
+    var cp2 = randInt(1, 10) * pick(cpMult2);
+    var lossPct = pick(lossOpts);
     var sp2 = cp2 * (1 - lossPct / 100);
     return { question: 'CP = ' + cp2 + ', Loss = ' + lossPct + '%. SP = ?', answer: sp2, category: 'profit-loss' };
   } else {
@@ -151,11 +282,16 @@ function genProfitLoss() {
 
 /** Time, Speed, Distance calculations with randomized values */
 function genTSD() {
+  var diff = _getDifficulty();
   var type = randInt(0, 2);
+
   if (type === 0) {
     /* Find distance given speed and time */
-    var speed = randInt(2, 12) * 10;
-    var time = randInt(2, 8);
+    var sMin = diff === 'easy' ? 2 : (diff === 'hard' ? 3 : 2);
+    var sMax = diff === 'easy' ? 8 : (diff === 'hard' ? 15 : 12);
+    var tMax = diff === 'easy' ? 5 : (diff === 'hard' ? 10 : 8);
+    var speed = randInt(sMin, sMax) * 10;
+    var time = randInt(2, tMax);
     return { question: 'Speed = ' + speed + ' km/h, Time = ' + time + ' hrs. Distance = ?', answer: speed * time, category: 'time-speed-distance' };
   } else if (type === 1) {
     /* Find time given speed and distance */
@@ -227,4 +363,27 @@ function generateQuestions(n, category) {
   }
 
   return qs;
+}
+
+/**
+ * Generate questions from mistake history for review mode.
+ * @param {number} n - max number of questions
+ * @returns {Array<{ question: string, answer: number|string, category: string }>}
+ */
+function generateMistakeReviewQuestions(n) {
+  var mistakes = getMistakes();
+  if (mistakes.length === 0) return [];
+
+  /* Shuffle and take up to n */
+  var shuffled = mistakes.slice();
+  for (var i = shuffled.length - 1; i > 0; i--) {
+    var j = Math.floor(Math.random() * (i + 1));
+    var temp = shuffled[i];
+    shuffled[i] = shuffled[j];
+    shuffled[j] = temp;
+  }
+
+  return shuffled.slice(0, n).map(function (m) {
+    return { question: m.question, answer: m.answer, category: m.category };
+  });
 }

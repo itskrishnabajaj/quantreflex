@@ -1,5 +1,5 @@
 /**
- * style.css — Mobile-first responsive styles for Quant Reflex Trainer
+ * style.css — Mobile-first responsive styles for Quant Reflex Trainer (SPA)
  *
  * Color scheme (light study theme):
  *   background : #f8fafc
@@ -29,6 +29,14 @@ body {
 body.loaded { opacity: 1; }
 
 a { color: inherit; text-decoration: none; }
+
+/* ---- SPA View System ---- */
+.spa-view {
+  display: none;
+}
+.spa-view-active {
+  display: block;
+}
 
 /* ---- Layout ---- */
 .container {
@@ -72,6 +80,7 @@ header h1 {
   margin-bottom: .85rem;
   box-shadow: 0 2px 12px rgba(0,0,0,.08);
   display: block;
+  cursor: pointer;
   transition: transform .15s, box-shadow .15s;
 }
 .study-card:active { transform: scale(.98); }
@@ -152,6 +161,16 @@ header h1 {
 .feedback.correct { color: #16a34a; }
 .feedback.wrong   { color: #dc2626; }
 
+/* Feedback animation */
+.feedback-anim {
+  animation: feedbackPop .3s ease;
+}
+@keyframes feedbackPop {
+  0% { transform: scale(0.8); opacity: 0; }
+  50% { transform: scale(1.1); }
+  100% { transform: scale(1); opacity: 1; }
+}
+
 /* ---- Results Grid ---- */
 .results-grid {
   display: grid;
@@ -184,6 +203,23 @@ header h1 {
   color: #2563eb;
   margin: 0 0 .75rem;
 }
+
+/* ---- Learn Search ---- */
+.learn-search-container {
+  margin-bottom: 1rem;
+}
+.learn-search-input {
+  width: 100%;
+  padding: .75rem 1rem;
+  border: 2px solid #e2e8f0;
+  border-radius: .75rem;
+  background: #ffffff;
+  color: #0f172a;
+  font-size: .95rem;
+  outline: none;
+  transition: border-color .2s;
+}
+.learn-search-input:focus { border-color: #2563eb; }
 
 /* ---- Math Tables (monospace, aligned) ---- */
 .math-table {
@@ -299,7 +335,7 @@ header h1 {
   padding: .25rem .4rem;
 }
 
-/* ---- Progress Page ---- */
+/* ---- Progress/Stats Page ---- */
 .stat-grid {
   display: grid;
   grid-template-columns: 1fr 1fr;
@@ -340,22 +376,10 @@ header h1 {
   flex: 1;
   text-decoration: none;
   transition: color .2s;
+  cursor: pointer;
 }
 .bottom-nav a .nav-icon { font-size: 1.25rem; margin-bottom: .15rem; }
 .bottom-nav a.active { color: #2563eb; font-weight: 600; }
-
-/* ---- Nav back link ---- */
-.back-link {
-  display: inline-block;
-  margin-bottom: 1rem;
-  font-size: .9rem;
-  color: #64748b;
-}
-.back-link:hover { color: #0f172a; }
-
-/* ---- Install button (hidden by default) ---- */
-#installBtn { display: none; }
-#installBtn[hidden="false"], #installBtn:not([hidden]) { display: inline-block; }
 
 /* ---- Collapsible Sections ---- */
 .collapsible-card { padding: 0; overflow: hidden; }
@@ -481,10 +505,26 @@ header h1 {
   padding: .6rem 0;
   border-bottom: 1px solid #e2e8f0;
   font-size: .9rem;
+  gap: .5rem;
 }
 .category-stat-row:last-child { border-bottom: none; }
-.cat-name { color: #0f172a; font-weight: 500; text-transform: capitalize; }
-.cat-accuracy { color: #2563eb; font-weight: 600; }
+.cat-name { color: #0f172a; font-weight: 500; text-transform: capitalize; min-width: 5rem; }
+.cat-accuracy { color: #2563eb; font-weight: 600; white-space: nowrap; }
+
+/* Category accuracy bar */
+.cat-bar-container {
+  flex: 1;
+  height: .5rem;
+  background: #e2e8f0;
+  border-radius: .25rem;
+  overflow: hidden;
+}
+.cat-bar {
+  height: 100%;
+  background: #2563eb;
+  border-radius: .25rem;
+  transition: width .3s ease;
+}
 
 /* ---- Formula Text ---- */
 .formula-text {
@@ -529,7 +569,8 @@ body.dark-mode .bottom-nav {
 }
 body.dark-mode .bottom-nav a { color: #94a3b8; }
 body.dark-mode .bottom-nav a.active { color: #60a5fa; }
-body.dark-mode .input {
+body.dark-mode .input,
+body.dark-mode .learn-search-input {
   background: #1e293b;
   border-color: #334155;
   color: #e2e8f0;
@@ -578,6 +619,8 @@ body.dark-mode .formula-text {
 body.dark-mode .section-title { color: #60a5fa; }
 body.dark-mode .category-stat-row { border-bottom-color: #334155; }
 body.dark-mode .cat-accuracy { color: #60a5fa; }
+body.dark-mode .cat-bar-container { background: #1e293b; }
+body.dark-mode .cat-bar { background: #60a5fa; }
 body.dark-mode .learn-group-title { color: #e2e8f0; }
 body.dark-mode .math-grid-item { background: #334155; }
 body.dark-mode .math-expr { color: #e2e8f0; }

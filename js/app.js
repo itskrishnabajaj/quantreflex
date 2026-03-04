@@ -1,0 +1,366 @@
+/**
+ * app.js — SPA application bootstrap
+ *
+ * Responsibilities:
+ *   1. Register the service worker
+ *   2. Handle the PWA install prompt
+ *   3. Apply saved dark mode setting
+ *   4. Initialize the SPA router
+ *   5. Set up view initialization callbacks
+ */
+
+/* ---- Apply dark mode from settings immediately ---- */
+(function () {
+  try {
+    var settings = JSON.parse(localStorage.getItem('quant_reflex_settings') || '{}');
+    if (settings.darkMode) document.body.classList.add('dark-mode');
+  } catch (_) { /* ignore */ }
+})();
+
+/* ---- Service Worker Registration ---- */
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', function () {
+    navigator.serviceWorker
+      .register('./service-worker.js')
+      .catch(function (err) { console.warn('SW registration failed:', err); });
+  });
+}
+
+/* ---- PWA Install Prompt ---- */
+window._deferredPrompt = null;
+
+window.addEventListener('beforeinstallprompt', function (e) {
+  e.preventDefault();
+  window._deferredPrompt = e;
+
+  /* Show install card if settings view is active */
+  var installCard = document.getElementById('installCard');
+  if (installCard) {
+    installCard.style.display = 'block';
+  }
+});
+
+/* ---- Active drill engine reference for cleanup ---- */
+var _activeDrillEngine = null;
+
+/* ---- Initialize SPA when DOM is ready ---- */
+document.addEventListener('DOMContentLoaded', function () {
+  document.body.classList.add('loaded');
+
+  /* ---- Bottom nav click handlers ---- */
+  var navLinks = document.querySelectorAll('.bottom-nav a');
+  for (var i = 0; i < navLinks.length; i++) {
+    navLinks[i].addEventListener('click', function (e) {
+      e.preventDefault();
+      var view = this.getAttribute('data-view');
+      /* Cleanup any active drill engine when navigating away */
+      if (_activeDrillEngine) {
+        _activeDrillEngine.cleanup();
+        _activeDrillEngine = null;
+      }
+      Router.showView(view);
+    });
+  }
+
+  /* ---- HOME VIEW: render stats on every show ---- */
+  Router.onShow('home', function () {
+    var p = loadProgress();
+    var accuracy = p.totalAttempted ? ((p.totalCorrect / p.totalAttempted) * 100).toFixed(0) : '0';
+    var el = document.getElementById('homeStats');
+    if (el) {
+      el.innerHTML =
+        '<div class="stat-card"><div class="value">' + (p.todayAttempted || 0) + '</div><div class="label">Today</div></div>' +
+        '<div class="stat-card"><div class="value">' + accuracy + '%</div><div class="label">Accuracy</div></div>' +
+        '<div class="stat-card"><div class="value">' + (p.currentStreak || 0) + '</div><div class="label">Current Streak</div></div>' +
+        '<div class="stat-card"><div class="value">' + (p.bestStreak || 0) + '</div><div class="label">Best Streak</div></div>';
+    }
+  });
+
+  /* ---- HOME VIEW: study card and warmup click handlers ---- */
+  document.getElementById('startWarmup').addEventListener('click', function (e) {
+    e.preventDefault();
+    startDrillFromPractice('quick');
+  });
+
+  var studyLinks = document.querySelectorAll('[data-learn-section]');
+  for (var s = 0; s < studyLinks.length; s++) {
+    studyLinks[s].addEventListener('click', function (e) {
+      e.preventDefault();
+      var section = this.getAttribute('data-learn-section');
+      Router.showView('learn');
+      /* Scroll to section after view is shown */
+      setTimeout(function () {
+        var target = document.getElementById(section);
+        if (target) {
+          /* Expand collapsible if needed */
+          var header = target.querySelector('.collapsible-header');
+          if (header) {
+            var content = header.nextElementSibling;
+            if (content && content.style.display === 'none') {
+              toggleSection(header);
+            }
+          }
+          target.scrollIntoView({ behavior: 'smooth' });
+        }
+      }, 100);
+    });
+  }
+
+  document.getElementById('goToPractice').addEventListener('click', function (e) {
+    e.preventDefault();
+    Router.showView('practice');
+  });
+
+  /* ---- PRACTICE VIEW ---- */
+  Router.onShow('practice', function () {
+    /* Reset practice view state */
+    var modeSelect = document.getElementById('modeSelect');
+    var categorySelect = document.getElementById('categorySelect');
+    var drillContainer = document.getElementById('drillContainer');
+    if (modeSelect) modeSelect.style.display = 'block';
+    if (categorySelect) categorySelect.style.display = 'none';
+    if (drillContainer) {
+      drillContainer.style.display = 'none';
+      drillContainer.innerHTML = '';
+    }
+  });
+
+  Router.onInit('practice', function () {
+    var modeSelect = document.getElementById('modeSelect');
+    var categorySelect = document.getElementById('categorySelect');
+    var drillContainer = document.getElementById('drillContainer');
+
+    /* Mode card clicks */
+    var modeCards = document.querySelectorAll('.mode-card');
+    for (var i = 0; i < modeCards.length; i++) {
+      modeCards[i].addEventListener('click', function () {
+        var modeKey = this.getAttribute('data-mode');
+        if (modeKey === 'focus') {
+          modeSelect.style.display = 'none';
+          categorySelect.style.display = 'block';
+        } else if (modeKey === 'review') {
+          startDrillFromPractice('review');
+        } else {
+          startDrillFromPractice(modeKey);
+        }
+      });
+    }
+
+    /* Category button clicks */
+    var catBtns = document.querySelectorAll('.category-btn');
+    for (var j = 0; j < catBtns.length; j++) {
+      catBtns[j].addEventListener('click', function () {
+        var cat = this.getAttribute('data-cat');
+        startDrillFromPractice('focus', cat, this.textContent);
+      });
+    }
+
+    /* Back button */
+    document.getElementById('backToModes').addEventListener('click', function () {
+      categorySelect.style.display = 'none';
+      modeSelect.style.display = 'block';
+    });
+  });
+
+  /* ---- LEARN VIEW: lazy init ---- */
+  var learnInitialized = false;
+  Router.onShow('learn', function () {
+    if (!learnInitialized) {
+      initLearnView();
+      learnInitialized = true;
+    }
+  });
+
+  /* ---- STATS VIEW: render on every show ---- */
+  Router.onShow('stats', renderStatsView);
+
+  /* ---- SETTINGS VIEW: init on every show ---- */
+  Router.onShow('settings', initSettingsView);
+
+  /* ---- Initialize router ---- */
+  Router.init();
+});
+
+/* ---- Practice drill starter ---- */
+function startDrillFromPractice(modeKey, category, categoryLabel) {
+  var modeSelect = document.getElementById('modeSelect');
+  var categorySelect = document.getElementById('categorySelect');
+  var drillContainer = document.getElementById('drillContainer');
+
+  var modes = {
+    quick:  { count: 5,  timeLimitSec: null, perQuestionSec: null, category: null, mode: '⚡ Quick Drill' },
+    reflex: { count: 10, timeLimitSec: null, perQuestionSec: 15,   category: null, mode: '🧠 Reflex Drill' },
+    timed:  { count: 10, timeLimitSec: 180,  perQuestionSec: null, category: null, mode: '⏱ Timed Test' },
+    focus:  { count: 10, timeLimitSec: null, perQuestionSec: null, category: null, mode: '🎯 Focus Training' },
+    review: { count: 10, timeLimitSec: null, perQuestionSec: null, category: null, mode: '🔄 Review Mistakes', reviewMode: true }
+  };
+
+  var config = Object.assign({}, modes[modeKey] || modes.quick);
+  if (category) {
+    config.category = category;
+    config.mode = '🎯 ' + (categoryLabel || category);
+  }
+
+  config.onFinish = function (view) {
+    if (_activeDrillEngine) {
+      _activeDrillEngine.cleanup();
+      _activeDrillEngine = null;
+    }
+    Router.showView(view);
+  };
+
+  modeSelect.style.display = 'none';
+  categorySelect.style.display = 'none';
+  drillContainer.style.display = 'block';
+
+  /* Cleanup previous engine if any */
+  if (_activeDrillEngine) {
+    _activeDrillEngine.cleanup();
+  }
+
+  var engine = createDrillEngine(drillContainer, config);
+  _activeDrillEngine = engine;
+  engine.start();
+}
+
+/* ---- Learn view initializer ---- */
+function initLearnView() {
+  /* Render multiplication table selector and display */
+  var tableSelector = document.getElementById('tableSelector');
+  var tableDisplay = document.getElementById('tableDisplay');
+  if (tableSelector && tableDisplay) {
+    renderTableSelector(tableSelector, tableDisplay, 30);
+  }
+
+  /* Populate squares grid (1–30) */
+  var sqGrid = document.getElementById('squaresGrid');
+  if (sqGrid) {
+    for (var n = 1; n <= 30; n++) {
+      var item = document.createElement('div');
+      item.className = 'math-grid-item';
+      item.innerHTML = '<span class="math-expr">' + padTableNum(n, 2) + '²</span><span class="math-eq">=</span><span class="math-val">' + padTableNum(n * n, 3) + '</span>';
+      sqGrid.appendChild(item);
+    }
+  }
+
+  /* Populate cubes grid (1–20) */
+  var cuGrid = document.getElementById('cubesGrid');
+  if (cuGrid) {
+    for (var m = 1; m <= 20; m++) {
+      var item2 = document.createElement('div');
+      item2.className = 'math-grid-item';
+      item2.innerHTML = '<span class="math-expr">' + padTableNum(m, 2) + '³</span><span class="math-eq">=</span><span class="math-val">' + padTableNum(m * m * m, 4) + '</span>';
+      cuGrid.appendChild(item2);
+    }
+  }
+
+  /* Render topic-wise formula sections from formulas.js */
+  var sections = getFormulaSections();
+  var topicContainer = document.getElementById('topicSections');
+  if (topicContainer) {
+    for (var i = 0; i < sections.length; i++) {
+      var s = sections[i];
+      var card = document.createElement('div');
+      card.className = 'card learn-searchable';
+      card.id = s.id;
+      card.innerHTML = '<h3 class="section-title">' + s.title + '</h3>' + s.content;
+      topicContainer.appendChild(card);
+    }
+  }
+
+  /* Learn search functionality */
+  var searchInput = document.getElementById('learnSearch');
+  if (searchInput) {
+    searchInput.addEventListener('input', function () {
+      var query = this.value.toLowerCase().trim();
+      var searchables = document.querySelectorAll('#view-learn .learn-searchable');
+      for (var k = 0; k < searchables.length; k++) {
+        var el = searchables[k];
+        if (!query) {
+          el.style.display = '';
+        } else {
+          var text = el.textContent.toLowerCase();
+          el.style.display = text.indexOf(query) !== -1 ? '' : 'none';
+        }
+      }
+      /* Also search non-searchable cards in learn view */
+      var allCards = document.querySelectorAll('#view-learn .card:not(.learn-searchable)');
+      for (var l = 0; l < allCards.length; l++) {
+        var card = allCards[l];
+        if (!query) {
+          card.style.display = '';
+        } else {
+          var cardText = card.textContent.toLowerCase();
+          card.style.display = cardText.indexOf(query) !== -1 ? '' : 'none';
+        }
+      }
+    });
+  }
+}
+
+/* ---- Collapsible section toggle (used in Learn view) ---- */
+function toggleSection(header) {
+  var content = header.nextElementSibling;
+  var icon = header.querySelector('.collapse-icon');
+  if (content.style.display === 'none' || !content.style.display) {
+    content.style.display = 'block';
+    icon.textContent = '▲';
+  } else {
+    content.style.display = 'none';
+    icon.textContent = '▼';
+  }
+}
+
+/* ---- Stats view renderer ---- */
+function renderStatsView() {
+  var p = loadProgress();
+  var accuracy = p.totalAttempted ? ((p.totalCorrect / p.totalAttempted) * 100).toFixed(1) : '0';
+  var avgTime = getAvgResponseTime();
+  var weakest = getWeakestCategory();
+  var strongest = getStrongestCategory();
+
+  var statsGrid = document.getElementById('statsGrid');
+  if (statsGrid) {
+    statsGrid.innerHTML =
+      '<div class="stat-card"><div class="value">' + p.totalAttempted + '</div><div class="label">Questions Attempted</div></div>' +
+      '<div class="stat-card"><div class="value">' + p.totalCorrect + '</div><div class="label">Correct Answers</div></div>' +
+      '<div class="stat-card"><div class="value">' + accuracy + '%</div><div class="label">Accuracy</div></div>' +
+      '<div class="stat-card"><div class="value">' + (p.bestStreak || 0) + '</div><div class="label">Best Streak</div></div>' +
+      '<div class="stat-card"><div class="value">' + (p.drillSessions || 0) + '</div><div class="label">Drill Sessions</div></div>' +
+      '<div class="stat-card"><div class="value">' + (p.timedTestSessions || 0) + '</div><div class="label">Timed Tests</div></div>' +
+      '<div class="stat-card"><div class="value">' + (p.dailyStreak || 0) + '</div><div class="label">Daily Streak 🔥</div></div>' +
+      '<div class="stat-card"><div class="value">' + (p.todayAttempted || 0) + '</div><div class="label">Today\'s Questions</div></div>' +
+      '<div class="stat-card"><div class="value">' + (avgTime || '—') + 's</div><div class="label">Avg Response Time</div></div>' +
+      '<div class="stat-card"><div class="value">' + (weakest || '—') + '</div><div class="label">Weakest Category</div></div>' +
+      '<div class="stat-card"><div class="value">' + (strongest || '—') + '</div><div class="label">Strongest Category</div></div>' +
+      '<div class="stat-card"><div class="value">' + ((p.mistakes || []).length) + '</div><div class="label">Mistakes Logged</div></div>';
+  }
+
+  /* Category stats */
+  var catContainer = document.getElementById('categoryStats');
+  if (!catContainer) return;
+  var cats = p.categoryStats || {};
+  var keys = Object.keys(cats);
+  if (keys.length === 0) {
+    catContainer.innerHTML = '<p class="secondary-text">Start practicing to see category-wise performance.</p>';
+    return;
+  }
+
+  var html = '<div class="category-stats-list">';
+  for (var i = 0; i < keys.length; i++) {
+    var cat = keys[i];
+    var cs = cats[cat];
+    var catAcc = cs.attempted ? ((cs.correct / cs.attempted) * 100).toFixed(0) : '0';
+    var barWidth = cs.attempted ? Math.round((cs.correct / cs.attempted) * 100) : 0;
+    html +=
+      '<div class="category-stat-row">' +
+        '<span class="cat-name">' + cat + '</span>' +
+        '<div class="cat-bar-container">' +
+          '<div class="cat-bar" style="width:' + barWidth + '%"></div>' +
+        '</div>' +
+        '<span class="cat-accuracy">' + catAcc + '%</span>' +
+      '</div>';
+  }
+  html += '</div>';
+  catContainer.innerHTML = html;
+}
