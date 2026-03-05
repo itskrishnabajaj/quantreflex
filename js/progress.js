@@ -209,9 +209,11 @@ function getWeakestCategory() {
   var worstAcc = 101;
   for (var i = 0; i < keys.length; i++) {
     var c = cats[keys[i]];
-    if (c.attempted >= 3) {
-      var acc = (c.correct / c.attempted) * 100;
-      if (acc < worstAcc) {
+    var attempted = parseInt(c.attempted) || 0;
+    var correct = parseInt(c.correct) || 0;
+    if (attempted >= 3) {
+      var acc = (correct / attempted) * 100;
+      if (!isNaN(acc) && acc < worstAcc) {
         worstAcc = acc;
         worst = keys[i];
       }
@@ -229,9 +231,11 @@ function getStrongestCategory() {
   var bestAcc = -1;
   for (var i = 0; i < keys.length; i++) {
     var c = cats[keys[i]];
-    if (c.attempted >= 3) {
-      var acc = (c.correct / c.attempted) * 100;
-      if (acc > bestAcc) {
+    var attempted = parseInt(c.attempted) || 0;
+    var correct = parseInt(c.correct) || 0;
+    if (attempted >= 3) {
+      var acc = (correct / attempted) * 100;
+      if (!isNaN(acc) && acc > bestAcc) {
         bestAcc = acc;
         best = keys[i];
       }

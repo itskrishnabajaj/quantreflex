@@ -1670,6 +1670,11 @@ body.numpad-active {
   padding-bottom: calc(4.5rem + env(safe-area-inset-bottom, 0px) + 14rem);
 }
 
+/* When in drill session (nav hidden), numpad sits at screen bottom */
+body.drill-session-active .custom-numpad {
+  bottom: env(safe-area-inset-bottom, 0px);
+}
+
 /* ---- Native App Feel Enhancements ---- */
 
 /* Prevent image dragging throughout the app (decorative images only) */

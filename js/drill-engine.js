@@ -68,7 +68,7 @@ function createDrillEngine(container, opts) {
         '<button id="startBtn" class="btn accent">START</button>' +
       '</div>';
     hideCustomNumpad();
-    _drillSessionActive = false;
+    _exitDrillSession();
     container.querySelector('#startBtn').addEventListener('click', begin);
   }
 
@@ -100,8 +100,7 @@ function createDrillEngine(container, opts) {
     container.querySelector('#drillExitBtn').addEventListener('click', function () {
       if (confirm(_exitSessionMsg)) {
         cleanup();
-        hideCustomNumpad();
-        _drillSessionActive = false;
+        _exitDrillSession();
         /* End Firestore batch that was started in begin() */
         if (typeof FirestoreSync !== 'undefined') {
           FirestoreSync.endDrillBatch();
@@ -190,10 +189,20 @@ function createDrillEngine(container, opts) {
       currentSessionStreak = 0;
       /* In review mode, re-queue incorrect questions at the end so users
          cycle through remaining mistakes before seeing the same one again.
-         Cap at 2x original count to prevent infinite loops. */
+         Only re-queue if this exact question isn't already waiting in the
+         remaining queue, to prevent duplicates. Cap at 2x original count. */
       if (reviewMode && count < reviewOriginalCount * 2) {
-        questions.push({ question: q.question, answer: q.answer, category: q.category });
-        count++;
+        var isDuplicate = false;
+        for (var ri = current + 1; ri < questions.length; ri++) {
+          if (questions[ri].question === q.question) {
+            isDuplicate = true;
+            break;
+          }
+        }
+        if (!isDuplicate) {
+          questions.push({ question: q.question, answer: q.answer, category: q.category });
+          count++;
+        }
       }
     }
 
@@ -252,8 +261,7 @@ function createDrillEngine(container, opts) {
 
   function finish() {
     cleanup();
-    hideCustomNumpad();
-    _drillSessionActive = false;
+    _exitDrillSession();
     SoundEngine.play('drillEnd');
     /* Haptic feedback on drill completion */
     if (typeof triggerHaptic === 'function') triggerHaptic([50, 50, 100]);
@@ -360,8 +368,8 @@ function createDrillEngine(container, opts) {
   /* ---- begin drill ---- */
 
   function begin() {
-    /* Mark session as active for gesture control */
-    _drillSessionActive = true;
+    /* Mark session as active and hide nav for immersive experience */
+    _enterDrillSession();
 
     /* Begin Firestore write batching during drill */
     if (typeof FirestoreSync !== 'undefined') {
@@ -371,12 +379,11 @@ function createDrillEngine(container, opts) {
     if (reviewMode) {
       questions = generateMistakeReviewQuestions(count);
       if (questions.length === 0) {
-        _drillSessionActive = false;
+        _exitDrillSession();
         /* End drill batch since no drill will happen */
         if (typeof FirestoreSync !== 'undefined') {
           FirestoreSync.endDrillBatch();
         }
-        hideCustomNumpad();
         container.innerHTML =
           '<div class="card center-content">' +
             '<h2>No Mistakes to Review</h2>' +

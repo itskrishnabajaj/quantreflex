@@ -51,9 +51,9 @@ function genCube() {
   if (diff === 'easy') {
     n = randInt(1, 10);
   } else if (diff === 'hard') {
-    n = randInt(5, 25);
+    n = randInt(5, 15);
   } else {
-    n = randInt(1, 20);
+    n = randInt(1, 12);
   }
   return { question: n + '³ = ?', answer: n * n * n, category: 'cubes' };
 }
@@ -161,11 +161,11 @@ function genMultiplication() {
     x = randInt(2, 20);
     y = randInt(2, 12);
   } else if (diff === 'hard') {
-    x = randInt(11, 99);
-    y = randInt(2, 49);
+    x = randInt(11, 50);
+    y = randInt(2, 25);
   } else {
-    x = randInt(2, 50);
-    y = randInt(2, 30);
+    x = randInt(2, 30);
+    y = randInt(2, 20);
   }
   return { question: x + ' × ' + y + ' = ?', answer: x * y, category: 'multiplication' };
 }
@@ -217,11 +217,11 @@ function genAverage() {
     if (randInt(0, 1) === 0) {
       return genAverageMissing();
     }
-    count = randInt(4, 6);
-    minVal = 10; maxVal = 150;
-  } else {
-    count = randInt(3, 6);
+    count = randInt(4, 5);
     minVal = 10; maxVal = 100;
+  } else {
+    count = randInt(3, 5);
+    minVal = 10; maxVal = 80;
   }
 
   var nums = [];

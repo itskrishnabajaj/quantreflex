@@ -142,6 +142,34 @@ var _activeDrillEngine = null;
 var _drillSessionActive = false;
 var _exitSessionMsg = 'Exit this session? Your progress will be lost.';
 
+/**
+ * Enter drill session mode:
+ * - set session active flag
+ * - hide bottom navigation bar for immersive experience
+ * - add body class for CSS adjustments (numpad positioning)
+ */
+function _enterDrillSession() {
+  _drillSessionActive = true;
+  var nav = document.querySelector('.bottom-nav');
+  if (nav) nav.style.display = 'none';
+  document.body.classList.add('drill-session-active');
+}
+
+/**
+ * Exit drill session mode (unified cleanup):
+ * - reset session flag
+ * - restore bottom navigation bar
+ * - remove body class
+ * - hide custom numpad and clean up input state
+ */
+function _exitDrillSession() {
+  _drillSessionActive = false;
+  var nav = document.querySelector('.bottom-nav');
+  if (nav) nav.style.display = '';
+  document.body.classList.remove('drill-session-active');
+  hideCustomNumpad();
+}
+
 /* ---- Quick Study Links Configuration ---- */
 var QUICK_LINKS_KEY = 'quant_quick_links';
 var AVAILABLE_QUICK_LINKS = [
@@ -378,19 +406,8 @@ function initSwipeNavigation() {
     var currentIndex = viewOrder.indexOf(currentView);
     if (currentIndex === -1) return;
 
-    /* Block swipe during active drill session (after START pressed) */
-    if (_drillSessionActive) return;
-
-    /* On the drill start/preview screen, swipe returns to Practice mode selection */
-    if (_activeDrillEngine) {
-      _activeDrillEngine.cleanup();
-      _activeDrillEngine = null;
-      hideCustomNumpad();
-      SoundEngine.play('tabSwitch');
-      triggerHaptic(10);
-      Router.showView('practice');
-      return;
-    }
+    /* Block swipe during active drill/test session or on drill start screen */
+    if (_drillSessionActive || _activeDrillEngine) return;
 
     var nextIndex;
     if (deltaX > 0) {
@@ -620,9 +637,7 @@ document.addEventListener('DOMContentLoaded', function () {
       if (_drillSessionActive && typeof FirestoreSync !== 'undefined') {
         FirestoreSync.endDrillBatch();
       }
-      _drillSessionActive = false;
-      /* Hide numpad when navigating */
-      hideCustomNumpad();
+      _exitDrillSession();
       SoundEngine.play('tabSwitch');
       triggerHaptic(10);
       Router.showView(view);
@@ -635,7 +650,6 @@ document.addEventListener('DOMContentLoaded', function () {
       /* Drills only run inside the Practice view, so 'practice' is always correct here */
       history.pushState({ view: 'practice' }, '', '#practice');
       if (confirm(_exitSessionMsg)) {
-        _drillSessionActive = false;
         if (_activeDrillEngine) {
           _activeDrillEngine.cleanup();
           _activeDrillEngine = null;
@@ -644,7 +658,7 @@ document.addEventListener('DOMContentLoaded', function () {
         if (typeof FirestoreSync !== 'undefined') {
           FirestoreSync.endDrillBatch();
         }
-        hideCustomNumpad();
+        _exitDrillSession();
         Router.showView('practice');
       }
       return;
@@ -653,7 +667,7 @@ document.addEventListener('DOMContentLoaded', function () {
       _activeDrillEngine.cleanup();
       _activeDrillEngine = null;
     }
-    hideCustomNumpad();
+    _exitDrillSession();
   });
 
   /* ---- HOME VIEW: render stats on every show ---- */
@@ -724,9 +738,7 @@ document.addEventListener('DOMContentLoaded', function () {
     if (_drillSessionActive && typeof FirestoreSync !== 'undefined') {
       FirestoreSync.endDrillBatch();
     }
-    _drillSessionActive = false;
-    /* Hide custom numpad when returning to practice mode select */
-    hideCustomNumpad();
+    _exitDrillSession();
     /* Reset practice view state */
     var modeSelect = document.getElementById('modeSelect');
     var categorySelect = document.getElementById('categorySelect');
@@ -829,8 +841,7 @@ function startDrillFromPractice(modeKey, category, categoryLabel) {
     if (_drillSessionActive && typeof FirestoreSync !== 'undefined') {
       FirestoreSync.endDrillBatch();
     }
-    _drillSessionActive = false;
-    hideCustomNumpad();
+    _exitDrillSession();
     Router.showView(view);
   };
 
