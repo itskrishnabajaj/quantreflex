@@ -70,7 +70,21 @@ var Auth = (function () {
 
       /* Listen for auth state changes */
       _auth.onAuthStateChanged(function (user) {
+        var previousUser = _currentUser;
         _currentUser = user;
+
+        /* If transitioning away from an authenticated user (logout, token
+           expiry, or user switch), reset the Firestore sync layer so no
+           cached data from the previous user leaks into the next session.
+           This is a defense-in-depth measure — the logout button handler
+           also calls resetSyncState(), but this covers edge cases like
+           token revocation or sign-out from another tab. */
+        if (previousUser && (!user || user.uid !== previousUser.uid)) {
+          if (typeof FirestoreSync !== 'undefined') {
+            FirestoreSync.resetSyncState();
+          }
+        }
+
         _authReady = true;
         /* Fire all waiting callbacks */
         for (var i = 0; i < _authReadyCallbacks.length; i++) {

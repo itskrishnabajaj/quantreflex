@@ -23,6 +23,7 @@ var FirestoreSync = (function () {
   var _memoryCache = null; /* In-memory cache of the user document */
   var _dataLoaded = false; /* Whether initial load has completed */
   var _drillActive = false; /* Whether a drill is in progress (defers syncing) */
+  var _loadedUserId = null; /* UID whose data is currently loaded — detects user switches */
   var SYNC_DEBOUNCE_MS = 2000; /* batch updates every 2 seconds */
 
   /* All localStorage keys that store user-specific data */
@@ -76,6 +77,7 @@ var FirestoreSync = (function () {
     _dataLoaded = false;
     _pendingUpdates = {};
     _drillActive = false;
+    _loadedUserId = null;
     if (_syncTimer) {
       clearTimeout(_syncTimer);
       _syncTimer = null;
@@ -93,6 +95,14 @@ var FirestoreSync = (function () {
    * @param {function} [callback] - Optional callback when done
    */
   function loadFromFirestore(callback) {
+    var currentUserId = FirebaseApp.getUserId();
+
+    /* If a different user is now authenticated, force a full reset so we
+       never serve stale data from the previous user's cache. */
+    if (_loadedUserId && currentUserId && _loadedUserId !== currentUserId) {
+      resetSyncState();
+    }
+
     /* Return cached data if already loaded this session */
     if (_dataLoaded && _memoryCache) {
       if (callback) callback(true);
@@ -115,6 +125,7 @@ var FirestoreSync = (function () {
         var data = doc.data();
         _memoryCache = data;
         _dataLoaded = true;
+        _loadedUserId = currentUserId;
         /* Merge Firestore data into localStorage (Firestore is source of truth) */
         if (data.settings) {
           try { localStorage.setItem('quant_reflex_settings', JSON.stringify(data.settings)); } catch (_) {}
@@ -137,6 +148,7 @@ var FirestoreSync = (function () {
       } else {
         /* First time: create document with default data */
         _createDefaultDocument();
+        _loadedUserId = currentUserId;
       }
       if (callback) callback(true);
     }).catch(function (err) {
