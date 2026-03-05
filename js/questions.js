@@ -385,7 +385,7 @@ function genTimeWork() {
     var sum = a + b;
     /* Only use questions with clean integer answers */
     if (product % sum !== 0) {
-      /* Fall back to simple variant */
+      /* Fall back to a known-good pair: 6 and 3 → (6×3)/(6+3) = 18/9 = 2 days */
       a = 6; b = 3;
       product = 18; sum = 9;
     }

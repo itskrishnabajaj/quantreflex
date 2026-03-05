@@ -674,7 +674,7 @@ document.addEventListener('DOMContentLoaded', function () {
   } else {
     /* Firebase not available — show app directly (localStorage only mode) */
     if (loginScreen) loginScreen.style.display = 'none';
-    _launchOnboardingIfNeeded();
+    _launchOnboardingOrShowMain();
   }
 
   /* ---- Bottom nav click handlers ---- */
