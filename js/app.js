@@ -136,11 +136,39 @@ window.addEventListener('beforeinstallprompt', function (e) {
   }
 });
 
+/* ---- Category name formatting for display ---- */
+var _CATEGORY_LABELS = {
+  'squares': 'Squares',
+  'cubes': 'Cubes',
+  'fractions': 'Fractions',
+  'percentages': 'Percentages',
+  'multiplication': 'Multiplication',
+  'ratios': 'Ratios',
+  'averages': 'Averages',
+  'profit-loss': 'Profit & Loss',
+  'time-speed-distance': 'Time, Speed & Distance',
+  'time-and-work': 'Time & Work'
+};
+
+/**
+ * Format a raw category key into a human-readable label.
+ * @param {string} key - raw category key (e.g. 'time-and-work')
+ * @returns {string} formatted label (e.g. 'Time & Work')
+ */
+function formatCategoryName(key) {
+  if (!key) return '—';
+  if (_CATEGORY_LABELS[key]) return _CATEGORY_LABELS[key];
+  /* Fallback: capitalize and replace hyphens with spaces */
+  return key.replace(/-/g, ' ').replace(/\b\w/g, function (c) { return c.toUpperCase(); });
+}
+
 /* ---- Active drill engine reference for cleanup ---- */
 var _activeDrillEngine = null;
 /* True only while user is actively answering questions (after START pressed) */
 var _drillSessionActive = false;
 var _exitSessionMsg = 'Exit this session? Your progress will be lost.';
+/* Prevents multiple exit dialogs from stacking */
+var _exitDialogShowing = false;
 
 /**
  * Enter drill session mode:
@@ -170,6 +198,54 @@ function _exitDrillSession() {
   hideCustomNumpad();
 }
 
+/**
+ * Show a custom in-app exit confirmation dialog instead of native confirm().
+ * Native confirm() can behave unreliably in TWA/WebView contexts,
+ * sometimes ending the session even when Cancel is pressed.
+ * @param {function} onConfirm - callback when user confirms exit
+ */
+function showExitSessionDialog(onConfirm) {
+  if (_exitDialogShowing) return;
+  _exitDialogShowing = true;
+
+  var modal = document.getElementById('exitSessionModal');
+  if (!modal) {
+    /* Fallback: use native confirm if modal element is missing */
+    if (confirm(_exitSessionMsg)) {
+      _exitDialogShowing = false;
+      onConfirm();
+    } else {
+      _exitDialogShowing = false;
+    }
+    return;
+  }
+
+  modal.style.display = 'flex';
+
+  var cancelBtn = document.getElementById('exitSessionCancel');
+  var confirmBtn = document.getElementById('exitSessionConfirm');
+
+  function closeDialog() {
+    modal.style.display = 'none';
+    _exitDialogShowing = false;
+  }
+
+  cancelBtn.onclick = function () {
+    closeDialog();
+    /* Session continues — do nothing else */
+  };
+
+  confirmBtn.onclick = function () {
+    closeDialog();
+    onConfirm();
+  };
+
+  /* Close on overlay click (treat as cancel) */
+  modal.onclick = function (e) {
+    if (e.target === modal) closeDialog();
+  };
+}
+
 /* Prevent accidental page close / tab close during active drill sessions */
 window.addEventListener('beforeunload', function (e) {
   if (_drillSessionActive) {
@@ -178,6 +254,20 @@ window.addEventListener('beforeunload', function (e) {
     e.returnValue = '';
   }
 });
+
+/**
+ * Hide the app loading indicator.
+ * Called once auth state is determined (or immediately if Firebase is not available).
+ */
+function _hideAppLoader() {
+  var loader = document.getElementById('appLoader');
+  if (loader) {
+    loader.style.opacity = '0';
+    setTimeout(function () {
+      loader.style.display = 'none';
+    }, 300);
+  }
+}
 
 /**
  * Close all open info modals (App Guide, About).
@@ -564,6 +654,7 @@ document.addEventListener('DOMContentLoaded', function () {
    * Re-render the current view to reflect loaded data.
    */
   function _revealMainApp() {
+    _hideAppLoader();
     if (container) container.style.display = '';
     if (bottomNav) bottomNav.style.display = '';
     /* Re-render current view to reflect loaded data */
@@ -575,6 +666,7 @@ document.addEventListener('DOMContentLoaded', function () {
    * Show the login screen and hide the main app.
    */
   function showLogin() {
+    _hideAppLoader();
     if (loginScreen) loginScreen.style.display = 'flex';
     if (container) container.style.display = 'none';
     if (bottomNav) bottomNav.style.display = 'none';
@@ -682,6 +774,7 @@ document.addEventListener('DOMContentLoaded', function () {
     }
   } else {
     /* Firebase not available — show app directly (localStorage only mode) */
+    _hideAppLoader();
     if (loginScreen) loginScreen.style.display = 'none';
     _launchOnboardingOrShowMain();
   }
@@ -716,10 +809,10 @@ document.addEventListener('DOMContentLoaded', function () {
     _closeAllInfoModals();
     if (_drillSessionActive) {
       /* Push history state back to prevent the browser from actually navigating away.
-         This must happen before the confirm dialog to keep the URL stable. */
+         This must happen before the dialog to keep the URL stable. */
       history.pushState({ view: 'practice' }, '', '#practice');
 
-      if (confirm(_exitSessionMsg)) {
+      showExitSessionDialog(function () {
         if (_activeDrillEngine) {
           _activeDrillEngine.cleanup();
           _activeDrillEngine = null;
@@ -730,8 +823,8 @@ document.addEventListener('DOMContentLoaded', function () {
         }
         _exitDrillSession();
         Router.showView('practice');
-      }
-      /* If cancelled, session continues — history state is already restored */
+      });
+      /* If cancelled, session continues — dialog closes without action */
       return;
     }
     if (_activeDrillEngine) {
@@ -1105,10 +1198,13 @@ function renderStatsView() {
 
   var statsGrid = document.getElementById('statsGrid');
   if (statsGrid) {
-    /* Show placeholder when not enough attempts for category ranking */
-    var categoryInsightMsg = (!weakest && !strongest && p.totalAttempted < 10) ? 'Solve more questions to unlock category insights.' : '';
-    var weakestDisplay = weakest || (categoryInsightMsg ? '🔒' : '—');
-    var strongestDisplay = strongest || (categoryInsightMsg ? '🔒' : '—');
+    /* Show placeholder when not enough data for category ranking.
+       Show the message whenever insights are unavailable, regardless of total count,
+       since the per-category threshold (10 per category) may not be met even with
+       many total attempts spread across categories. */
+    var categoryInsightMsg = (!weakest && !strongest) ? 'Solve more questions to unlock category insights.' : '';
+    var weakestDisplay = weakest ? formatCategoryName(weakest) : (categoryInsightMsg ? '🔒' : '—');
+    var strongestDisplay = strongest ? formatCategoryName(strongest) : (categoryInsightMsg ? '🔒' : '—');
 
     statsGrid.innerHTML =
       '<div class="stat-card"><div class="value">' + p.totalAttempted + '</div><div class="label">Questions Attempted</div></div>' +
@@ -1161,7 +1257,7 @@ function renderStatsView() {
     else { barClass += 'cat-bar-weak'; strengthLabel = '<span class="category-strength-label strength-weak">Weak</span>'; }
     html +=
       '<div class="category-stat-row">' +
-        '<span class="cat-name">' + cat + '</span>' +
+        '<span class="cat-name">' + formatCategoryName(cat) + '</span>' +
         '<div class="cat-bar-container">' +
           '<div class="' + barClass + '" style="width:' + barWidth + '%"></div>' +
         '</div>' +
