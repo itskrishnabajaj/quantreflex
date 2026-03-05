@@ -7,7 +7,7 @@
  *   3. Stats
  *   4. Daily Goal Selection
  *   5. Ready to Train
- *   6. First Question
+ *   6. First Question (up to 3 attempts with guided retry)
  *
  * Display logic:
  *   - Shows only when `onboardingCompleted` is false in settings.
@@ -17,6 +17,9 @@
  * Skip behavior:
  *   - Skip jumps to Screen 4 (Daily Goal).
  *   - After selecting a goal, skips remaining screens and goes to Home.
+ *
+ * Analytics:
+ *   - Records each onboarding question attempt via recordAnswer().
  */
 
 var Onboarding = (function () {
@@ -26,16 +29,40 @@ var Onboarding = (function () {
   var _skipped = false;
   var _selectedGoal = 50;
   var _onComplete = null;
+  var _questionAttempt = 0;       /* 0-based: tracks which attempt (0, 1, 2) */
+  var _currentQuestion = null;    /* current question object {text, answer} */
 
-  /* Simple easy questions for the first question screen */
+  /* Simple easy questions for the first question screen — very easy only */
   var EASY_QUESTIONS = [
     { text: '12 × 5 = ?', answer: 60 },
     { text: '8 × 7 = ?', answer: 56 },
     { text: '15 × 4 = ?', answer: 60 },
     { text: '9 × 6 = ?', answer: 54 },
     { text: '11 × 3 = ?', answer: 33 },
-    { text: '25 × 2 = ?', answer: 50 }
+    { text: '25 × 2 = ?', answer: 50 },
+    { text: '7 + 8 = ?', answer: 15 },
+    { text: '14 + 9 = ?', answer: 23 },
+    { text: '6 × 4 = ?', answer: 24 },
+    { text: '5 × 9 = ?', answer: 45 },
+    { text: '10 + 15 = ?', answer: 25 },
+    { text: '3 × 8 = ?', answer: 24 },
+    { text: '20 + 13 = ?', answer: 33 },
+    { text: '7 × 5 = ?', answer: 35 },
+    { text: '50% of 40 = ?', answer: 20 },
+    { text: '10% of 90 = ?', answer: 9 }
   ];
+
+  /**
+   * Pick a random easy question, avoiding the current one.
+   */
+  function _pickNewQuestion() {
+    var pool = EASY_QUESTIONS;
+    if (_currentQuestion && pool.length > 1) {
+      pool = pool.filter(function (q) { return q.text !== _currentQuestion.text; });
+    }
+    _currentQuestion = pool[Math.floor(Math.random() * pool.length)];
+    return _currentQuestion;
+  }
 
   /**
    * Check if onboarding should be shown.
@@ -85,6 +112,8 @@ var Onboarding = (function () {
     _currentScreen = 0;
     _skipped = false;
     _selectedGoal = 50;
+    _questionAttempt = 0;
+    _currentQuestion = null;
 
     _overlay = document.getElementById('onboardingOverlay');
     if (!_overlay) return;
@@ -102,11 +131,53 @@ var Onboarding = (function () {
   }
 
   /**
+   * Show/hide the bottom nav for Screen 3 guidance.
+   * When visible, only the Stats tab is shown and highlighted.
+   */
+  function _showStatsNavGuide() {
+    var bottomNav = document.querySelector('.bottom-nav');
+    if (!bottomNav) return;
+    var links = bottomNav.querySelectorAll('a');
+    for (var i = 0; i < links.length; i++) {
+      var view = links[i].getAttribute('data-view');
+      if (view === 'stats') {
+        links[i].style.display = '';
+        links[i].classList.add('active');
+      } else {
+        links[i].style.display = 'none';
+      }
+    }
+    bottomNav.style.display = 'flex';
+    bottomNav.style.zIndex = '10001';
+  }
+
+  /**
+   * Restore the bottom nav to its normal state after Screen 3.
+   */
+  function _hideStatsNavGuide() {
+    var bottomNav = document.querySelector('.bottom-nav');
+    if (!bottomNav) return;
+    var links = bottomNav.querySelectorAll('a');
+    for (var i = 0; i < links.length; i++) {
+      links[i].style.display = '';
+      links[i].classList.remove('active');
+    }
+    bottomNav.style.zIndex = '';
+    /* Hide nav during onboarding (it's normally hidden) */
+    bottomNav.style.display = '';
+  }
+
+  /**
    * Render the current screen inside the overlay.
    */
   function _renderScreen(index) {
     var card = _overlay.querySelector('.onboarding-card');
     if (!card) return;
+
+    /* Clean up Screen 3 stats guide if leaving it */
+    if (_currentScreen !== 2 || index !== 2) {
+      _hideStatsNavGuide();
+    }
 
     /* Slide-out animation */
     card.classList.remove('onboarding-card-enter');
@@ -159,6 +230,11 @@ var Onboarding = (function () {
 
       /* Bind event handlers for this screen */
       _bindScreenHandlers(index);
+
+      /* Show Stats nav guide on Screen 3 */
+      if (index === 2) {
+        _showStatsNavGuide();
+      }
     }, 180);
   }
 
@@ -241,9 +317,12 @@ var Onboarding = (function () {
   }
 
   function _screen6() {
-    var q = EASY_QUESTIONS[Math.floor(Math.random() * EASY_QUESTIONS.length)];
+    var q = _pickNewQuestion();
+    var attemptLabel = _questionAttempt === 0 ? 'Your first question' :
+                       _questionAttempt === 1 ? 'Try this one' :
+                       'One more try';
     return '<div class="onboarding-question-screen" data-answer="' + q.answer + '">' +
-      '<p class="onboarding-q-label">Your first question</p>' +
+      '<p class="onboarding-q-label">' + attemptLabel + '</p>' +
       '<h2 class="onboarding-q-text">' + q.text + '</h2>' +
       '<input type="text" class="input onboarding-q-input" id="obAnswer" readonly placeholder="Tap numpad to answer" autocomplete="off" />' +
       '<div class="onboarding-q-feedback" id="obFeedback"></div>' +
@@ -329,7 +408,8 @@ var Onboarding = (function () {
   }
 
   /**
-   * Check the answer to the first question.
+   * Check the answer to the onboarding question.
+   * Supports up to 3 attempts with guided retry.
    */
   function _checkOnboardingAnswer() {
     var inputEl = document.getElementById('obAnswer');
@@ -342,12 +422,25 @@ var Onboarding = (function () {
 
     if (userAnswer === '') return;
 
-    if (parseInt(userAnswer, 10) === correctAnswer) {
+    var isCorrect = parseInt(userAnswer, 10) === correctAnswer;
+
+    /* Record in analytics via progress.js */
+    if (typeof recordAnswer === 'function') {
+      var questionText = qScreen.querySelector('.onboarding-q-text');
+      var qData = {
+        question: questionText ? questionText.textContent : '',
+        answer: correctAnswer,
+        category: 'onboarding'
+      };
+      recordAnswer(isCorrect, 'onboarding', isCorrect ? null : qData);
+    }
+
+    if (isCorrect) {
       /* Correct! */
       inputEl.disabled = true;
       if (typeof triggerHaptic === 'function') triggerHaptic(50);
       if (typeof SoundEngine !== 'undefined') SoundEngine.play('drillEnd');
-      feedback.innerHTML = '<span class="onboarding-success">🎉 Great start!</span>';
+      feedback.innerHTML = '<span class="onboarding-success">🎉 Great job! You\'re ready to start training.</span>';
       feedback.style.display = 'block';
 
       /* Auto-complete after a short delay */
@@ -355,29 +448,89 @@ var Onboarding = (function () {
         _finish();
       }, 1200);
     } else {
-      /* Wrong — shake input and let user try again */
-      if (typeof triggerHaptic === 'function') triggerHaptic([40, 30, 40]);
-      inputEl.classList.add('onboarding-shake');
-      inputEl.value = '';
-      setTimeout(function () {
-        inputEl.classList.remove('onboarding-shake');
-      }, 400);
+      /* Wrong answer — guided retry system */
+      _questionAttempt++;
+
+      if (_questionAttempt < 3) {
+        /* Attempts 1 or 2: show supportive message, then present new question */
+        if (typeof triggerHaptic === 'function') triggerHaptic([40, 30, 40]);
+        var msg = _questionAttempt === 1
+          ? 'Almost there. Try the next one.'
+          : 'You\'re close. Give it one more try.';
+        feedback.innerHTML = '<span class="onboarding-retry-msg">' + msg + '</span>';
+        feedback.style.display = 'block';
+
+        /* After a brief delay, show the next question */
+        setTimeout(function () {
+          _renderQuestionRetry();
+        }, 1200);
+      } else {
+        /* 3rd wrong answer: reassuring message, redirect to Practice */
+        inputEl.disabled = true;
+        if (typeof triggerHaptic === 'function') triggerHaptic([40, 30, 40]);
+        feedback.innerHTML = '<span class="onboarding-retry-msg">No worries. Everyone starts somewhere. Let\'s practice together.</span>';
+        feedback.style.display = 'block';
+
+        setTimeout(function () {
+          _finishToPractice();
+        }, 1800);
+      }
     }
   }
 
   /**
+   * Re-render screen 6 with a new question for retry attempts.
+   * Keeps the numpad open.
+   */
+  function _renderQuestionRetry() {
+    var card = _overlay.querySelector('.onboarding-card');
+    if (!card) return;
+
+    /* Build new question content */
+    var q = _pickNewQuestion();
+    var attemptLabel = _questionAttempt === 1 ? 'Try this one' : 'One more try';
+
+    var content = '<div class="onboarding-question-screen" data-answer="' + q.answer + '">' +
+      '<p class="onboarding-q-label">' + attemptLabel + '</p>' +
+      '<h2 class="onboarding-q-text">' + q.text + '</h2>' +
+      '<input type="text" class="input onboarding-q-input" id="obAnswer" readonly placeholder="Tap numpad to answer" autocomplete="off" />' +
+      '<div class="onboarding-q-feedback" id="obFeedback"></div>' +
+      '</div>';
+
+    /* Keep progress dots */
+    var dotsHtml = '<div class="onboarding-dots">';
+    var totalScreens = 6;
+    for (var i = 0; i < totalScreens; i++) {
+      var activeClass = i === 5 ? ' onboarding-dot-active' : '';
+      var completedClass = i < 5 ? ' onboarding-dot-completed' : '';
+      dotsHtml += '<span class="onboarding-dot' + activeClass + completedClass + '"></span>';
+    }
+    dotsHtml += '</div>';
+
+    /* Slide animation for new question */
+    card.classList.remove('onboarding-card-enter');
+    card.classList.add('onboarding-card-exit');
+
+    setTimeout(function () {
+      card.innerHTML = content + dotsHtml;
+      card.classList.remove('onboarding-card-exit');
+      card.classList.add('onboarding-card-enter');
+
+      /* Re-bind numpad to new input */
+      var newInput = document.getElementById('obAnswer');
+      if (newInput) {
+        _showOnboardingNumpad(newInput);
+      }
+    }, 180);
+  }
+
+  /**
    * Complete onboarding and clean up.
+   * Navigates to Home tab.
    */
   function _finish() {
     _markCompleted();
-    /* Clean up numpad overrides */
-    var numpad = document.getElementById('customNumpad');
-    if (numpad) { numpad.style.zIndex = ''; numpad.style.bottom = ''; }
-    if (_overlay) _overlay.style.pointerEvents = '';
-    var card = _overlay ? _overlay.querySelector('.onboarding-card') : null;
-    if (card) card.style.pointerEvents = '';
-    document.body.classList.remove('onboarding-numpad-active');
-    hideCustomNumpad();
+    _cleanupNumpad();
 
     /* Fade out the overlay */
     if (_overlay) {
@@ -389,6 +542,44 @@ var Onboarding = (function () {
     }
 
     if (_onComplete) _onComplete();
+  }
+
+  /**
+   * Complete onboarding and redirect to Practice tab.
+   * Used when user fails all 3 attempts.
+   */
+  function _finishToPractice() {
+    _markCompleted();
+    _cleanupNumpad();
+
+    /* Fade out the overlay */
+    if (_overlay) {
+      _overlay.classList.add('onboarding-exit');
+      setTimeout(function () {
+        _overlay.style.display = 'none';
+        _overlay.classList.remove('onboarding-exit');
+      }, 300);
+    }
+
+    /* Navigate to Practice tab instead of Home */
+    if (typeof Router !== 'undefined') {
+      Router.showView('practice');
+    } else if (_onComplete) {
+      _onComplete();
+    }
+  }
+
+  /**
+   * Clean up numpad overrides and hide it.
+   */
+  function _cleanupNumpad() {
+    var numpad = document.getElementById('customNumpad');
+    if (numpad) { numpad.style.zIndex = ''; numpad.style.bottom = ''; }
+    if (_overlay) _overlay.style.pointerEvents = '';
+    var card = _overlay ? _overlay.querySelector('.onboarding-card') : null;
+    if (card) card.style.pointerEvents = '';
+    document.body.classList.remove('onboarding-numpad-active');
+    hideCustomNumpad();
   }
 
   return {
