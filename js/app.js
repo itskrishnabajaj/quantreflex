@@ -180,6 +180,11 @@ function _closeAllInfoModals() {
     modals[i].style.display = 'none';
     modals[i].classList.remove('closing');
   }
+  /* Clean up any active Escape key handler from openInfoModal */
+  if (typeof _infoModalEscapeHandler === 'function') {
+    document.removeEventListener('keydown', _infoModalEscapeHandler);
+    _infoModalEscapeHandler = null;
+  }
 }
 
 /* ---- Quick Study Links Configuration ---- */

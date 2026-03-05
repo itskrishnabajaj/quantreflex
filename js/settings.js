@@ -320,20 +320,28 @@ function openInfoModal(modalId) {
   function closeModal() {
     modal.classList.add('closing');
     SoundEngine.play('tableModal');
-    document.removeEventListener('keydown', handleEscape);
+    document.removeEventListener('keydown', _infoModalEscapeHandler);
+    _infoModalEscapeHandler = null;
     setTimeout(function () {
       modal.style.display = 'none';
       modal.classList.remove('closing');
     }, 200);
   }
 
-  function handleEscape(e) {
-    if (e.key === 'Escape') closeModal();
-  }
+  /* Store handler reference on module scope for cleanup by _closeAllInfoModals */
+  _infoModalEscapeHandler = function (e) {
+    if (e.key === 'Escape') {
+      e.preventDefault();
+      closeModal();
+    }
+  };
 
   if (closeBtn) closeBtn.onclick = closeModal;
   modal.onclick = function (e) {
     if (e.target === modal) closeModal();
   };
-  document.addEventListener('keydown', handleEscape);
+  document.addEventListener('keydown', _infoModalEscapeHandler);
 }
+
+/* Reference to the active info modal Escape handler for cleanup */
+var _infoModalEscapeHandler = null;
