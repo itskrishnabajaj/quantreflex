@@ -659,7 +659,8 @@ document.addEventListener('DOMContentLoaded', function () {
     if (container) container.style.display = '';
     if (bottomNav) bottomNav.style.display = '';
     /* Re-render current view to reflect loaded data.
-       Fall back to 'home' if Router hasn't initialized yet. */
+       Fall back to 'home' if Router hasn't initialized yet —
+       Router.showView safely handles unknown views by defaulting to home. */
     var currentView = Router.getCurrentView() || 'home';
     Router.showView(currentView);
   }

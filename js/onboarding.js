@@ -33,6 +33,12 @@ var Onboarding = (function () {
   var _questionAttempt = 0;       /* 0-based: tracks which attempt (0, 1, 2) */
   var _currentQuestion = null;    /* current question object {text, answer} */
 
+  /** Escape HTML special characters to prevent XSS when inserting user text */
+  function _escapeHtml(str) {
+    if (!str) return '';
+    return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+  }
+
   /* Simple easy questions for the first question screen — very easy only.
      Each question has a real category so analytics are accurate.
      No addition or subtraction — only question types users will practice. */
@@ -266,7 +272,7 @@ var Onboarding = (function () {
       '<p class="onboarding-desc">Improve mental math speed for CAT, MBA CET, and other aptitude exams using fast drills and smart practice tools.</p>' +
       '<div class="onboarding-name-field">' +
       '<label class="onboarding-name-label">What should we call you?</label>' +
-      '<input type="text" class="input onboarding-name-input" id="obNameInput" placeholder="Enter your name" maxlength="50" value="' + (_userName || '') + '" />' +
+      '<input type="text" class="input onboarding-name-input" id="obNameInput" placeholder="Enter your name" maxlength="50" value="' + _escapeHtml(_userName) + '" />' +
       '</div>' +
       '<div class="onboarding-actions">' +
       '<button class="btn accent onboarding-next-btn" id="obNext">Next</button>' +
@@ -322,8 +328,9 @@ var Onboarding = (function () {
   }
 
   function _screen5() {
-    var title = _userName
-      ? _userName + ', are you ready to train?'
+    var safeName = _escapeHtml(_userName);
+    var title = safeName
+      ? safeName + ', are you ready to train?'
       : 'Ready to Train Your Brain?';
     return '<div class="onboarding-visual">' +
       '<div class="onboarding-icon-anim">' +
