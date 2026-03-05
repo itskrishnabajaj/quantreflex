@@ -167,7 +167,7 @@ var Onboarding = (function () {
     }
     bottomNav.style.zIndex = '';
     bottomNav.style.pointerEvents = '';
-    /* Restore nav to its normal display (visible behind the overlay) */
+    /* Restore nav to its default CSS display state */
     bottomNav.style.display = '';
   }
 
