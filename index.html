@@ -365,116 +365,174 @@
         <button id="installBtn" class="btn accent">Install App</button>
       </div>
 
-      <!-- Section 1: Appearance -->
-      <div class="settings-group">
-        <div class="card settings-row">
-          <div class="settings-label">
-            <h3>🌙 Dark Mode</h3>
-            <p>Switch between light and dark theme</p>
+      <!-- SECTION 1 — Appearance & Personalization -->
+      <div class="settings-section">
+        <h3 class="settings-section-title">Appearance &amp; Personalization</h3>
+        <div class="settings-section-card">
+          <div class="settings-row">
+            <div class="settings-label">
+              <h3>🌙 Dark Mode</h3>
+              <p>Switch between light and dark theme</p>
+            </div>
+            <label class="toggle">
+              <input type="checkbox" id="darkModeToggle" />
+              <span class="toggle-slider"></span>
+            </label>
           </div>
-          <label class="toggle">
-            <input type="checkbox" id="darkModeToggle" />
-            <span class="toggle-slider"></span>
-          </label>
+          <div class="settings-row-divider"></div>
+          <div class="settings-row settings-row-disabled">
+            <div class="settings-label">
+              <h3>🎨 Themes</h3>
+              <p>Coming soon — customize the look of your trainer.</p>
+            </div>
+          </div>
         </div>
       </div>
 
-      <div class="settings-divider"></div>
-
-      <!-- Section 2: Training -->
-      <div class="settings-group">
-        <div class="card">
-          <h3 style="margin-bottom:.5rem;">📈 Difficulty Level</h3>
-          <p class="secondary-text" style="margin-bottom:.75rem;">Adjusts question complexity</p>
-          <select id="difficultySelect" class="input" style="text-align:left;">
-            <option value="easy">Easy</option>
-            <option value="medium" selected>Medium</option>
-            <option value="hard">Hard</option>
-          </select>
-        </div>
-
-        <div class="card settings-row">
-          <div class="settings-label">
-            <h3>🎯 Daily Goal</h3>
-            <p>Set your daily question target</p>
+      <!-- SECTION 2 — Practice Preferences -->
+      <div class="settings-section">
+        <h3 class="settings-section-title">Practice Preferences</h3>
+        <div class="settings-section-card">
+          <div class="settings-row-block">
+            <h3>📈 Difficulty Level</h3>
+            <p class="secondary-text" style="margin-bottom:.75rem;">Adjusts question complexity</p>
+            <select id="difficultySelect" class="input" style="text-align:left;">
+              <option value="easy">Easy</option>
+              <option value="medium" selected>Medium</option>
+              <option value="hard">Hard</option>
+            </select>
           </div>
-          <input type="number" id="dailyGoalInput" class="goal-input" min="10" max="500" step="10" value="50" />
+          <div class="settings-row-divider"></div>
+          <div class="settings-row">
+            <div class="settings-label">
+              <h3>🎯 Daily Goal</h3>
+              <p>Set your daily question target</p>
+            </div>
+            <input type="number" id="dailyGoalInput" class="goal-input" min="10" max="500" step="10" value="50" />
+          </div>
+          <div class="settings-row-divider"></div>
+          <div class="settings-row">
+            <div class="settings-label">
+              <h3>⏭️ Skip Questions</h3>
+              <p>Allow skipping questions in drills</p>
+            </div>
+            <label class="toggle">
+              <input type="checkbox" id="skipToggle" />
+              <span class="toggle-slider"></span>
+            </label>
+          </div>
         </div>
       </div>
 
-      <div class="settings-divider"></div>
-
-      <!-- Section 3: Feedback & Notifications -->
-      <div class="settings-group">
-        <div class="card settings-row">
-          <div class="settings-label">
-            <h3>🔊 Sound Feedback</h3>
-            <p>Play sound on correct/wrong answers</p>
+      <!-- SECTION 3 — Feedback & Interactions -->
+      <div class="settings-section">
+        <h3 class="settings-section-title">Feedback &amp; Interactions</h3>
+        <div class="settings-section-card">
+          <div class="settings-row">
+            <div class="settings-label">
+              <h3>🔊 Sound Feedback</h3>
+              <p>Play sound on answers and navigation</p>
+            </div>
+            <label class="toggle">
+              <input type="checkbox" id="soundToggle" />
+              <span class="toggle-slider"></span>
+            </label>
           </div>
-          <label class="toggle">
-            <input type="checkbox" id="soundToggle" />
-            <span class="toggle-slider"></span>
-          </label>
-        </div>
-
-        <div class="card settings-row">
-          <div class="settings-label">
-            <h3>📳 Vibration</h3>
-            <p>Vibrate on correct answers</p>
+          <div class="settings-row-divider"></div>
+          <div class="settings-row">
+            <div class="settings-label">
+              <h3>📳 Vibration</h3>
+              <p>Vibrate on correct answers</p>
+            </div>
+            <label class="toggle">
+              <input type="checkbox" id="vibrationToggle" />
+              <span class="toggle-slider"></span>
+            </label>
           </div>
-          <label class="toggle">
-            <input type="checkbox" id="vibrationToggle" />
-            <span class="toggle-slider"></span>
-          </label>
-        </div>
-
-        <div class="card settings-row">
-          <div class="settings-label">
-            <h3>🔔 Notifications</h3>
-            <p>Receive daily motivational reminders</p>
+          <div class="settings-row-divider"></div>
+          <div class="settings-row">
+            <div class="settings-label">
+              <h3>🐢 Reduced Motion</h3>
+              <p>Reduce animations for accessibility</p>
+            </div>
+            <label class="toggle">
+              <input type="checkbox" id="reducedMotionToggle" />
+              <span class="toggle-slider"></span>
+            </label>
           </div>
-          <label class="toggle">
-            <input type="checkbox" id="notificationsToggle" />
-            <span class="toggle-slider"></span>
-          </label>
         </div>
       </div>
 
-      <div class="settings-divider"></div>
-
-      <!-- Section 4: App Info & About -->
-      <div class="settings-group">
-        <div class="card settings-row settings-link" id="openAppGuide">
-          <div class="settings-label">
-            <h3>📖 App Guide</h3>
-            <p>Learn how to use the app</p>
+      <!-- SECTION 4 — Notifications -->
+      <div class="settings-section">
+        <h3 class="settings-section-title">Notifications</h3>
+        <div class="settings-section-card">
+          <div class="settings-row">
+            <div class="settings-label">
+              <h3>🔔 Daily Reminders</h3>
+              <p>Receive daily motivational push reminders</p>
+            </div>
+            <label class="toggle">
+              <input type="checkbox" id="notificationsToggle" />
+              <span class="toggle-slider"></span>
+            </label>
           </div>
-          <span class="settings-chevron">›</span>
-        </div>
-
-        <div class="card settings-row settings-link" id="openAbout">
-          <div class="settings-label">
-            <h3>💡 About</h3>
-            <p>App info and developer</p>
-          </div>
-          <span class="settings-chevron">›</span>
         </div>
       </div>
 
-      <div class="settings-divider"></div>
-
-      <!-- Section 5: Data & Account -->
-      <div class="settings-group">
-        <div class="card">
-          <h3 style="margin-bottom:.5rem;">🗑️ Clear Data</h3>
-          <p class="secondary-text" style="margin-bottom:.75rem;">Clear specific data or reset everything</p>
-          <button id="clearDataBtn" class="btn" style="background:#fee2e2;color:#dc2626;">Clear Data</button>
+      <!-- SECTION 5 — Help & Information -->
+      <div class="settings-section">
+        <h3 class="settings-section-title">Help &amp; Information</h3>
+        <div class="settings-section-card">
+          <div class="settings-row settings-link" id="openAppGuide">
+            <div class="settings-label">
+              <h3>📖 App Guide</h3>
+              <p>Learn how to use the app</p>
+            </div>
+            <span class="settings-chevron">›</span>
+          </div>
+          <div class="settings-row-divider"></div>
+          <div class="settings-row settings-link" id="openAbout">
+            <div class="settings-label">
+              <h3>💡 About</h3>
+              <p>App info and developer</p>
+            </div>
+            <span class="settings-chevron">›</span>
+          </div>
         </div>
+      </div>
 
-        <div class="card" id="logoutCard">
-          <h3 style="margin-bottom:.5rem;">🚪 Account</h3>
-          <p class="secondary-text" style="margin-bottom:.75rem;">Log out of your account on this device</p>
-          <button id="logoutBtn" class="btn" style="background:#fef3c7;color:#92400e;">Log Out</button>
+      <!-- SECTION 6 — Data Management -->
+      <div class="settings-section">
+        <h3 class="settings-section-title">Data Management</h3>
+        <div class="settings-section-card">
+          <div class="settings-row-block">
+            <h3>🗑️ Clear Data</h3>
+            <p class="secondary-text" style="margin-bottom:.75rem;">Clear specific data or reset everything</p>
+            <button id="clearDataBtn" class="btn" style="background:#fee2e2;color:#dc2626;">Clear Data</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- SECTION 7 — Account Management -->
+      <div class="settings-section">
+        <h3 class="settings-section-title">Account</h3>
+        <div class="settings-section-card">
+          <div class="settings-row settings-link" id="openProfileModal">
+            <div class="settings-label">
+              <h3>👤 Profile</h3>
+              <p>View and edit your profile</p>
+            </div>
+            <span class="settings-chevron">›</span>
+          </div>
+          <div class="settings-row-divider"></div>
+          <div class="settings-row-block">
+            <button id="logoutBtn" class="btn" style="background:#fef3c7;color:#92400e;width:100%;">🚪 Log Out</button>
+          </div>
+          <div class="settings-row-divider"></div>
+          <div class="settings-row-block">
+            <button id="deleteAccountBtn" class="btn" style="background:#fee2e2;color:#dc2626;width:100%;">🗑️ Delete Account</button>
+          </div>
         </div>
       </div>
     </div>
