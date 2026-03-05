@@ -802,6 +802,13 @@ document.addEventListener('DOMContentLoaded', function () {
       _closeAllInfoModals();
       SoundEngine.play('tabSwitch');
       triggerHaptic(10);
+      /* Trigger icon pop animation */
+      var iconEl = this.querySelector('.nav-icon img');
+      if (iconEl) {
+        iconEl.classList.remove('tab-pop');
+        void iconEl.offsetWidth; /* force reflow to restart animation */
+        iconEl.classList.add('tab-pop');
+      }
       Router.showView(view);
     });
   }

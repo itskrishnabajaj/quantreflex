@@ -174,6 +174,7 @@ header h1 {
 .header-icon {
   width: 28px;
   height: 28px;
+  object-fit: contain;
   vertical-align: middle;
   flex-shrink: 0;
 }
@@ -700,12 +701,15 @@ body.dark-mode .drill-exit-btn:active {
   display: flex;
   align-items: center;
   justify-content: center;
+  width: 24px;
+  height: 24px;
   margin-bottom: .2rem;
   line-height: 0;
 }
 .bottom-nav a .nav-icon img {
   width: 24px;
   height: 24px;
+  object-fit: contain;
   transition: transform .2s cubic-bezier(.25,.46,.45,.94), opacity .2s;
   opacity: .55;
 }
@@ -713,6 +717,8 @@ body.dark-mode .drill-exit-btn:active {
 .bottom-nav a.active .nav-icon img {
   transform: scale(1.15);
   opacity: 1;
+}
+.bottom-nav a .nav-icon img.tab-pop {
   animation: tab-icon-pop .25s cubic-bezier(.25,.46,.45,.94);
 }
 @keyframes tab-icon-pop {
