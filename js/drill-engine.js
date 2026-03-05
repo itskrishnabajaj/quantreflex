@@ -100,23 +100,10 @@ function createDrillEngine(container, opts) {
        the TWA/WebView bug where native confirm() can end the session
        even when Cancel is pressed */
     container.querySelector('#drillExitBtn').addEventListener('click', function () {
-      if (typeof showExitSessionDialog === 'function') {
-        showExitSessionDialog(function () {
-          cleanup();
-          _exitDrillSession();
-          /* End Firestore batch that was started in begin() */
-          if (typeof FirestoreSync !== 'undefined') {
-            FirestoreSync.endDrillBatch();
-          }
-          if (onFinish) {
-            onFinish('practice');
-          } else {
-            Router.showView('practice');
-          }
-        });
-      } else if (confirm(_exitSessionMsg)) {
+      function performExit() {
         cleanup();
         _exitDrillSession();
+        /* End Firestore batch that was started in begin() */
         if (typeof FirestoreSync !== 'undefined') {
           FirestoreSync.endDrillBatch();
         }
@@ -125,6 +112,12 @@ function createDrillEngine(container, opts) {
         } else {
           Router.showView('practice');
         }
+      }
+
+      if (typeof showExitSessionDialog === 'function') {
+        showExitSessionDialog(performExit);
+      } else if (confirm(_exitSessionMsg)) {
+        performExit();
       }
     });
 
