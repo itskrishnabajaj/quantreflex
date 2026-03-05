@@ -341,6 +341,8 @@ function openClearConfirmModal(type) {
         progress.currentStreak = 0;
         progress.bestStreak = 0;
         progress.dailyStreak = 0;
+        progress.bestDailyStreak = 0;
+        progress.lastPracticeDate = null;
         localStorage.setItem('quant_reflex_progress', JSON.stringify(progress));
         if (typeof FirestoreSync !== 'undefined') {
           FirestoreSync.syncStats(progress);
@@ -512,28 +514,40 @@ function openDeleteAccountModal() {
 
     var user = Auth.getCurrentUser();
 
-    /* Delete Firestore user document first */
+    /**
+     * Delete account in proper order:
+     * 1. Delete Firestore user document (while auth context is valid)
+     * 2. Clear all local data
+     * 3. Delete Firebase Auth account (last — invalidates the session)
+     */
+    function deleteAuthAndReload() {
+      try {
+        localStorage.clear();
+      } catch (_) {}
+      user.delete().then(function () {
+        window.location.reload();
+      }).catch(function (err) {
+        showToast('Account deletion failed: ' + err.message);
+      });
+    }
+
     if (typeof FirebaseApp !== 'undefined' && FirebaseApp.isReady()) {
       var db = FirebaseApp.getDb();
       var userId = FirebaseApp.getUserId();
       if (db && userId) {
-        db.collection('users').doc(userId).delete().catch(function (err) {
-          console.warn('Failed to delete Firestore user document:', err);
-        });
+        db.collection('users').doc(userId).delete()
+          .then(deleteAuthAndReload)
+          .catch(function (err) {
+            console.warn('Failed to delete Firestore user document:', err);
+            /* Proceed with auth deletion even if Firestore delete fails */
+            deleteAuthAndReload();
+          });
+        return;
       }
     }
 
-    /* Clear all local data */
-    try {
-      localStorage.clear();
-    } catch (_) {}
-
-    /* Delete Firebase Auth account */
-    user.delete().then(function () {
-      window.location.reload();
-    }).catch(function (err) {
-      showToast('Account deletion failed: ' + err.message);
-    });
+    /* No Firestore — just clear and delete auth */
+    deleteAuthAndReload();
   };
 }
 

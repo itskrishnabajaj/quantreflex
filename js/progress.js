@@ -49,6 +49,7 @@ function loadProgress() {
       data.drillSessions = parseInt(data.drillSessions) || 0;
       data.timedTestSessions = parseInt(data.timedTestSessions) || 0;
       data.dailyStreak = parseInt(data.dailyStreak) || 0;
+      data.bestDailyStreak = parseInt(data.bestDailyStreak) || 0;
       data.todayAttempted = parseInt(data.todayAttempted) || 0;
       data.todayCorrect = parseInt(data.todayCorrect) || 0;
       return data;
@@ -60,7 +61,8 @@ function loadProgress() {
     totalAttempted: 0, totalCorrect: 0,
     bestStreak: 0, currentStreak: 0,
     drillSessions: 0, timedTestSessions: 0,
-    dailyStreak: 0, lastActiveDate: null,
+    dailyStreak: 0, bestDailyStreak: 0,
+    lastActiveDate: null,
     lastPracticeDate: null,
     todayAttempted: 0, todayCorrect: 0,
     categoryStats: {},
@@ -96,6 +98,10 @@ function recordAnswer(correct, category, questionData, responseTime) {
   /* Daily streak: increment on first practice of a new day */
   if (p.lastPracticeDate !== today) {
     p.dailyStreak = (p.dailyStreak || 0) + 1;
+    /* Track best daily streak ever achieved */
+    if (p.dailyStreak > (p.bestDailyStreak || 0)) {
+      p.bestDailyStreak = p.dailyStreak;
+    }
     p.lastPracticeDate = today;
   }
 
@@ -266,7 +272,8 @@ function resetProgress() {
     totalAttempted: 0, totalCorrect: 0,
     bestStreak: 0, currentStreak: 0,
     drillSessions: 0, timedTestSessions: 0,
-    dailyStreak: 0, lastActiveDate: null,
+    dailyStreak: 0, bestDailyStreak: 0,
+    lastActiveDate: null,
     lastPracticeDate: null,
     todayAttempted: 0, todayCorrect: 0,
     categoryStats: {},
