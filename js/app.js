@@ -1132,7 +1132,7 @@ function renderStatsView() {
   var keys = Object.keys(cats);
 
   /* Filter out invalid categories (e.g. legacy "onboarding" entries) */
-  keys = keys.filter(function (k) { return !_INVALID_CATEGORIES || !_INVALID_CATEGORIES[k]; });
+  keys = keys.filter(function (k) { return isValidCategory(k); });
 
   if (keys.length === 0) {
     catContainer.innerHTML = '<p class="secondary-text">Start practicing to see category-wise performance.</p>';

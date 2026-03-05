@@ -203,6 +203,11 @@ function getAvgResponseTime() {
 /** Categories that are not valid for analytics (e.g. from legacy data) */
 var _INVALID_CATEGORIES = { onboarding: true };
 
+/** Check if a category name is valid for analytics display */
+function isValidCategory(cat) {
+  return !_INVALID_CATEGORIES[cat];
+}
+
 /** Get weakest category (lowest accuracy with at least 10 attempts) */
 function getWeakestCategory() {
   var p = loadProgress();
