@@ -119,7 +119,7 @@ function initSettingsView() {
       saveSettings(settings);
       SoundEngine.play('settingsToggle');
     });
-    reducedMotionToggle.checked = settings.reducedMotion || false;
+    reducedMotionToggle.checked = !!settings.reducedMotion;
   }
 
   /* Skip Question toggle */
@@ -137,7 +137,7 @@ function initSettingsView() {
       saveSettings(settings);
       SoundEngine.play('settingsToggle');
     });
-    skipToggle.checked = (settings.skipEnabled && settings.difficulty !== 'hard') || false;
+    skipToggle.checked = !!(settings.skipEnabled && settings.difficulty !== 'hard');
   }
 
   difficultySelect = rebind(difficultySelect, 'change', function () {
@@ -471,7 +471,7 @@ function openProfileModal() {
           showToast('Password update failed: ' + err.message);
         });
       }
-    } else if (newPassword && newPassword.length > 0 && newPassword.length < 6) {
+    } else if (newPassword && newPassword.length < 6) {
       showToast('Password must be at least 6 characters.');
       return;
     }

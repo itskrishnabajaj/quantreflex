@@ -909,11 +909,19 @@ body.dark-mode .profile-field-label {
 }
 
 /* Reduced Motion */
+@media (prefers-reduced-motion: reduce) {
+  body,
+  body * {
+    animation-duration: 0s !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0s !important;
+  }
+}
 body.reduced-motion,
 body.reduced-motion * {
-  animation-duration: 0.01ms !important;
+  animation-duration: 0s !important;
   animation-iteration-count: 1 !important;
-  transition-duration: 0.01ms !important;
+  transition-duration: 0s !important;
 }
 
 /* Toggle Switch */
