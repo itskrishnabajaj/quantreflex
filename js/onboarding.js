@@ -132,7 +132,7 @@ var Onboarding = (function () {
           break;
         case 3:
           content = _screen4();
-          dotIndex = _skipped ? 3 : 3;
+          dotIndex = 3;
           break;
         case 4:
           content = _screen5();
