@@ -12,12 +12,13 @@
  *   8. Manage customizable quick study links
  */
 
-/* ---- Apply dark mode and reduced motion from settings immediately ---- */
+/* ---- Apply dark mode, theme and reduced motion from settings immediately ---- */
 (function () {
   try {
     var settings = JSON.parse(localStorage.getItem('quant_reflex_settings') || '{}');
     if (settings.darkMode) document.body.classList.add('dark-mode');
     if (settings.reducedMotion) document.body.classList.add('reduced-motion');
+    if (settings.theme === 'playful') document.body.classList.add('theme-playful');
   } catch (_) { /* ignore */ }
 })();
 
@@ -611,10 +612,11 @@ document.addEventListener('DOMContentLoaded', function () {
     if (typeof FirestoreSync !== 'undefined' && typeof FirebaseApp !== 'undefined' && FirebaseApp.isReady() && FirebaseApp.getUserId()) {
       FirestoreSync.loadFromFirestore(function (success) {
         if (success) {
-          /* Re-apply dark mode in case Firestore had updated settings */
+          /* Re-apply dark mode and theme in case Firestore had updated settings */
           try {
             var s = JSON.parse(localStorage.getItem('quant_reflex_settings') || '{}');
             document.body.classList.toggle('dark-mode', !!s.darkMode);
+            if (typeof applyTheme === 'function') applyTheme(s.theme || 'classic');
           } catch (_) { /* ignore */ }
         }
         /* Check onboarding BEFORE showing main UI */

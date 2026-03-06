@@ -15,7 +15,8 @@ function loadSettings() {
   } catch (_) { /* ignore */ }
   return {
     darkMode: false, sound: true, vibration: true, difficulty: 'medium',
-    dailyGoal: 50, reducedMotion: false, skipEnabled: false, notificationsEnabled: false
+    dailyGoal: 50, reducedMotion: false, skipEnabled: false, notificationsEnabled: false,
+    theme: 'classic'
   };
 }
 
@@ -27,6 +28,18 @@ function saveSettings(s) {
     }
   } catch (e) {
     console.warn('Failed to save settings:', e);
+  }
+}
+
+/**
+ * Apply a theme by class name.
+ * Removes all theme classes and applies the selected one.
+ * @param {string} theme - 'classic' or 'playful'
+ */
+function applyTheme(theme) {
+  document.body.classList.remove('theme-playful');
+  if (theme === 'playful') {
+    document.body.classList.add('theme-playful');
   }
 }
 
@@ -89,6 +102,18 @@ function initSettingsView() {
     if (typeof triggerHaptic === 'function') triggerHaptic(15);
   });
   darkToggle.checked = settings.darkMode || false;
+
+  /* Theme selector */
+  var themeSelect = document.getElementById('themeSelect');
+  if (themeSelect) {
+    themeSelect = rebind(themeSelect, 'change', function () {
+      settings.theme = this.value;
+      applyTheme(this.value);
+      saveSettings(settings);
+      SoundEngine.play('settingsToggle');
+    });
+    themeSelect.value = settings.theme || 'classic';
+  }
 
   soundToggle = rebind(soundToggle, 'change', function () {
     settings.sound = this.checked;
@@ -389,7 +414,8 @@ function openClearConfirmModal(type) {
         try {
           localStorage.setItem('quant_reflex_settings', JSON.stringify({
             darkMode: false, sound: true, vibration: true, difficulty: 'medium',
-            dailyGoal: 50, reducedMotion: false, skipEnabled: false, notificationsEnabled: false
+            dailyGoal: 50, reducedMotion: false, skipEnabled: false, notificationsEnabled: false,
+            theme: 'classic'
           }));
           localStorage.setItem('quant_custom_formulas', '{}');
           localStorage.setItem('quant_custom_topics', '[]');
@@ -424,8 +450,9 @@ function openProfileModal() {
 
   var nameInput = document.getElementById('profileName');
   var usernameInput = document.getElementById('profileUsername');
-  var joinedInput = document.getElementById('profileJoined');
+  var bannerEl = document.getElementById('profileBanner');
   var passwordInput = document.getElementById('profilePassword');
+  var passwordToggle = document.getElementById('profilePasswordToggle');
   var cancelBtn = document.getElementById('profileCancel');
   var saveBtn = document.getElementById('profileSave');
 
@@ -440,11 +467,34 @@ function openProfileModal() {
 
   if (nameInput) nameInput.value = profile.name || '';
   if (usernameInput) usernameInput.value = profile.username || '';
-  if (joinedInput) {
+
+  /* Profile banner: "{Name} started mathing on {Date}" */
+  if (bannerEl) {
+    var displayName = profile.name || 'You';
     var joinedDate = profile.createdAt ? new Date(profile.createdAt) : null;
-    joinedInput.value = joinedDate ? joinedDate.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' }) : '—';
+    var dateStr = joinedDate ? joinedDate.toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' }) : 'an unknown date';
+    bannerEl.textContent = displayName + ' started mathing on ' + dateStr + '.';
   }
-  if (passwordInput) passwordInput.value = '';
+
+  /* Reset password field */
+  if (passwordInput) {
+    passwordInput.value = '';
+    passwordInput.type = 'password';
+    passwordInput.placeholder = '\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022';
+  }
+
+  /* Password eye toggle */
+  if (passwordToggle && passwordInput) {
+    passwordToggle.onclick = function () {
+      if (passwordInput.type === 'password') {
+        passwordInput.type = 'text';
+        passwordToggle.textContent = '🙈';
+      } else {
+        passwordInput.type = 'password';
+        passwordToggle.textContent = '👁️';
+      }
+    };
+  }
 
   function closeModal() {
     modal.style.display = 'none';
