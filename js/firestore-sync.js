@@ -181,13 +181,14 @@ var FirestoreSync = (function () {
       },
       settings: {
         darkMode: false, sound: true, vibration: true, difficulty: 'medium',
-        dailyGoal: 50, reducedMotion: false, skipEnabled: false, notificationsEnabled: false
+        dailyGoal: 50, reducedMotion: false, skipEnabled: false, notificationsEnabled: false,
+        theme: 'classic'
       },
       stats: {
         totalAttempted: 0, totalCorrect: 0,
         bestStreak: 0, currentStreak: 0,
         drillSessions: 0, timedTestSessions: 0,
-        dailyStreak: 0, lastActiveDate: null,
+        dailyStreak: 0, bestDailyStreak: 0, lastActiveDate: null,
         lastPracticeDate: null,
         todayAttempted: 0, todayCorrect: 0,
         categoryStats: {}, mistakes: [],
@@ -416,7 +417,8 @@ var FirestoreSync = (function () {
     } else if (type === 'all') {
       var defaultSettings = {
         darkMode: false, sound: true, vibration: true, difficulty: 'medium',
-        dailyGoal: 50, reducedMotion: false, skipEnabled: false, notificationsEnabled: false
+        dailyGoal: 50, reducedMotion: false, skipEnabled: false, notificationsEnabled: false,
+        theme: 'classic'
       };
       var defaultStats = {
         totalAttempted: 0, totalCorrect: 0,

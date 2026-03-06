@@ -482,6 +482,9 @@ function openProfileModal() {
     passwordInput.type = 'password';
     passwordInput.placeholder = '\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022';
   }
+  if (passwordToggle) {
+    passwordToggle.textContent = '👁️';
+  }
 
   /* Password eye toggle */
   if (passwordToggle && passwordInput) {
