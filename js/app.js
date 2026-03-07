@@ -354,38 +354,46 @@ function _hideAppLoader() {
     return;
   }
 
+  /* Stage timing constants (ms) — keep in sync with CSS animation durations */
+  var BOUNCE_START     = 250;
+  var BLOB_EMERGE      = 600;
+  var BLOB_EXPAND      = 1000;
+  var FILL_START       = 1400;
+  var FADEOUT_START     = 1700;
+  var REMOVE_AT        = 2000;
+
   /* Stage 1 — brief pause (0–250 ms) is implicit: the loader is already visible. */
 
-  /* Stage 2 — Q bounce (250 ms mark) */
+  /* Stage 2 — Q bounce */
   setTimeout(function () {
     loader.classList.add('splash-bounce');
-  }, 250);
+  }, BOUNCE_START);
 
-  /* Stage 3 — blob emerge (600 ms mark) */
+  /* Stage 3 — blob emerge */
   setTimeout(function () {
     loader.classList.add('splash-blob-emerge');
-  }, 600);
+  }, BLOB_EMERGE);
 
-  /* Stage 4 — amoeba expansion (1000 ms mark) */
+  /* Stage 4 — amoeba expansion */
   setTimeout(function () {
     loader.classList.remove('splash-blob-emerge');
     loader.classList.add('splash-expand');
-  }, 1000);
+  }, BLOB_EXPAND);
 
-  /* Stage 5 — full-screen blue fill + Q emphasis (1400 ms mark) */
+  /* Stage 5 — full-screen blue fill + Q emphasis */
   setTimeout(function () {
     loader.classList.add('splash-fill');
-  }, 1400);
+  }, FILL_START);
 
-  /* Stage 6 — fade out (1700 ms mark) */
+  /* Stage 6 — fade out */
   setTimeout(function () {
     loader.classList.add('splash-fadeout');
-  }, 1700);
+  }, FADEOUT_START);
 
-  /* Remove from DOM after animation completes (2000 ms mark) */
+  /* Remove from DOM after animation completes */
   setTimeout(function () {
-    if (loader.parentNode) loader.parentNode.removeChild(loader);
-  }, 2000);
+    if (loader && loader.parentNode) loader.parentNode.removeChild(loader);
+  }, REMOVE_AT);
 }
 
 /**

@@ -86,7 +86,7 @@ body.dark-mode .app-loader { background: #0d1117; }
   will-change: transform;
 }
 
-/* Blob behind Q */
+/* Blob behind Q — irregular border-radius creates an organic, non-circular shape */
 .splash-blob {
   position: absolute;
   z-index: 1;
