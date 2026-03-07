@@ -354,29 +354,31 @@ function _hideAppLoader() {
     return;
   }
 
-  /* Stage timing constants (ms) — keep in sync with CSS animation durations */
-  var BOUNCE_START     = 250;
-  var BLOB_EMERGE      = 600;
-  var BLOB_EXPAND      = 1000;
-  var FILL_START       = 1400;
-  var FADEOUT_START     = 1700;
-  var REMOVE_AT        = 2000;
+  /* Stage timing constants (ms) — keep in sync with CSS animation durations.
+     Stages overlap slightly for fluid sequencing (~1.95 s total). */
+  var BOUNCE_START  = 200;   /* idle → bounce          */
+  var BLOB_EMERGE   = 480;   /* blob fades in           */
+  var BLOB_EXPAND   = 880;   /* amoeba growth begins    */
+  var FILL_START    = 1380;  /* bg turns blue + emphasis */
+  var FADEOUT_START  = 1650;  /* dissolve out            */
+  var REMOVE_AT     = 1950;  /* DOM cleanup             */
 
-  /* Stage 1 — brief pause (0–250 ms) is implicit: the loader is already visible. */
+  /* Stage 1 — brief pause is implicit: the loader is already visible
+     with a gentle idle pulse on the Q logo. */
 
-  /* Stage 2 — Q bounce */
+  /* Stage 2 — Q bounce (replaces idle animation via higher specificity) */
   setTimeout(function () {
     loader.classList.add('splash-bounce');
   }, BOUNCE_START);
 
-  /* Stage 3 — blob emerge */
+  /* Stage 3 — blob emerge (overlaps with bounce tail for organic feel) */
   setTimeout(function () {
     loader.classList.add('splash-blob-emerge');
   }, BLOB_EMERGE);
 
-  /* Stage 4 — amoeba expansion */
+  /* Stage 4 — amoeba expansion (CSS source order overrides emerge animation;
+     blob-emerge class stays so opacity: 1 forwards fill is not lost) */
   setTimeout(function () {
-    loader.classList.remove('splash-blob-emerge');
     loader.classList.add('splash-expand');
   }, BLOB_EXPAND);
 

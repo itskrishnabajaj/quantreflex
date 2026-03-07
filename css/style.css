@@ -61,7 +61,6 @@ body {
 * { scrollbar-width: none; }
 body.loaded { opacity: 1; }
 
-/* ---- App Loading Indicator — Brain Animation ---- */
 /* ---- Splash Screen ---- */
 .app-loader {
   position: fixed;
@@ -72,10 +71,14 @@ body.loaded { opacity: 1; }
   background: #ffffff;
   z-index: 9999;
   overflow: hidden;
+  touch-action: none;
+  -webkit-user-select: none;
+  user-select: none;
+  contain: layout style;
 }
 body.dark-mode .app-loader { background: #0d1117; }
 
-/* Q Logo */
+/* Q Logo — gentle idle pulse while waiting for app to initialize */
 .splash-logo {
   position: relative;
   z-index: 2;
@@ -83,75 +86,93 @@ body.dark-mode .app-loader { background: #0d1117; }
   min-width: 80px;
   max-width: 180px;
   height: auto;
-  will-change: transform;
+  will-change: transform, opacity;
+  animation: splashIdle 2.2s ease-in-out infinite;
+}
+@keyframes splashIdle {
+  0%, 100% { transform: scale(1); }
+  50%      { transform: scale(1.02); }
 }
 
-/* Blob behind Q — irregular border-radius creates an organic, non-circular shape */
+/* Blob behind Q — irregular border-radius creates an organic, non-circular shape.
+   Multi-layer gradient adds a highlight + shadow for liquid depth. */
 .splash-blob {
   position: absolute;
   z-index: 1;
-  width: 60px;
-  height: 60px;
+  width: 80px;
+  height: 80px;
   border-radius: 42% 58% 55% 45% / 52% 44% 56% 48%;
-  background: radial-gradient(circle at 40% 40%, #2f8bfd, #005fbd 60%, #003f7f);
+  background:
+    radial-gradient(circle at 35% 35%, rgba(47,139,253,.55), transparent 50%),
+    radial-gradient(circle at 65% 60%, rgba(0,63,127,.35), transparent 55%),
+    radial-gradient(ellipse at 50% 50%, #2f8bfd, #005fbd 55%, #004494 85%, #003060);
   opacity: 0;
-  will-change: transform, border-radius, opacity;
+  will-change: transform, opacity;
   pointer-events: none;
 }
 
-/* Stage 2 — Q Bounce */
+/* Stage 2 — Q Bounce (replaces idle animation) */
 .splash-bounce .splash-logo {
-  animation: splashBounce .5s cubic-bezier(.34,1.56,.64,1) forwards;
+  animation: splashBounce .48s cubic-bezier(.22,.68,.36,1.16) forwards;
 }
 @keyframes splashBounce {
   0%   { transform: translateY(0); }
-  30%  { transform: translateY(-10px); }
-  65%  { transform: translateY(3px); }
+  32%  { transform: translateY(-11px); }
+  58%  { transform: translateY(2px); }
+  78%  { transform: translateY(-1px); }
   100% { transform: translateY(0); }
 }
 
 /* Stage 3 — Blob Emerge */
 .splash-blob-emerge .splash-blob {
-  animation: blobEmerge .5s cubic-bezier(.25,.46,.45,.94) forwards;
+  animation: blobEmerge .42s cubic-bezier(.25,.46,.45,.94) forwards;
 }
 @keyframes blobEmerge {
-  0%   { opacity: 0; transform: scale(0.3); border-radius: 42% 58% 55% 45% / 52% 44% 56% 48%; }
-  50%  { opacity: .85; }
+  0%   { opacity: 0; transform: scale(0.15); border-radius: 42% 58% 55% 45% / 52% 44% 56% 48%; }
+  40%  { opacity: .75; }
   100% { opacity: 1; transform: scale(1); border-radius: 38% 62% 50% 50% / 55% 40% 60% 45%; }
 }
 
-/* Stage 4 — Amoeba Expansion */
+/* Stage 4 — Amoeba Expansion
+   opacity: 1 prevents flash when this overrides blob-emerge (same specificity,
+   later source order wins). Seven keyframe stops for organic border-radius wobble. */
 .splash-expand .splash-blob {
-  animation: blobExpand .55s cubic-bezier(.4,0,.2,1) forwards;
+  opacity: 1;
+  animation: blobExpand .58s cubic-bezier(.32,0,.15,1) forwards;
 }
 @keyframes blobExpand {
   0%   { transform: scale(1);  border-radius: 38% 62% 50% 50% / 55% 40% 60% 45%; }
-  25%  { transform: scale(8);  border-radius: 45% 55% 60% 40% / 48% 52% 48% 52%; }
-  50%  { transform: scale(18); border-radius: 50% 50% 44% 56% / 52% 48% 55% 45%; }
-  75%  { transform: scale(32); border-radius: 46% 54% 52% 48% / 50% 50% 50% 50%; }
-  100% { transform: scale(50); border-radius: 50%; }
+  12%  { transform: scale(3.5); border-radius: 44% 56% 58% 42% / 46% 54% 50% 50%; }
+  28%  { transform: scale(10);  border-radius: 50% 50% 42% 58% / 53% 47% 55% 45%; }
+  45%  { transform: scale(19);  border-radius: 46% 54% 55% 45% / 48% 52% 48% 52%; }
+  65%  { transform: scale(30);  border-radius: 52% 48% 50% 50% / 50% 50% 52% 48%; }
+  82%  { transform: scale(40);  border-radius: 49% 51% 50% 50% / 50% 50% 50% 50%; }
+  100% { transform: scale(50);  border-radius: 50%; }
 }
 
 /* Stage 5 — Full Screen Fill + Q emphasis */
 .splash-fill {
   background: #005fbd;
+  transition: background .15s ease;
 }
 body.dark-mode .splash-fill {
   background: #005fbd;
 }
 .splash-fill .splash-logo {
-  animation: splashEmphasis .3s cubic-bezier(.34,1.56,.64,1) forwards;
+  animation: splashEmphasis .28s cubic-bezier(.34,1.4,.64,1) forwards;
 }
 @keyframes splashEmphasis {
   0%   { transform: scale(1); }
-  50%  { transform: scale(1.07); }
+  50%  { transform: scale(1.06); }
   100% { transform: scale(1); }
 }
 
-/* Stage 6 — Fade Out */
+/* Stage 6 — Fade Out (subtle scale-up dissolve, disable pointer events) */
 .splash-fadeout {
   opacity: 0;
-  transition: opacity .3s ease;
+  transform: scale(1.015);
+  transition: opacity .28s ease, transform .28s ease;
+  pointer-events: none;
 }
 
 a { color: inherit; text-decoration: none; }
