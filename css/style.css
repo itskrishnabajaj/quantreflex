@@ -216,7 +216,7 @@ header h1 {
   border: 1px solid rgba(226,232,240,.6);
   display: block;
   cursor: pointer;
-  transition: transform .15s ease, box-shadow .15s ease;
+  transition: transform .18s cubic-bezier(.25,.46,.45,.94), box-shadow .18s ease;
 }
 .study-card:active { transform: scale(.97); box-shadow: 0 1px 4px rgba(0,0,0,.08); }
 .study-card h3 {
@@ -778,7 +778,7 @@ body.dark-mode .drill-exit-btn:active {
   box-shadow: 0 2px 8px rgba(0,0,0,.05), 0 4px 16px rgba(0,0,0,.05);
   border: 1px solid rgba(226,232,240,.6);
   cursor: pointer;
-  transition: transform .15s ease, box-shadow .15s ease;
+  transition: transform .18s cubic-bezier(.25,.46,.45,.94), box-shadow .18s ease;
   min-height: 48px;
 }
 .mode-card:active { transform: scale(.97) translateY(1px); box-shadow: 0 1px 4px rgba(0,0,0,.08); }
@@ -809,7 +809,7 @@ body.dark-mode .drill-exit-btn:active {
   font-size: .85rem;
   font-weight: 600;
   cursor: pointer;
-  transition: border-color .2s, background .2s, transform .15s;
+  transition: border-color .2s, background .2s, transform .18s cubic-bezier(.25,.46,.45,.94);
 }
 .category-btn:active {
   background: #eff6ff;
@@ -1856,6 +1856,7 @@ body.dark-mode .table-modal-title {
   overflow: hidden;
   text-overflow: ellipsis;
   max-width: 100%;
+  letter-spacing: -.02em;
 }
 .stat-grid-3 .stat-card .value {
   font-size: 1.25rem;
@@ -3886,27 +3887,12 @@ body.theme-playful.dark-mode .skip-btn:active {
   margin-right: auto;
 }
 
-/* Task 9: Mode card lift animation */
-.mode-card {
-  transition: transform .18s cubic-bezier(.25,.46,.45,.94), box-shadow .18s ease;
-}
-
-/* Task 10: Stat card values visual prominence */
-.stat-card .value {
-  letter-spacing: -.02em;
-}
-
 /* Task 13: Subtle card tap feedback on analytics cards */
 .analytics-card {
   transition: transform .15s ease, box-shadow .15s ease;
 }
 .analytics-card:active {
   transform: scale(.985);
-}
-
-/* Task 13: Study card improved interaction */
-.study-card {
-  transition: transform .18s cubic-bezier(.25,.46,.45,.94), box-shadow .18s ease;
 }
 
 /* Task 12: Improved scroll behavior */
@@ -3918,11 +3904,6 @@ body.theme-playful.dark-mode .skip-btn:active {
 /* Task 13: Settings section card tap feedback */
 .settings-section-card {
   transition: transform .15s ease;
-}
-
-/* Task 13: Category button improved feedback */
-.category-btn {
-  transition: border-color .2s, background .2s, transform .18s cubic-bezier(.25,.46,.45,.94);
 }
 
 /* Task 14: Reduced motion for view transitions */
