@@ -356,12 +356,12 @@ function _hideAppLoader() {
 
   /* Stage timing constants (ms) — keep in sync with CSS animation durations.
      Stages overlap slightly for fluid sequencing (~1.95 s total). */
-  var BOUNCE_START  = 200;   /* idle → bounce          */
-  var BLOB_EMERGE   = 480;   /* blob fades in           */
-  var BLOB_EXPAND   = 880;   /* amoeba growth begins    */
-  var FILL_START    = 1380;  /* bg turns blue + emphasis */
-  var FADEOUT_START  = 1650;  /* dissolve out            */
-  var REMOVE_AT     = 1950;  /* DOM cleanup             */
+  var BOUNCE_START = 200;   /* idle → bounce          */
+  var BLOB_EMERGE  = 480;   /* blob fades in           */
+  var BLOB_EXPAND  = 880;   /* amoeba growth begins    */
+  var FILL_START   = 1380;  /* bg turns blue + emphasis */
+  var FADEOUT_START = 1650;  /* dissolve out            */
+  var REMOVE_AT    = 1950;  /* DOM cleanup             */
 
   /* Stage 1 — brief pause is implicit: the loader is already visible
      with a gentle idle pulse on the Q logo. */

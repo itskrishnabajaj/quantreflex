@@ -74,7 +74,7 @@ body.loaded { opacity: 1; }
   touch-action: none;
   -webkit-user-select: none;
   user-select: none;
-  contain: layout style;
+  contain: layout style paint;
 }
 body.dark-mode .app-loader { background: #0d1117; }
 
