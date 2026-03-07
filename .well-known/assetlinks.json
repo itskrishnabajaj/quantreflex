@@ -1,1 +1,11 @@
-
+[
+  {
+    "relation": ["delegate_permission/common.handle_all_urls"],
+    "target": {
+      "namespace": "android_app",
+      "package_name": "com.krisveltrix.quantr",
+      "sha256_cert_fingerprints":
+      ["6E:EA:1F:B3:09:32:A0:2D:D3:99:1E:31:41:42:E8:DA:87:D3:99:BB:F9:38:68:1C:C8:10:3B:C9:C2:6F:AA:F7"]
+    }
+  }
+]
