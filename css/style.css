@@ -62,73 +62,96 @@ body {
 body.loaded { opacity: 1; }
 
 /* ---- App Loading Indicator — Brain Animation ---- */
+/* ---- Splash Screen ---- */
 .app-loader {
   position: fixed;
   top: 0; left: 0; right: 0; bottom: 0;
   display: flex;
   align-items: center;
   justify-content: center;
-  background: #f8fafc;
+  background: #ffffff;
   z-index: 9999;
-  transition: opacity .3s ease;
+  overflow: hidden;
 }
-body.dark-mode .app-loader { background: #0f172a; }
-.app-loader-content {
-  text-align: center;
+body.dark-mode .app-loader { background: #0d1117; }
+
+/* Q Logo */
+.splash-logo {
   position: relative;
-  width: 160px;
-  height: 160px;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-}
-.app-loader-brain {
-  font-size: 3.5rem;
-  animation: brainPulse 2s ease-in-out infinite;
-  filter: drop-shadow(0 0 12px rgba(37,99,235,.35));
   z-index: 2;
+  width: 22vw;
+  min-width: 80px;
+  max-width: 180px;
+  height: auto;
+  will-change: transform;
 }
-@keyframes brainPulse {
-  0%, 100% { transform: scale(1); filter: drop-shadow(0 0 8px rgba(37,99,235,.25)); }
-  50% { transform: scale(1.08); filter: drop-shadow(0 0 18px rgba(37,99,235,.5)); }
-}
-.app-loader-symbols {
+
+/* Blob behind Q */
+.splash-blob {
   position: absolute;
-  top: -20px; left: -20px; right: -20px; bottom: -20px;
+  z-index: 1;
+  width: 60px;
+  height: 60px;
+  border-radius: 42% 58% 55% 45% / 52% 44% 56% 48%;
+  background: radial-gradient(circle at 40% 40%, #2f8bfd, #005fbd 60%, #003f7f);
+  opacity: 0;
+  will-change: transform, border-radius, opacity;
   pointer-events: none;
 }
-.floating-symbol {
-  position: absolute;
-  top: 50%; left: 50%;
-  font-size: 1.2rem;
-  font-weight: 700;
-  color: #2563eb;
+
+/* Stage 2 — Q Bounce */
+.splash-bounce .splash-logo {
+  animation: splashBounce .5s cubic-bezier(.34,1.56,.64,1) forwards;
+}
+@keyframes splashBounce {
+  0%   { transform: translateY(0); }
+  30%  { transform: translateY(-10px); }
+  65%  { transform: translateY(3px); }
+  100% { transform: translateY(0); }
+}
+
+/* Stage 3 — Blob Emerge */
+.splash-blob-emerge .splash-blob {
+  animation: blobEmerge .5s cubic-bezier(.25,.46,.45,.94) forwards;
+}
+@keyframes blobEmerge {
+  0%   { opacity: 0; transform: scale(0.3); border-radius: 42% 58% 55% 45% / 52% 44% 56% 48%; }
+  50%  { opacity: .85; }
+  100% { opacity: 1; transform: scale(1); border-radius: 38% 62% 50% 50% / 55% 40% 60% 45%; }
+}
+
+/* Stage 4 — Amoeba Expansion */
+.splash-expand .splash-blob {
+  animation: blobExpand .55s cubic-bezier(.4,0,.2,1) forwards;
+}
+@keyframes blobExpand {
+  0%   { transform: scale(1);  border-radius: 38% 62% 50% 50% / 55% 40% 60% 45%; }
+  25%  { transform: scale(8);  border-radius: 45% 55% 60% 40% / 48% 52% 48% 52%; }
+  50%  { transform: scale(18); border-radius: 50% 50% 44% 56% / 52% 48% 55% 45%; }
+  75%  { transform: scale(32); border-radius: 46% 54% 52% 48% / 50% 50% 50% 50%; }
+  100% { transform: scale(50); border-radius: 50%; }
+}
+
+/* Stage 5 — Full Screen Fill + Q emphasis */
+.splash-fill {
+  background: #005fbd;
+}
+body.dark-mode .splash-fill {
+  background: #005fbd;
+}
+.splash-fill .splash-logo {
+  animation: splashEmphasis .3s cubic-bezier(.34,1.56,.64,1) forwards;
+}
+@keyframes splashEmphasis {
+  0%   { transform: scale(1); }
+  50%  { transform: scale(1.07); }
+  100% { transform: scale(1); }
+}
+
+/* Stage 6 — Fade Out */
+.splash-fadeout {
   opacity: 0;
-  animation: floatSymbol var(--dur, 4s) ease-in-out var(--delay, 0s) infinite;
-}
-body.dark-mode .floating-symbol { color: #60a5fa; }
-@keyframes floatSymbol {
-  0% { opacity: 0; transform: translate(-50%, -50%) translate(0, 0); }
-  20% { opacity: .7; }
-  80% { opacity: .7; }
-  100% { opacity: 0; transform: translate(-50%, -50%) translate(var(--x, 0), var(--y, 0)); }
-}
-.app-loader-spinner {
-  width: 24px; height: 24px;
-  border: 3px solid #e2e8f0;
-  border-top-color: #2563eb;
-  border-radius: 50%;
-  animation: loaderSpin .8s linear infinite;
-  margin: .75rem auto 0;
-  z-index: 2;
-}
-body.dark-mode .app-loader-spinner {
-  border-color: #334155;
-  border-top-color: #3b82f6;
-}
-@keyframes loaderSpin {
-  to { transform: rotate(360deg); }
+  transition: opacity .3s ease;
 }
 
 a { color: inherit; text-decoration: none; }
@@ -1009,8 +1032,8 @@ body.reduced-motion *::after {
   scroll-behavior: auto !important;
 }
 body.reduced-motion .ripple-effect { display: none !important; }
-body.reduced-motion .floating-symbol { display: none !important; }
-body.reduced-motion .app-loader-spinner { animation: none !important; }
+body.reduced-motion .splash-logo { animation: none !important; }
+body.reduced-motion .splash-blob { animation: none !important; display: none !important; }
 body.reduced-motion .fade-in { animation: none !important; opacity: 1 !important; }
 body.reduced-motion .guide-animate-section { opacity: 1 !important; transform: none !important; }
 
@@ -2838,12 +2861,7 @@ body.theme-playful {
   color: #1a1a2e;
 }
 
-body.theme-playful .app-loader { background: #faf9f7; }
-body.theme-playful .floating-symbol { color: #4f8ff7; }
-body.theme-playful .app-loader-spinner {
-  border-color: #e8e6e1;
-  border-top-color: #4f8ff7;
-}
+body.theme-playful .app-loader { background: #ffffff; }
 
 body.theme-playful header h1 {
   background: linear-gradient(135deg, #4f8ff7, #2dd4bf);
@@ -3272,11 +3290,6 @@ body.theme-playful.dark-mode {
 }
 
 body.theme-playful.dark-mode .app-loader { background: #0d1117; }
-body.theme-playful.dark-mode .floating-symbol { color: #58a6ff; }
-body.theme-playful.dark-mode .app-loader-spinner {
-  border-color: #1c2333;
-  border-top-color: #58a6ff;
-}
 
 body.theme-playful.dark-mode header h1 {
   background: linear-gradient(135deg, #58a6ff, #3ddbd9);

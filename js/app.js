@@ -339,17 +339,53 @@ window.addEventListener('beforeunload', function (e) {
 });
 
 /**
- * Hide the app loading indicator.
- * Called once auth state is determined (or immediately if Firebase is not available).
+ * Run the splash screen animation sequence and remove it when finished.
+ * Stages: pause → bounce → blob emerge → amoeba expand → fill → fade out.
+ * Uses CSS classes to trigger GPU-accelerated animations.
+ * Falls back to an instant hide when reduced-motion is active.
  */
 function _hideAppLoader() {
   var loader = document.getElementById('appLoader');
-  if (loader) {
-    loader.style.opacity = '0';
-    setTimeout(function () {
-      loader.style.display = 'none';
-    }, 300);
+  if (!loader) return;
+
+  /* Reduced motion — skip animation entirely */
+  if (document.body.classList.contains('reduced-motion')) {
+    loader.style.display = 'none';
+    return;
   }
+
+  /* Stage 1 — brief pause (0–250 ms) is implicit: the loader is already visible. */
+
+  /* Stage 2 — Q bounce (250 ms mark) */
+  setTimeout(function () {
+    loader.classList.add('splash-bounce');
+  }, 250);
+
+  /* Stage 3 — blob emerge (600 ms mark) */
+  setTimeout(function () {
+    loader.classList.add('splash-blob-emerge');
+  }, 600);
+
+  /* Stage 4 — amoeba expansion (1000 ms mark) */
+  setTimeout(function () {
+    loader.classList.remove('splash-blob-emerge');
+    loader.classList.add('splash-expand');
+  }, 1000);
+
+  /* Stage 5 — full-screen blue fill + Q emphasis (1400 ms mark) */
+  setTimeout(function () {
+    loader.classList.add('splash-fill');
+  }, 1400);
+
+  /* Stage 6 — fade out (1700 ms mark) */
+  setTimeout(function () {
+    loader.classList.add('splash-fadeout');
+  }, 1700);
+
+  /* Remove from DOM after animation completes (2000 ms mark) */
+  setTimeout(function () {
+    if (loader.parentNode) loader.parentNode.removeChild(loader);
+  }, 2000);
 }
 
 /**
