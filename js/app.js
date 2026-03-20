@@ -308,6 +308,8 @@ function updateNavigationIcons(theme) {
 
 /* ---- Active drill engine reference for cleanup ---- */
 var _activeDrillEngine = null;
+var _navTransitionInProgress = false;
+var _practiceActionLocked = false;
 /* True only while user is actively answering questions (after START pressed) */
 var _drillSessionActive = false;
 var _exitSessionMsg = 'Exit this session? Your progress will be lost.';
@@ -325,6 +327,7 @@ function _enterDrillSession() {
   var nav = document.querySelector('.bottom-nav');
   if (nav) nav.style.display = 'none';
   document.body.classList.add('drill-session-active');
+  document.documentElement.classList.add('drill-session-active');
 }
 
 /**
@@ -339,7 +342,42 @@ function _exitDrillSession() {
   var nav = document.querySelector('.bottom-nav');
   if (nav) nav.style.display = '';
   document.body.classList.remove('drill-session-active');
+  document.documentElement.classList.remove('drill-session-active');
   hideCustomNumpad();
+}
+
+function _tryBeginNavTransition() {
+  if (_navTransitionInProgress) return false;
+  _navTransitionInProgress = true;
+  setTimeout(function () {
+    _navTransitionInProgress = false;
+  }, 220);
+  return true;
+}
+
+function _tryPracticeAction() {
+  if (_practiceActionLocked) return false;
+  _practiceActionLocked = true;
+  setTimeout(function () {
+    _practiceActionLocked = false;
+  }, 220);
+  return true;
+}
+
+function _resetPracticeUiToModes() {
+  _customPracticeActive = false;
+  var modeSelect = document.getElementById('modeSelect');
+  var categorySelect = document.getElementById('categorySelect');
+  var customPracticeConfig = document.getElementById('customPracticeConfig');
+  var drillContainer = document.getElementById('drillContainer');
+  if (modeSelect) modeSelect.style.display = 'block';
+  if (categorySelect) categorySelect.style.display = 'none';
+  if (customPracticeConfig) customPracticeConfig.style.display = 'none';
+  if (drillContainer) {
+    drillContainer.style.display = 'none';
+    drillContainer.innerHTML = '';
+  }
+  _resetCustomPracticeState();
 }
 
 /**
@@ -787,6 +825,8 @@ document.addEventListener('DOMContentLoaded', function () {
   var container = document.querySelector('.container');
   var bottomNav = document.querySelector('.bottom-nav');
   var _pendingPassword = null; /* Temporarily holds password from login/signup for Firestore storage */
+  var _authRequestInFlight = false;
+  var _authViewToken = 0;
 
   /**
    * Show the main app and hide the login screen.
@@ -795,11 +835,17 @@ document.addEventListener('DOMContentLoaded', function () {
    * to prevent the main interface from flashing before onboarding.
    */
   function showApp() {
+    _authViewToken++;
+    var token = _authViewToken;
+    var expectedUserId = (typeof Auth !== 'undefined' && typeof Auth.getUserId === 'function') ? Auth.getUserId() : null;
     if (loginScreen) loginScreen.style.display = 'none';
 
     /* Load data from Firestore after authentication */
     if (typeof FirestoreSync !== 'undefined' && typeof FirebaseApp !== 'undefined' && FirebaseApp.isReady() && FirebaseApp.getUserId()) {
       FirestoreSync.loadFromFirestore(function (success) {
+        if (token !== _authViewToken) return;
+        var currentUserId = (typeof Auth !== 'undefined' && typeof Auth.getUserId === 'function') ? Auth.getUserId() : null;
+        if (expectedUserId && currentUserId !== expectedUserId) return;
         if (success) {
           /* Re-apply dark mode and theme in case Firestore had updated settings */
           try {
@@ -817,6 +863,9 @@ document.addEventListener('DOMContentLoaded', function () {
         _launchOnboardingOrShowMain();
       });
     } else {
+      if (token !== _authViewToken) return;
+      var currentUserId = (typeof Auth !== 'undefined' && typeof Auth.getUserId === 'function') ? Auth.getUserId() : null;
+      if (expectedUserId && currentUserId !== expectedUserId) return;
       /* No Firestore — check onboarding immediately */
       _launchOnboardingOrShowMain();
     }
@@ -872,7 +921,9 @@ document.addEventListener('DOMContentLoaded', function () {
    * Show the login screen and hide the main app.
    */
   function showLogin() {
+    _authViewToken++;
     _hideAppLoader();
+    _authRequestInFlight = false;
     if (loginScreen) loginScreen.style.display = 'flex';
     if (container) container.style.display = 'none';
     if (bottomNav) bottomNav.style.display = 'none';
@@ -921,12 +972,15 @@ document.addEventListener('DOMContentLoaded', function () {
 
     if (loginBtn) {
       loginBtn.addEventListener('click', function () {
+        if (_authRequestInFlight) return;
         hideError();
         var username = loginUsername ? loginUsername.value : '';
         var password = loginPassword ? loginPassword.value : '';
+        _authRequestInFlight = true;
         setButtonsDisabled(true);
 
         Auth.login(username, password, function (err) {
+          _authRequestInFlight = false;
           setButtonsDisabled(false);
           if (err) {
             showError(err);
@@ -944,12 +998,15 @@ document.addEventListener('DOMContentLoaded', function () {
 
     if (signupBtn) {
       signupBtn.addEventListener('click', function () {
+        if (_authRequestInFlight) return;
         hideError();
         var username = loginUsername ? loginUsername.value : '';
         var password = loginPassword ? loginPassword.value : '';
+        _authRequestInFlight = true;
         setButtonsDisabled(true);
 
         Auth.signup(username, password, function (err) {
+          _authRequestInFlight = false;
           setButtonsDisabled(false);
           if (err) {
             showError(err);
@@ -1004,6 +1061,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
     navLinks[i].addEventListener('click', function (e) {
       e.preventDefault();
+      if (!_tryBeginNavTransition()) return;
       var view = this.getAttribute('data-view');
       /* Skip if already on this tab and no drill is active */
       if (this.classList.contains('active') && !_drillSessionActive) return;
@@ -1131,6 +1189,7 @@ document.addEventListener('DOMContentLoaded', function () {
   /* ---- HOME VIEW: warmup handler ---- */
   document.getElementById('startWarmup').addEventListener('click', function (e) {
     e.preventDefault();
+    if (!_tryPracticeAction()) return;
     SoundEngine.play('settingsToggle');
     Router.showView('practice');
     startDrillFromPractice('quick');
@@ -1156,20 +1215,7 @@ document.addEventListener('DOMContentLoaded', function () {
       FirestoreSync.endDrillBatch();
     }
     _exitDrillSession();
-    _customPracticeActive = false;
-    /* Reset practice view state */
-    var modeSelect = document.getElementById('modeSelect');
-    var categorySelect = document.getElementById('categorySelect');
-    var customPracticeConfig = document.getElementById('customPracticeConfig');
-    var drillContainer = document.getElementById('drillContainer');
-    if (modeSelect) modeSelect.style.display = 'block';
-    if (categorySelect) categorySelect.style.display = 'none';
-    if (customPracticeConfig) customPracticeConfig.style.display = 'none';
-    if (drillContainer) {
-      drillContainer.style.display = 'none';
-      drillContainer.innerHTML = '';
-    }
-    _resetCustomPracticeState();
+    _resetPracticeUiToModes();
   });
 
   Router.onInit('practice', function () {
@@ -1183,11 +1229,13 @@ document.addEventListener('DOMContentLoaded', function () {
     _customPracticeDom.value = document.getElementById('customQuestionCountValue');
     _customPracticeDom.text = document.getElementById('customQuestionCountText');
     _customPracticeDom.error = document.getElementById('customModeError');
+    if (!modeSelect || !categorySelect || !drillContainer) return;
 
     /* Mode card clicks */
-    var modeCards = document.querySelectorAll('.mode-card');
+    var modeCards = modeSelect.querySelectorAll('.mode-card');
     for (var i = 0; i < modeCards.length; i++) {
       modeCards[i].addEventListener('click', function () {
+        if (!_tryPracticeAction()) return;
         SoundEngine.play('settingsToggle');
         var modeKey = this.getAttribute('data-mode');
         if (modeKey === 'wordproblems') {
@@ -1230,6 +1278,7 @@ document.addEventListener('DOMContentLoaded', function () {
           if (_customPracticeDom.error) _customPracticeDom.error.textContent = '';
           return;
         }
+        if (!_tryPracticeAction()) return;
         startDrillFromPractice('focus', cat, this.textContent);
       });
     }
@@ -1245,6 +1294,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
     if (customStartBtn) {
       customStartBtn.addEventListener('click', function () {
+        if (!_tryPracticeAction()) return;
         var user = (typeof Auth !== 'undefined' && typeof Auth.getCurrentUser === 'function') ? Auth.getCurrentUser() : null;
         if (!canAccessCustomMode(user)) {
           return;
@@ -1259,11 +1309,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
     /* Back button */
     document.getElementById('backToModes').addEventListener('click', function () {
-      _customPracticeActive = false;
-      categorySelect.style.display = 'none';
-      if (customPracticeConfig) customPracticeConfig.style.display = 'none';
-      modeSelect.style.display = 'block';
-      _resetCustomPracticeState();
+      _resetPracticeUiToModes();
     });
   });
 
@@ -1296,13 +1342,14 @@ function startDrillFromPractice(modeKey, category, categoryLabel) {
   var categorySelect = document.getElementById('categorySelect');
   var customPracticeConfig = document.getElementById('customPracticeConfig');
   var drillContainer = document.getElementById('drillContainer');
+  if (!modeSelect || !categorySelect || !drillContainer) return;
 
   var modes = {
     quick:  { count: 5,  timeLimitSec: null, perQuestionSec: null, category: null, mode: '⚡ Quick Drill' },
     reflex: { count: 10, timeLimitSec: null, perQuestionSec: 15,   category: null, mode: '🧠 Reflex Drill' },
     timed:  { count: 10, timeLimitSec: 180,  perQuestionSec: null, category: null, mode: '⏱ Timed Test' },
     focus:  { count: 10, timeLimitSec: null, perQuestionSec: null, category: null, mode: '🎯 Focus Training' },
-    custom: { count: _customPracticeState.totalQuestions, timeLimitSec: null, perQuestionSec: null, category: null, topics: _customPracticeState.topics.slice(), mode: '⚡ Custom Training Mode' },
+    custom: { count: _customPracticeState.totalQuestions, timeLimitSec: null, perQuestionSec: null, category: null, topics: _customPracticeState.topics.slice(), mode: '✨ Custom Training' },
     review: { count: 10, timeLimitSec: null, perQuestionSec: null, category: null, mode: '🔄 Review Mistakes', reviewMode: true }
   };
 
@@ -1322,6 +1369,9 @@ function startDrillFromPractice(modeKey, category, categoryLabel) {
       FirestoreSync.endDrillBatch();
     }
     _exitDrillSession();
+    if (view === 'practice') {
+      _resetPracticeUiToModes();
+    }
     Router.showView(view);
   };
 
