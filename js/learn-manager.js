@@ -306,8 +306,15 @@ function renderCustomFormulas(container, topicId, onUpdate) {
 function renderAddFormulaButton(container, topicId, onUpdate) {
   var btn = document.createElement('button');
   btn.className = 'btn add-formula-btn';
-  btn.textContent = '+ Add Formula / Tip';
+  var canAddFormula = (typeof canAccessFeature === 'function') ? canAccessFeature('add_formula') : true;
+  btn.textContent = canAddFormula ? '+ Add Formula / Tip' : '🔒 Add Formula / Tip (Premium)';
   btn.addEventListener('click', function () {
+    var hasAccessNow = (typeof canAccessFeature === 'function') ? canAccessFeature('add_formula') : true;
+    if (!hasAccessNow) {
+      if (typeof showPaywall === 'function') showPaywall('add_formula');
+      return;
+    }
+    if (btn.textContent.indexOf('🔒') !== -1) btn.textContent = '+ Add Formula / Tip';
     _createModal('Add Formula', [
       { name: 'title', label: 'Title', placeholder: 'e.g. Compound Interest Formula' },
       { name: 'text', label: 'Formula / Description', type: 'textarea', placeholder: 'e.g. CI = P(1 + r/100)^n - P' },
@@ -387,7 +394,6 @@ function renderCustomTopicSections() {
   if (!container) return;
   container.innerHTML = '';
   var topics = loadCustomTopics();
-
   for (var i = 0; i < topics.length; i++) {
     (function (topic) {
       var card = document.createElement('div');
@@ -404,6 +410,11 @@ function renderCustomTopicSections() {
       card.appendChild(header);
 
       header.querySelector('.rename-topic-btn').addEventListener('click', function () {
+        var hasTopicAccess = (typeof canAccessFeature === 'function') ? canAccessFeature('add_topic') : true;
+        if (!hasTopicAccess) {
+          if (typeof showPaywall === 'function') showPaywall('add_topic');
+          return;
+        }
         _createModal('Rename Topic', [
           { name: 'name', label: 'Topic Name', value: topic.name, placeholder: 'Topic name' }
         ], function (values) {
@@ -414,6 +425,11 @@ function renderCustomTopicSections() {
       });
 
       header.querySelector('.delete-topic-btn').addEventListener('click', function () {
+        var hasTopicAccess = (typeof canAccessFeature === 'function') ? canAccessFeature('add_topic') : true;
+        if (!hasTopicAccess) {
+          if (typeof showPaywall === 'function') showPaywall('add_topic');
+          return;
+        }
         if (confirm('Delete topic "' + topic.name + '" and all its formulas?')) {
           deleteCustomTopic(topic.id);
           renderCustomTopicSections();

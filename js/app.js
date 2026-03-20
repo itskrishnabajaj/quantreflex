@@ -1250,6 +1250,10 @@ document.addEventListener('DOMContentLoaded', function () {
           return;
         }
         if (modeKey === 'custom') {
+          if (!canAccessFeature('custom_training')) {
+            showPaywall('custom_training');
+            return;
+          }
           _customPracticeActive = true;
           modeSelect.style.display = 'none';
           categorySelect.style.display = 'block';
@@ -1264,6 +1268,10 @@ document.addEventListener('DOMContentLoaded', function () {
           categorySelect.style.display = 'block';
           _syncCustomPracticeSelectionUi();
         } else if (modeKey === 'review') {
+          if (!canAccessFeature('review_mistakes')) {
+            showPaywall('review_mistakes');
+            return;
+          }
           startDrillFromPractice('review');
         } else {
           startDrillFromPractice(modeKey);
@@ -1302,8 +1310,8 @@ document.addEventListener('DOMContentLoaded', function () {
     if (customStartBtn) {
       customStartBtn.addEventListener('click', function () {
         if (!_tryPracticeAction()) return;
-        var user = (typeof Auth !== 'undefined' && typeof Auth.getCurrentUser === 'function') ? Auth.getCurrentUser() : null;
-        if (!canAccessCustomMode(user)) {
+        if (!canAccessFeature('custom_training')) {
+          showPaywall('custom_training');
           return;
         }
         if (selectedTopics.length === 0) {
@@ -1417,25 +1425,6 @@ var _customPracticeActive = false;
 var _CUSTOM_DEFAULT_QUESTIONS = 20;
 var _CUSTOM_MIN_QUESTIONS = 1;
 var _CUSTOM_MAX_QUESTIONS = 100;
-
-/* Placeholder for future paywall integration. */
-/**
- * Central paywall access hook.
- * Planned feature keys include: 'custom_mode', 'analytics_export', 'advanced_tests'.
- * Gate checks should be centralized here once subscription state is available.
- * @param {string} feature - feature key (e.g. 'custom_mode') to gate in future.
- * @returns {boolean}
- */
-function canAccessFeature(feature) {
-  return true;
-}
-
-/* Placeholder for future paywall integration. */
-function canAccessCustomMode(user) {
-  /* 'user' is reserved for future subscription checks. */
-  if (!canAccessFeature('custom_mode')) return false;
-  return true;
-}
 
 function _toggleCustomPracticeTopic(topicKey) {
   if (!topicKey) return;
@@ -1570,6 +1559,10 @@ function initLearnView() {
   var addTopicBtn = document.getElementById('addTopicBtn');
   if (addTopicBtn) {
     addTopicBtn.addEventListener('click', function () {
+      if (!canAccessFeature('add_topic')) {
+        showPaywall('add_topic');
+        return;
+      }
       _createModal('Create New Topic', [
         { name: 'name', label: 'Topic Name', placeholder: 'e.g. Number Systems' }
       ], function (values) {
@@ -1637,6 +1630,8 @@ function toggleSection(header) {
 /* ---- Stats view renderer ---- */
 function renderStatsView() {
   var p = loadProgress();
+  var canSeeInsights = canAccessFeature('performance_insights');
+  var canSeeCategoryAccuracy = canAccessFeature('category_accuracy');
   var accuracy = p.totalAttempted ? ((p.totalCorrect / p.totalAttempted) * 100).toFixed(1) : '0';
   var avgTime = getAvgResponseTime();
   var weakest = getWeakestCategory();
@@ -1717,6 +1712,16 @@ function renderStatsView() {
   /* Section 5 — Performance Insights (3 cols) */
   var insightsEl = document.getElementById('statsInsights');
   if (insightsEl) {
+    if (!canSeeInsights) {
+      insightsEl.innerHTML =
+        '<button class="stat-card stat-card-locked" id="unlockInsightsBtn" type="button">' +
+          '<div class="value value-sm">🔒 Premium Insights</div><div class="label">Unlock strongest/weakest analysis and trends</div>' +
+        '</button>';
+      var unlockInsightsBtn = document.getElementById('unlockInsightsBtn');
+      if (unlockInsightsBtn) {
+        unlockInsightsBtn.addEventListener('click', function () { showPaywall('stats'); });
+      }
+    } else {
     var categoryInsightMsg = (!weakest && !strongest) ? 'Solve more questions to unlock category insights.' : '';
     var weakestDisplay = weakest ? formatCategoryName(weakest) : (categoryInsightMsg ? '🔒' : '—');
     var strongestDisplay = strongest ? formatCategoryName(strongest) : (categoryInsightMsg ? '🔒' : '—');
@@ -1725,11 +1730,23 @@ function renderStatsView() {
       '<div class="stat-card' + (strongest ? ' stat-card-positive' : '') + '"><div class="value value-sm">' + strongestDisplay + '</div><div class="label">Strongest Category</div>' + (categoryInsightMsg && !strongest ? '<div class="stat-hint">' + categoryInsightMsg + '</div>' : '') + '</div>' +
       '<div class="stat-card' + (weakest ? ' stat-card-negative' : '') + '"><div class="value value-sm">' + weakestDisplay + '</div><div class="label">Weakest Category</div>' + (categoryInsightMsg && !weakest ? '<div class="stat-hint">' + categoryInsightMsg + '</div>' : '') + '</div>' +
       '<div class="stat-card' + trendClass + '"><div class="value value-sm">' + trend + '</div><div class="label">Recent Trend</div></div>';
+    }
   }
 
   /* Category stats with color-coded bars and strength labels */
   var catContainer = document.getElementById('categoryStats');
   if (!catContainer) return;
+  if (!canSeeCategoryAccuracy) {
+    catContainer.innerHTML =
+      '<button class="category-locked-card" id="unlockCategoryAccuracyBtn" type="button">' +
+        '<strong>🔒 Category Accuracy is Premium</strong><span>Unlock category-level strengths and weaknesses.</span>' +
+      '</button>';
+    var unlockCategoryAccuracyBtn = document.getElementById('unlockCategoryAccuracyBtn');
+    if (unlockCategoryAccuracyBtn) {
+      unlockCategoryAccuracyBtn.addEventListener('click', function () { showPaywall('stats'); });
+    }
+    return;
+  }
   var cats = p.categoryStats || {};
   var keys = Object.keys(cats);
 

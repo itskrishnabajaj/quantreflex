@@ -111,11 +111,21 @@ function initSettingsView() {
   var themeSelect = document.getElementById('themeSelect');
   if (themeSelect) {
     themeSelect = rebind(themeSelect, 'change', function () {
+      if (this.value !== 'classic' && !canAccessFeature('advanced_theme')) {
+        this.value = settings.theme || 'classic';
+        showPaywall('settings');
+        return;
+      }
       settings.theme = this.value;
       applyTheme(this.value);
       saveSettings(settings);
       SoundEngine.play('settingsToggle');
     });
+    if ((settings.theme || 'classic') !== 'classic' && !canAccessFeature('advanced_theme')) {
+      settings.theme = 'classic';
+      applyTheme('classic');
+      saveSettings(settings);
+    }
     themeSelect.value = settings.theme || 'classic';
   }
 
@@ -156,6 +166,13 @@ function initSettingsView() {
   if (skipToggle) {
     skipToggle = rebind(skipToggle, 'change', function () {
       var toggle = this;
+      if (toggle.checked && !canAccessFeature('skip_question')) {
+        toggle.checked = false;
+        settings.skipEnabled = false;
+        saveSettings(settings);
+        showPaywall('settings');
+        return;
+      }
       if (toggle.checked && settings.difficulty === 'hard') {
         /* Revert toggle immediately */
         toggle.checked = false;
@@ -170,6 +187,11 @@ function initSettingsView() {
   }
 
   difficultySelect = rebind(difficultySelect, 'change', function () {
+    if (this.value === 'hard' && !canAccessFeature('hard_mode')) {
+      this.value = settings.difficulty || 'medium';
+      showPaywall('settings');
+      return;
+    }
     settings.difficulty = this.value;
     /* If switching to Hard, disable skip */
     if (this.value === 'hard' && settings.skipEnabled) {
@@ -189,10 +211,19 @@ function initSettingsView() {
     dailyGoalInput = rebind(dailyGoalInput, 'change', function () {
       var val = parseInt(this.value);
       if (val >= 10 && val <= 500) {
+        if (val > 50 && !canAccessFeature('daily_goal_limit')) {
+          this.value = String(settings.dailyGoal || 50);
+          showPaywall('settings');
+          return;
+        }
         settings.dailyGoal = val;
         saveSettings(settings);
       }
     });
+    if ((settings.dailyGoal || 50) > 50 && !canAccessFeature('daily_goal_limit')) {
+      settings.dailyGoal = 50;
+      saveSettings(settings);
+    }
     dailyGoalInput.value = settings.dailyGoal || 50;
   }
 
