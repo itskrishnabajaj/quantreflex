@@ -25,6 +25,7 @@
  * @param {number|null} opts.timeLimitSec    - overall time limit in seconds (null = unlimited)
  * @param {number|null} opts.perQuestionSec  - per-question time limit in seconds (null = unlimited)
  * @param {string|null} opts.category        - question category filter (null = all)
+ * @param {string[]|null} opts.topics        - multi-topic filters for custom mode
  * @param {string}      opts.mode            - drill mode label for display
  * @param {boolean}     opts.reviewMode      - if true, use mistake review questions
  * @param {function}    opts.onFinish        - callback when drill finishes (for SPA navigation)
@@ -35,6 +36,7 @@ function createDrillEngine(container, opts) {
   var timeLimit = opts.timeLimitSec || null;
   var perQLimit = opts.perQuestionSec || null;
   var category = opts.category || null;
+  var topics = Array.isArray(opts.topics) ? opts.topics : null;
   var mode = opts.mode || 'Drill';
   var reviewMode = opts.reviewMode || false;
   var onFinish = opts.onFinish || null;
@@ -60,6 +62,7 @@ function createDrillEngine(container, opts) {
     if (timeLimit) subtitle += ' · ' + timeLimit + 's time limit';
     if (perQLimit) subtitle += ' · ' + perQLimit + 's per question';
     if (category) subtitle += ' · ' + category;
+    if (topics && topics.length) subtitle += ' · ' + topics.length + ' topics';
 
     container.innerHTML =
       '<div class="card center-content">' +
@@ -424,7 +427,7 @@ function createDrillEngine(container, opts) {
       count = questions.length; /* May be less than requested */
       reviewOriginalCount = count;
     } else {
-      questions = generateQuestions(count, category); /* questions.js */
+      questions = generateQuestions(count, category, topics); /* questions.js */
     }
     current = 0;
     score = 0;

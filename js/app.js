@@ -1164,12 +1164,20 @@ document.addEventListener('DOMContentLoaded', function () {
       drillContainer.style.display = 'none';
       drillContainer.innerHTML = '';
     }
+    if (typeof CustomMode !== 'undefined' && typeof CustomMode.reset === 'function') {
+      CustomMode.reset();
+      CustomMode.hidePanel();
+    }
   });
 
   Router.onInit('practice', function () {
     var modeSelect = document.getElementById('modeSelect');
     var categorySelect = document.getElementById('categorySelect');
     var drillContainer = document.getElementById('drillContainer');
+
+    if (typeof CustomMode !== 'undefined' && typeof CustomMode.init === 'function') {
+      CustomMode.init();
+    }
 
     /* Mode card clicks */
     var modeCards = document.querySelectorAll('.mode-card');
@@ -1181,6 +1189,12 @@ document.addEventListener('DOMContentLoaded', function () {
           /* Future feature teaser */
           if (typeof showToast === 'function') {
             showToast('Word problem training is coming soon.');
+          }
+          return;
+        }
+        if (modeKey === 'custom') {
+          if (typeof CustomMode !== 'undefined' && typeof CustomMode.showPanel === 'function') {
+            CustomMode.showPanel();
           }
           return;
         }
@@ -1272,6 +1286,52 @@ function startDrillFromPractice(modeKey, category, categoryLabel) {
   drillContainer.style.display = 'block';
 
   /* Cleanup previous engine if any */
+  if (_activeDrillEngine) {
+    _activeDrillEngine.cleanup();
+  }
+
+  var engine = createDrillEngine(drillContainer, config);
+  _activeDrillEngine = engine;
+  engine.start();
+}
+
+function startCustomDrillFromPractice(customConfig) {
+  if (!customConfig || !customConfig.topics || !customConfig.topics.length) return;
+  var modeSelect = document.getElementById('modeSelect');
+  var categorySelect = document.getElementById('categorySelect');
+  var customModePanel = document.getElementById('customModePanel');
+  var drillContainer = document.getElementById('drillContainer');
+
+  var count = parseInt(customConfig.totalQuestions, 10);
+  if (isNaN(count)) count = 20;
+  count = Math.max(1, Math.min(100, count));
+
+  var config = {
+    count: count,
+    timeLimitSec: null,
+    perQuestionSec: null,
+    category: null,
+    topics: customConfig.topics.slice(),
+    mode: '⚡ Custom Training Mode'
+  };
+
+  config.onFinish = function (view) {
+    if (_activeDrillEngine) {
+      _activeDrillEngine.cleanup();
+      _activeDrillEngine = null;
+    }
+    if (_drillSessionActive && typeof FirestoreSync !== 'undefined') {
+      FirestoreSync.endDrillBatch();
+    }
+    _exitDrillSession();
+    Router.showView(view);
+  };
+
+  if (modeSelect) modeSelect.style.display = 'none';
+  if (categorySelect) categorySelect.style.display = 'none';
+  if (customModePanel) customModePanel.style.display = 'none';
+  if (drillContainer) drillContainer.style.display = 'block';
+
   if (_activeDrillEngine) {
     _activeDrillEngine.cleanup();
   }
