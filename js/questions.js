@@ -3,7 +3,7 @@
  *
  * Categories:
  *   squares, cubes, fractions-to-percent, percentage-calculations,
- *   mental-multiplication, ratios, averages, profit-loss, time-speed-distance
+ *   mental-multiplication, ratios, averages, area, volume, profit-loss, time-speed-distance
  *
  * Each generator returns { question: string, answer: number|string, category: string }
  *
@@ -19,6 +19,8 @@ function randInt(min, max) {
 function pick(arr) {
   return arr[Math.floor(Math.random() * arr.length)];
 }
+
+var PI = 3.14;
 
 /** Get current difficulty from settings */
 function _getDifficulty() {
@@ -56,6 +58,74 @@ function genCube() {
     n = randInt(1, 12);
   }
   return { question: n + '³ = ?', answer: n * n * n, category: 'cubes' };
+}
+
+/** Area calculations */
+function genArea() {
+  var diff = _getDifficulty();
+  var type = randInt(0, 5);
+
+  if (type === 0) {
+    var a = diff === 'easy' ? randInt(2, 15) : (diff === 'hard' ? randInt(8, 40) : randInt(4, 25));
+    return { question: 'Area of a square with side ' + a + ' cm = ? cm²', answer: a * a, category: 'area' };
+  } else if (type === 1) {
+    var l = diff === 'easy' ? randInt(4, 18) : (diff === 'hard' ? randInt(10, 45) : randInt(6, 30));
+    var b = diff === 'easy' ? randInt(3, 14) : (diff === 'hard' ? randInt(8, 35) : randInt(5, 24));
+    return { question: 'Area of a rectangle with length ' + l + ' cm and breadth ' + b + ' cm = ? cm²', answer: l * b, category: 'area' };
+  } else if (type === 2) {
+    var base = diff === 'easy' ? randInt(4, 20) : (diff === 'hard' ? randInt(10, 50) : randInt(6, 30));
+    var height = diff === 'easy' ? randInt(3, 16) : (diff === 'hard' ? randInt(8, 36) : randInt(5, 24));
+    var tri = (base * height) / 2;
+    if (tri !== Math.floor(tri)) {
+      if (base % 2 === 1) base++;
+      tri = (base * height) / 2;
+    }
+    return { question: 'Area of a triangle with base ' + base + ' cm and height ' + height + ' cm = ? cm²', answer: tri, category: 'area' };
+  } else if (type === 3) {
+    var r = diff === 'easy' ? randInt(2, 10) : (diff === 'hard' ? randInt(6, 20) : randInt(3, 14));
+    return { question: 'Area of a circle (use π = 3.14) with radius ' + r + ' cm = ?', answer: parseFloat((PI * r * r).toFixed(2)), category: 'area' };
+  } else if (type === 4) {
+    var pb = diff === 'easy' ? randInt(4, 18) : (diff === 'hard' ? randInt(10, 40) : randInt(6, 26));
+    var ph = diff === 'easy' ? randInt(3, 14) : (diff === 'hard' ? randInt(8, 30) : randInt(5, 22));
+    return { question: 'Area of a parallelogram with base ' + pb + ' cm and height ' + ph + ' cm = ? cm²', answer: pb * ph, category: 'area' };
+  }
+
+  var ta = diff === 'easy' ? randInt(4, 14) : (diff === 'hard' ? randInt(8, 26) : randInt(5, 18));
+  var tb = diff === 'easy' ? randInt(3, 12) : (diff === 'hard' ? randInt(7, 22) : randInt(4, 16));
+  var th = diff === 'easy' ? randInt(3, 12) : (diff === 'hard' ? randInt(6, 20) : randInt(4, 14));
+  var trap = ((ta + tb) * th) / 2;
+  if (trap !== Math.floor(trap)) {
+    if ((ta + tb) % 2 === 1) ta++;
+    trap = ((ta + tb) * th) / 2;
+  }
+  return { question: 'Area of a trapezium with parallel sides ' + ta + ' cm, ' + tb + ' cm and height ' + th + ' cm = ? cm²', answer: trap, category: 'area' };
+}
+
+/** Volume calculations */
+function genVolume() {
+  var diff = _getDifficulty();
+  var type = randInt(0, 4);
+
+  if (type === 0) {
+    var a = diff === 'easy' ? randInt(2, 12) : (diff === 'hard' ? randInt(6, 25) : randInt(3, 18));
+    return { question: 'Volume of a cube with side ' + a + ' cm = ? cm³', answer: a * a * a, category: 'volume' };
+  } else if (type === 1) {
+    var l = diff === 'easy' ? randInt(3, 14) : (diff === 'hard' ? randInt(8, 28) : randInt(4, 18));
+    var b = diff === 'easy' ? randInt(2, 12) : (diff === 'hard' ? randInt(6, 22) : randInt(3, 16));
+    var h = diff === 'easy' ? randInt(2, 10) : (diff === 'hard' ? randInt(5, 18) : randInt(3, 14));
+    return { question: 'Volume of a cuboid with dimensions ' + l + ' cm × ' + b + ' cm × ' + h + ' cm = ? cm³', answer: l * b * h, category: 'volume' };
+  } else if (type === 2) {
+    var r = diff === 'easy' ? randInt(2, 8) : (diff === 'hard' ? randInt(5, 14) : randInt(3, 10));
+    var ch = diff === 'easy' ? randInt(3, 12) : (diff === 'hard' ? randInt(6, 20) : randInt(4, 15));
+    return { question: 'Volume of a cylinder (use π = 3.14) with radius ' + r + ' cm and height ' + ch + ' cm = ?', answer: parseFloat((PI * r * r * ch).toFixed(2)), category: 'volume' };
+  } else if (type === 3) {
+    var sr = diff === 'easy' ? randInt(2, 7) : (diff === 'hard' ? randInt(4, 12) : randInt(3, 9));
+    return { question: 'Volume of a sphere (use π = 3.14) with radius ' + sr + ' cm = ?', answer: parseFloat(((4 / 3) * PI * sr * sr * sr).toFixed(2)), category: 'volume' };
+  }
+
+  var cr = diff === 'easy' ? randInt(2, 8) : (diff === 'hard' ? randInt(4, 12) : randInt(3, 10));
+  var coneH = diff === 'easy' ? randInt(3, 12) : (diff === 'hard' ? randInt(6, 18) : randInt(4, 14));
+  return { question: 'Volume of a cone (use π = 3.14) with radius ' + cr + ' cm and height ' + coneH + ' cm = ?', answer: parseFloat(((1 / 3) * PI * cr * cr * coneH).toFixed(2)), category: 'volume' };
 }
 
 /** Fractions → percentage (complete table from spec) */
@@ -427,6 +497,8 @@ function genTimeWork() {
 var categoryGenerators = {
   squares: genSquare,
   cubes: genCube,
+  area: genArea,
+  volume: genVolume,
   fractions: genFraction,
   percentages: genPercentage,
   multiplication: genMultiplication,
@@ -452,8 +524,8 @@ function _wasRecentlyAsked(questionText) {
 
 /* ---- public API ---- */
 
-var generators = [genSquare, genCube, genFraction, genPercentage, genMultiplication,
-  genRatio, genAverage, genProfitLoss, genTSD, genTimeWork];
+var generators = [genSquare, genCube, genArea, genVolume, genFraction, genPercentage,
+  genMultiplication, genRatio, genAverage, genProfitLoss, genTSD, genTimeWork];
 
 /**
  * Generate a single random question (all categories).

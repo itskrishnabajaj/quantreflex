@@ -193,6 +193,11 @@
           <p>Practice your previously wrong answers</p>
         </div>
 
+        <div class="mode-card" data-mode="custom">
+          <h3>⚡ Custom Training Mode</h3>
+          <p>Multi-topic session · 1–100 questions · Fully personalized</p>
+        </div>
+
         <div class="mode-card mode-card-teaser" data-mode="wordproblems">
           <h3>🔒 Word Problems</h3>
           <p>Coming in a future update.</p>
@@ -201,10 +206,12 @@
 
       <!-- Category selection (shown when Focus Training is picked) -->
       <div id="categorySelect" style="display:none;">
-        <h3 style="margin-bottom:.75rem;">Choose Category</h3>
+        <h3 class="category-select-title">Choose Category</h3>
         <div class="category-grid">
           <button class="category-btn" data-cat="squares">Squares</button>
           <button class="category-btn" data-cat="cubes">Cubes</button>
+          <button class="category-btn" data-cat="area">Area</button>
+          <button class="category-btn" data-cat="volume">Volume</button>
           <button class="category-btn" data-cat="percentages">Percentages</button>
           <button class="category-btn" data-cat="multiplication">Multiplication</button>
           <button class="category-btn" data-cat="fractions">Fractions</button>
@@ -214,7 +221,17 @@
           <button class="category-btn" data-cat="time-speed-distance">Time Speed Dist</button>
           <button class="category-btn" data-cat="time-and-work">Time &amp; Work</button>
         </div>
-        <button class="btn" id="backToModes" style="margin-top:1rem;">← Back</button>
+        <div id="customPracticeConfig" class="custom-practice-config">
+          <label class="secondary-text" for="customQuestionCount">Number of Questions</label>
+          <input id="customQuestionCount" class="custom-question-range" type="range" min="1" max="100" value="20" />
+          <div class="custom-practice-meta-row">
+            <strong id="customQuestionCountValue">20</strong>
+            <span class="secondary-text" id="customQuestionCountText">You will solve 20 questions</span>
+          </div>
+          <p id="customModeError" class="custom-mode-error secondary-text"></p>
+          <button class="btn accent custom-practice-start-btn" id="startCustomSessionBtn">Start Custom Session</button>
+        </div>
+        <button class="btn category-back-btn" id="backToModes">← Back</button>
       </div>
 
       <!-- Drill engine renders here -->
@@ -251,7 +268,7 @@
 
       <!-- SECTION 1: General Maths -->
       <h2 class="learn-group-title" id="generalMath">📚 General Maths</h2>
-      <p class="secondary-text" style="margin-bottom:1rem;">Calculation foundations every student must memorize.</p>
+      <p class="secondary-text learn-group-subtitle">Calculation foundations every student must memorize.</p>
 
       <!-- Multiplication Tables (collapsible — large section with selector) -->
       <div class="card collapsible-card learn-searchable" id="tablesContainer">
@@ -334,7 +351,7 @@
 
       <!-- SECTION 2: Topic Wise Quant -->
       <h2 class="learn-group-title" id="formulaSections">📝 Topic Wise Quant</h2>
-      <p class="secondary-text" style="margin-bottom:1rem;">Formulas, shortcuts &amp; tricks organized by topic.</p>
+      <p class="secondary-text learn-group-subtitle">Formulas, shortcuts &amp; tricks organized by topic.</p>
 
       <!-- Dynamic formula sections rendered by JS from formulas.js -->
       <div id="topicSections"></div>
@@ -343,7 +360,7 @@
       <div id="customTopicSections"></div>
 
       <!-- Add New Topic Button -->
-      <button class="btn add-topic-btn" id="addTopicBtn" style="width:100%;">+ Add New Topic</button>
+      <button class="btn add-topic-btn" id="addTopicBtn">+ Add New Topic</button>
     </div>
 
     <!-- ==================== STATS VIEW ==================== -->
@@ -824,7 +841,7 @@
         <h3 class="info-section-title">📬 Contact</h3>
         <div class="info-block">
           <p>For feedback, suggestions, or support, reach out at:</p>
-          <p><strong>quantreflex@gmail.com</strong></p>
+          <p><a href="mailto:quantreflex@gmail.com"><strong>quantreflex@gmail.com</strong></a></p>
         </div>
       </div>
 

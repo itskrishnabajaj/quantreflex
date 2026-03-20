@@ -25,6 +25,7 @@
  * @param {number|null} opts.timeLimitSec    - overall time limit in seconds (null = unlimited)
  * @param {number|null} opts.perQuestionSec  - per-question time limit in seconds (null = unlimited)
  * @param {string|null} opts.category        - question category filter (null = all)
+ * @param {string[]|null} opts.topics        - optional custom mode topic list
  * @param {string}      opts.mode            - drill mode label for display
  * @param {boolean}     opts.reviewMode      - if true, use mistake review questions
  * @param {function}    opts.onFinish        - callback when drill finishes (for SPA navigation)
@@ -35,6 +36,7 @@ function createDrillEngine(container, opts) {
   var timeLimit = opts.timeLimitSec || null;
   var perQLimit = opts.perQuestionSec || null;
   var category = opts.category || null;
+  var topics = Array.isArray(opts.topics) ? opts.topics : null;
   var mode = opts.mode || 'Drill';
   var reviewMode = opts.reviewMode || false;
   var onFinish = opts.onFinish || null;
@@ -52,6 +54,14 @@ function createDrillEngine(container, opts) {
   var autoAdvanceTimer = null;
   var answered = false; /* prevents double-counting */
   var reviewOriginalCount = 0; /* track original count for review mode cap */
+  var ui = {
+    globalTimerEl: null,
+    perQTimerEl: null,
+    answerInputEl: null,
+    submitBtnEl: null,
+    feedbackEl: null,
+    cardEl: null
+  };
 
   /* ---- render helpers ---- */
 
@@ -60,6 +70,7 @@ function createDrillEngine(container, opts) {
     if (timeLimit) subtitle += ' · ' + timeLimit + 's time limit';
     if (perQLimit) subtitle += ' · ' + perQLimit + 's per question';
     if (category) subtitle += ' · ' + category;
+    if (topics && topics.length) subtitle += ' · ' + topics.length + ' topics';
 
     container.innerHTML =
       '<div class="card center-content">' +
@@ -95,6 +106,12 @@ function createDrillEngine(container, opts) {
         '<div id="feedback" class="feedback"></div>' +
         '<button id="submitBtn" class="btn accent">Submit</button>' +
       '</div>';
+    ui.globalTimerEl = container.querySelector('#globalTimer');
+    ui.perQTimerEl = container.querySelector('#perQTimer');
+    ui.answerInputEl = container.querySelector('#answerInput');
+    ui.submitBtnEl = container.querySelector('#submitBtn');
+    ui.feedbackEl = container.querySelector('#feedback');
+    ui.cardEl = container.querySelector('.card');
 
     /* Exit button handler — uses custom in-app dialog to prevent
        the TWA/WebView bug where native confirm() can end the session
@@ -121,8 +138,8 @@ function createDrillEngine(container, opts) {
       }
     });
 
-    var input = container.querySelector('#answerInput');
-    var submitBtn = container.querySelector('#submitBtn');
+    var input = ui.answerInputEl;
+    var submitBtn = ui.submitBtnEl;
     /* Auto-focus input with delay to ensure DOM is ready */
     setTimeout(function () { input.focus(); }, 50);
 
@@ -151,7 +168,7 @@ function createDrillEngine(container, opts) {
         recordAnswer(false, q.category, q, 0);
         nextQuestion();
       });
-      var card = container.querySelector('.card');
+      var card = ui.cardEl;
       if (card) card.appendChild(skipBtn);
     }
 
@@ -243,27 +260,27 @@ function createDrillEngine(container, opts) {
       if (typeof triggerHaptic === 'function') triggerHaptic([40, 30, 40]);
     }
 
-    var feedback = container.querySelector('#feedback');
+    var feedback = ui.feedbackEl;
     feedback.textContent = correct ? '✓ Correct!' : '✗ Answer: ' + expected;
     feedback.className = 'feedback ' + (correct ? 'correct' : 'wrong');
 
     /* Add animation class — shake on wrong, pop on correct */
     feedback.classList.add('feedback-anim');
     if (!correct) {
-      var card = container.querySelector('.card');
+      var card = ui.cardEl;
       if (card) card.classList.add('feedback-shake');
       setTimeout(function () { if (card) card.classList.remove('feedback-shake'); }, 400);
     }
 
     /* Replace submit with next */
-    var submitBtn = container.querySelector('#submitBtn');
+    var submitBtn = ui.submitBtnEl;
     submitBtn.textContent = current + 1 < count ? 'Next →' : 'See Results';
     submitBtn.onclick = nextQuestion;
 
     /* Focus next button for keyboard navigation */
     submitBtn.focus();
 
-    container.querySelector('#answerInput').disabled = true;
+    ui.answerInputEl.disabled = true;
 
     /* Auto-advance on correct answer after a short delay for feedback visibility */
     if (correct && current + 1 < count) {
@@ -355,7 +372,7 @@ function createDrillEngine(container, opts) {
     if (!timeLimit) return;
     var remaining = timeLimit;
     function tick() {
-      var el = container.querySelector('#globalTimer');
+      var el = ui.globalTimerEl;
       if (el) el.textContent = '⏱ ' + remaining + 's';
       if (remaining <= 0) { clearInterval(overallTimer); overallTimer = null; finish(); return; }
       remaining--;
@@ -369,7 +386,7 @@ function createDrillEngine(container, opts) {
   function startPerQTimer() {
     var remaining = perQLimit;
     function tick() {
-      var el = container.querySelector('#perQTimer');
+      var el = ui.perQTimerEl;
       if (el) el.textContent = '⏱ ' + remaining + 's';
       if (remaining <= 0) {
         clearInterval(perQTimer);
@@ -392,6 +409,48 @@ function createDrillEngine(container, opts) {
   }
 
   /* ---- begin drill ---- */
+
+  function _generateCustomTopicQuestions(totalCount, topicKeys) {
+    var validTopics = [];
+    var topicSeen = {};
+    for (var i = 0; i < topicKeys.length; i++) {
+      var topicKey = topicKeys[i];
+      if (categoryGenerators[topicKey] && !topicSeen[topicKey]) {
+        validTopics.push(topicKey);
+        topicSeen[topicKey] = true;
+      }
+    }
+
+    if (!validTopics.length) {
+      return generateQuestions(totalCount, null);
+    }
+
+    var eachCount = Math.floor(totalCount / validTopics.length);
+    var remainder = totalCount % validTopics.length;
+    var assembled = [];
+
+    for (var v = 0; v < validTopics.length; v++) {
+      var perTopic = eachCount + (v < remainder ? 1 : 0);
+      if (perTopic <= 0) continue;
+      var topicQuestions = generateQuestions(perTopic, validTopics[v]);
+      for (var q = 0; q < topicQuestions.length; q++) {
+        assembled.push(topicQuestions[q]);
+      }
+    }
+
+    _shuffleInPlace(assembled);
+
+    return assembled.slice(0, totalCount);
+  }
+
+  function _shuffleInPlace(arr) {
+    for (var currentIndex = arr.length - 1; currentIndex > 0; currentIndex--) {
+      var randomIndex = Math.floor(Math.random() * (currentIndex + 1));
+      var tempQuestion = arr[currentIndex];
+      arr[currentIndex] = arr[randomIndex];
+      arr[randomIndex] = tempQuestion;
+    }
+  }
 
   function begin() {
     /* Mark session as active and hide nav for immersive experience */
@@ -423,6 +482,8 @@ function createDrillEngine(container, opts) {
       }
       count = questions.length; /* May be less than requested */
       reviewOriginalCount = count;
+    } else if (topics && topics.length) {
+      questions = _generateCustomTopicQuestions(count, topics);
     } else {
       questions = generateQuestions(count, category); /* questions.js */
     }
