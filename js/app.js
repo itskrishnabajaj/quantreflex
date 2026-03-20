@@ -392,15 +392,16 @@ function showExitSessionDialog(onConfirm) {
   if (_exitDialogShowing) return;
   _exitDialogShowing = true;
 
-  var modal = document.getElementById('exitSessionModal');
-  function closeDialog() {
-    if (modal) modal.style.display = 'none';
+  function closeDialog(modalEl) {
+    if (modalEl) modalEl.style.display = 'none';
     _exitDialogShowing = false;
   }
+
+  var modal = document.getElementById('exitSessionModal');
   if (!modal) {
     /* Fallback: use native confirm if modal element is missing */
     var shouldExit = confirm(_exitSessionMsg);
-    closeDialog();
+    closeDialog(null);
     if (shouldExit) onConfirm();
     return;
   }
@@ -411,24 +412,24 @@ function showExitSessionDialog(onConfirm) {
   var confirmBtn = document.getElementById('exitSessionConfirm');
   if (!cancelBtn || !confirmBtn) {
     var fallbackExit = confirm(_exitSessionMsg);
-    closeDialog();
+    closeDialog(modal);
     if (fallbackExit) onConfirm();
     return;
   }
 
   cancelBtn.onclick = function () {
-    closeDialog();
+    closeDialog(modal);
     /* Session continues — do nothing else */
   };
 
   confirmBtn.onclick = function () {
-    closeDialog();
+    closeDialog(modal);
     onConfirm();
   };
 
   /* Close on overlay click (treat as cancel) */
   modal.onclick = function (e) {
-    if (e.target === modal) closeDialog();
+    if (e.target === modal) closeDialog(modal);
   };
 }
 
@@ -1346,6 +1347,8 @@ document.addEventListener('DOMContentLoaded', function () {
 
 /* ---- Practice drill starter ---- */
 function startDrillFromPractice(modeKey, category, categoryLabel) {
+  /* Preserve custom selection mode only for custom sessions. */
+  if (modeKey !== 'custom') _customPracticeActive = false;
   var modeSelect = document.getElementById('modeSelect');
   var categorySelect = document.getElementById('categorySelect');
   var customPracticeConfig = document.getElementById('customPracticeConfig');
@@ -1416,12 +1419,20 @@ var _CUSTOM_MIN_QUESTIONS = 1;
 var _CUSTOM_MAX_QUESTIONS = 100;
 
 /* Placeholder for future paywall integration. */
+/**
+ * Central paywall access hook.
+ * Planned feature keys include: 'custom_mode', 'analytics_export', 'advanced_tests'.
+ * Gate checks should be centralized here once subscription state is available.
+ * @param {string} feature - feature key (e.g. 'custom_mode') to gate in future.
+ * @returns {boolean}
+ */
 function canAccessFeature(feature) {
   return true;
 }
 
 /* Placeholder for future paywall integration. */
 function canAccessCustomMode(user) {
+  /* 'user' is reserved for future subscription checks. */
   if (!canAccessFeature('custom_mode')) return false;
   return true;
 }
