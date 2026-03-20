@@ -20,6 +20,8 @@ function pick(arr) {
   return arr[Math.floor(Math.random() * arr.length)];
 }
 
+var PI = 3.14;
+
 /** Get current difficulty from settings */
 function _getDifficulty() {
   try {
@@ -81,7 +83,7 @@ function genArea() {
     return { question: 'Area of a triangle with base ' + base + ' cm and height ' + height + ' cm = ? cm²', answer: tri, category: 'area' };
   } else if (type === 3) {
     var r = diff === 'easy' ? randInt(2, 10) : (diff === 'hard' ? randInt(6, 20) : randInt(3, 14));
-    return { question: 'Area of a circle (use π = 3) with radius ' + r + ' cm = ?', answer: 3 * r * r, category: 'area' };
+    return { question: 'Area of a circle (use π = 3.14) with radius ' + r + ' cm = ?', answer: parseFloat((PI * r * r).toFixed(2)), category: 'area' };
   } else if (type === 4) {
     var pb = diff === 'easy' ? randInt(4, 18) : (diff === 'hard' ? randInt(10, 40) : randInt(6, 26));
     var ph = diff === 'easy' ? randInt(3, 14) : (diff === 'hard' ? randInt(8, 30) : randInt(5, 22));
@@ -115,15 +117,15 @@ function genVolume() {
   } else if (type === 2) {
     var r = diff === 'easy' ? randInt(2, 8) : (diff === 'hard' ? randInt(5, 14) : randInt(3, 10));
     var ch = diff === 'easy' ? randInt(3, 12) : (diff === 'hard' ? randInt(6, 20) : randInt(4, 15));
-    return { question: 'Volume of a cylinder (use π = 3) with radius ' + r + ' cm and height ' + ch + ' cm = ?', answer: 3 * r * r * ch, category: 'volume' };
+    return { question: 'Volume of a cylinder (use π = 3.14) with radius ' + r + ' cm and height ' + ch + ' cm = ?', answer: parseFloat((PI * r * r * ch).toFixed(2)), category: 'volume' };
   } else if (type === 3) {
     var sr = diff === 'easy' ? randInt(2, 7) : (diff === 'hard' ? randInt(4, 12) : randInt(3, 9));
-    return { question: 'Volume of a sphere (use π = 3) with radius ' + sr + ' cm = ?', answer: 4 * sr * sr * sr, category: 'volume' };
+    return { question: 'Volume of a sphere (use π = 3.14) with radius ' + sr + ' cm = ?', answer: parseFloat(((4 / 3) * PI * sr * sr * sr).toFixed(2)), category: 'volume' };
   }
 
   var cr = diff === 'easy' ? randInt(2, 8) : (diff === 'hard' ? randInt(4, 12) : randInt(3, 10));
   var coneH = diff === 'easy' ? randInt(3, 12) : (diff === 'hard' ? randInt(6, 18) : randInt(4, 14));
-  return { question: 'Volume of a cone (use π = 3) with radius ' + cr + ' cm and height ' + coneH + ' cm = ?', answer: cr * cr * coneH, category: 'volume' };
+  return { question: 'Volume of a cone (use π = 3.14) with radius ' + cr + ' cm and height ' + coneH + ' cm = ?', answer: parseFloat(((1 / 3) * PI * cr * cr * coneH).toFixed(2)), category: 'volume' };
 }
 
 /** Fractions → percentage (complete table from spec) */

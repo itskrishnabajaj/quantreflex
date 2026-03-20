@@ -207,20 +207,27 @@ header {
 header h1 {
   font-size: 1.5rem;
   letter-spacing: .05em;
-  background: linear-gradient(135deg, #2563eb, #1d4ed8);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
+  color: #2563eb;
   display: inline-flex;
   align-items: center;
   gap: .4rem;
 }
 .header-icon {
-  width: 28px;
-  height: 28px;
+  width: 20px;
+  height: 20px;
   object-fit: contain;
   vertical-align: middle;
   flex-shrink: 0;
+  color: inherit;
+  opacity: 1;
+  filter: none;
+  mix-blend-mode: normal;
+  -webkit-text-fill-color: initial;
+}
+.header-icon svg {
+  width: 20px;
+  height: 20px;
+  fill: currentColor;
 }
 
 /* ---- Cards ---- */
@@ -1505,9 +1512,7 @@ body.dark-mode {
   color: #e2e8f0;
 }
 body.dark-mode header h1 {
-  background: linear-gradient(135deg, #60a5fa, #3b82f6);
-  -webkit-background-clip: text;
-  background-clip: text;
+  color: #60a5fa;
 }
 body.dark-mode .card,
 body.dark-mode .study-card,
@@ -2954,9 +2959,7 @@ body.theme-playful {
 body.theme-playful .app-loader { background: #ffffff; }
 
 body.theme-playful header h1 {
-  background: linear-gradient(135deg, #4f8ff7, #2dd4bf);
-  -webkit-background-clip: text;
-  background-clip: text;
+  color: #4f8ff7;
 }
 
 body.theme-playful .card,
@@ -3386,9 +3389,7 @@ body.theme-playful.dark-mode {
 body.theme-playful.dark-mode .app-loader { background: #0d1117; }
 
 body.theme-playful.dark-mode header h1 {
-  background: linear-gradient(135deg, #58a6ff, #3ddbd9);
-  -webkit-background-clip: text;
-  background-clip: text;
+  color: #58a6ff;
 }
 
 body.theme-playful.dark-mode .card,

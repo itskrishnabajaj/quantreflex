@@ -45,10 +45,10 @@ var SoundEngine = (function () {
     if (!isSoundEnabled()) return;
     var audio = sounds[key];
     if (!audio) return;
-    /* Stop and reset to allow rapid re-triggering */
-    audio.pause();
-    audio.currentTime = 0;
-    audio.play().catch(function () { /* ignore autoplay restrictions */ });
+    /* Use cloned node for ultra-fast retriggering without cutting previous sound */
+    var node = audio.cloneNode();
+    node.currentTime = 0;
+    node.play().catch(function () { /* ignore autoplay restrictions */ });
   }
 
   /* Preload on script load */
