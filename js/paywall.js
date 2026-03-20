@@ -288,7 +288,7 @@ function showPaywall(featureType) {
     upgradeBtn.addEventListener('click', function () {
       if (!userId) {
         var now = Date.now();
-        if (now - _paywallGuestPromptAt < 900) return;
+        if (now - _paywallGuestPromptAt < 1000) return;
         _paywallGuestPromptAt = now;
         showToast('Please login to continue payment.');
         return;
