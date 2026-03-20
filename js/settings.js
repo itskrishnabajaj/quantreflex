@@ -7,6 +7,7 @@
  */
 
 var SETTINGS_KEY = 'quant_reflex_settings';
+var _logoutInFlight = false;
 
 function loadSettings() {
   try {
@@ -253,14 +254,20 @@ function initSettingsView() {
   var logoutBtn = document.getElementById('logoutBtn');
   if (logoutBtn) {
     rebind(logoutBtn, 'click', function () {
+      if (_logoutInFlight) return;
       if (typeof Auth !== 'undefined') {
+        _logoutInFlight = true;
+        this.disabled = true;
         /* Flush pending Firestore writes and clear local state BEFORE
            signing out, while the user context is still valid */
         if (typeof FirestoreSync !== 'undefined') {
           FirestoreSync.resetSyncState();
         }
         Auth.logout(function (err) {
+          _logoutInFlight = false;
           if (err) {
+            var lb = document.getElementById('logoutBtn');
+            if (lb) lb.disabled = false;
             alert('Logout failed: ' + err);
           } else {
             /* Reload page for clean state — auth persistence keeps

@@ -53,6 +53,7 @@ function createDrillEngine(container, opts) {
   var perQTimer = null;
   var autoAdvanceTimer = null;
   var answered = false; /* prevents double-counting */
+  var beginStarted = false; /* prevents duplicate START on rapid taps */
   var reviewOriginalCount = 0; /* track original count for review mode cap */
   var ui = {
     globalTimerEl: null,
@@ -108,7 +109,7 @@ function createDrillEngine(container, opts) {
       : count;
     var progressPct = displayCount > 0 ? Math.min(100, Math.round(((current) / displayCount) * 100)) : 0;
     container.innerHTML =
-      '<button class="drill-exit-btn" id="drillExitBtn" aria-label="Back to practice">← Back</button>' +
+      '<button class="drill-exit-btn" id="drillExitBtn" aria-label="Back to practice">← Back to Practice</button>' +
       '<div class="card center-content fade-in">' +
         '<p class="drill-progress">Question ' + (current + 1) + ' / ' + displayCount + '</p>' +
         '<div class="drill-progress-bar"><div class="drill-progress-fill" style="width:' + progressPct + '%"></div></div>' +
@@ -466,6 +467,8 @@ function createDrillEngine(container, opts) {
   }
 
   function begin() {
+    if (beginStarted) return;
+    beginStarted = true;
     /* Mark session as active and hide nav for immersive experience */
     _enterDrillSession();
 
