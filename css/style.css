@@ -1210,6 +1210,156 @@ body.dark-mode .settings-chevron { color: #64748b; }
   z-index: 300;
   animation: infoModalFadeIn .25s ease;
 }
+
+body.paywall-open {
+  overflow: hidden;
+}
+
+.paywall-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(11, 18, 32, .62);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  z-index: 500;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+  animation: paywallFadeIn .25s ease;
+}
+
+.paywall-overlay.closing {
+  animation: paywallFadeOut .2s ease forwards;
+}
+
+.paywall-card {
+  width: min(430px, 100%);
+  background: #f8fafc;
+  border-radius: 1rem;
+  padding: 1.25rem 1.1rem 1rem;
+  box-shadow: 0 24px 60px rgba(2, 8, 23, .38);
+  text-align: center;
+  transform-origin: center;
+  animation: paywallScaleIn .3s cubic-bezier(.16,1,.3,1);
+  position: relative;
+}
+
+.paywall-close {
+  position: absolute;
+  top: .55rem;
+  right: .55rem;
+  width: 2rem;
+  height: 2rem;
+  border: none;
+  border-radius: 50%;
+  background: rgba(2, 8, 23, .08);
+  color: #334155;
+  font-size: 1.3rem;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.paywall-badge {
+  margin: 0 auto .45rem;
+  display: inline-block;
+  font-size: .78rem;
+  font-weight: 800;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+  color: #1d4ed8;
+}
+
+.paywall-card h2 {
+  margin: 0 0 .55rem;
+  font-size: 1.34rem;
+}
+
+.paywall-subtitle {
+  margin: 0 0 .8rem;
+  color: #475569;
+}
+
+.paywall-benefits {
+  margin: 0 0 1rem;
+  padding: 0;
+  list-style: none;
+  text-align: left;
+}
+
+.paywall-benefits li {
+  margin: 0 0 .42rem;
+  padding-left: 1.15rem;
+  position: relative;
+  color: #1e293b;
+}
+
+.paywall-benefits li::before {
+  content: '✓';
+  position: absolute;
+  left: 0;
+  top: 0;
+  color: #16a34a;
+  font-weight: 700;
+}
+
+.paywall-upgrade {
+  width: 100%;
+}
+
+.paywall-footnote {
+  margin: .65rem 0 0;
+  color: #64748b;
+  font-size: .82rem;
+}
+
+.stat-card-locked,
+.category-locked-card {
+  width: 100%;
+  border: 1px dashed #93c5fd;
+  background: #eff6ff;
+  color: #1e3a8a;
+  border-radius: .8rem;
+  padding: .9rem;
+  text-align: left;
+  cursor: pointer;
+}
+
+.category-locked-card span {
+  display: block;
+  margin-top: .25rem;
+}
+
+body.dark-mode .paywall-card {
+  background: #0f172a;
+}
+body.dark-mode .paywall-close {
+  background: rgba(148, 163, 184, .2);
+  color: #e2e8f0;
+}
+body.dark-mode .paywall-badge { color: #93c5fd; }
+body.dark-mode .paywall-subtitle,
+body.dark-mode .paywall-footnote { color: #94a3b8; }
+body.dark-mode .paywall-benefits li { color: #e2e8f0; }
+body.dark-mode .stat-card-locked,
+body.dark-mode .category-locked-card {
+  background: rgba(30, 41, 59, .8);
+  border-color: #334155;
+  color: #bfdbfe;
+}
+
+@keyframes paywallFadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+@keyframes paywallFadeOut {
+  from { opacity: 1; }
+  to { opacity: 0; }
+}
+@keyframes paywallScaleIn {
+  from { opacity: 0; transform: scale(.95); }
+  to { opacity: 1; transform: scale(1); }
+}
 .info-modal-overlay.closing {
   animation: infoModalFadeOut .2s ease forwards;
 }

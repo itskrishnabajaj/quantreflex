@@ -25,6 +25,8 @@ var FirestoreSync = (function () {
   var _drillActive = false; /* Whether a drill is in progress (defers syncing) */
   var _loadedUserId = null; /* UID whose data is currently loaded — detects user switches */
   var SYNC_DEBOUNCE_MS = 2000; /* batch updates every 2 seconds */
+  var EARLY_USER_LIMIT = 121;
+  var TRIAL_DAYS = 7;
 
   /* All localStorage keys that store user-specific data */
   var _USER_STORAGE_KEYS = [
@@ -123,7 +125,9 @@ var FirestoreSync = (function () {
     docRef.get().then(function (doc) {
       if (doc.exists) {
         var data = doc.data();
+        _normalizeMonetization(data, docRef);
         _memoryCache = data;
+        _enforceTrialExpiry(_memoryCache, docRef);
         _dataLoaded = true;
         _loadedUserId = currentUserId;
         /* Merge Firestore data into localStorage (Firestore is source of truth) */
@@ -166,6 +170,8 @@ var FirestoreSync = (function () {
   function _createDefaultDocument() {
     var docRef = _getUserDocRef();
     if (!docRef) return;
+    var db = FirebaseApp.getDb();
+    if (!db) return;
 
     var userId = FirebaseApp.getUserId();
     var username = userId || 'user';
@@ -173,11 +179,13 @@ var FirestoreSync = (function () {
     if (typeof Auth !== 'undefined' && Auth.getCurrentUser() && Auth.getCurrentUser().email) {
       username = Auth.getCurrentUser().email.split('@')[0];
     }
-    var defaults = {
+    var now = new Date();
+    var trialEndDate = new Date(now.getTime() + (TRIAL_DAYS * 24 * 60 * 60 * 1000));
+    var fallbackDefaults = {
       profile: {
         name: '',
         username: username,
-        createdAt: new Date().toISOString()
+        createdAt: now.toISOString()
       },
       settings: {
         darkMode: false, sound: true, vibration: true, difficulty: 'medium',
@@ -197,24 +205,126 @@ var FirestoreSync = (function () {
       quickLinks: ['fractionTable', 'tablesContainer', 'formulaSections', 'mentalTricks'],
       customTopics: [],
       customFormulas: {},
-      bookmarks: []
+      bookmarks: [],
+      isPremium: true,
+      isTrial: true,
+      trialEnd: trialEndDate,
+      hasPaid: false,
+      isEarlyUser: false,
+      createdAt: now.toISOString()
     };
 
-    _memoryCache = defaults;
+    _memoryCache = fallbackDefaults;
     _dataLoaded = true;
 
     /* Write clean defaults to localStorage so the app has consistent state */
     try {
-      localStorage.setItem('quant_reflex_settings', JSON.stringify(defaults.settings));
-      localStorage.setItem('quant_reflex_progress', JSON.stringify(defaults.stats));
-      localStorage.setItem('quant_quick_links', JSON.stringify(defaults.quickLinks));
-      localStorage.setItem('quant_custom_topics', JSON.stringify(defaults.customTopics));
-      localStorage.setItem('quant_custom_formulas', JSON.stringify(defaults.customFormulas));
-      localStorage.setItem('quant_bookmarks', JSON.stringify(defaults.bookmarks));
+      localStorage.setItem('quant_reflex_settings', JSON.stringify(fallbackDefaults.settings));
+      localStorage.setItem('quant_reflex_progress', JSON.stringify(fallbackDefaults.stats));
+      localStorage.setItem('quant_quick_links', JSON.stringify(fallbackDefaults.quickLinks));
+      localStorage.setItem('quant_custom_topics', JSON.stringify(fallbackDefaults.customTopics));
+      localStorage.setItem('quant_custom_formulas', JSON.stringify(fallbackDefaults.customFormulas));
+      localStorage.setItem('quant_bookmarks', JSON.stringify(fallbackDefaults.bookmarks));
     } catch (_) {}
+    var metaRef = db.collection('appMeta').doc('global');
 
-    docRef.set(defaults, { merge: true }).catch(function (err) {
+    db.runTransaction(function (tx) {
+      return tx.get(docRef).then(function (userDoc) {
+        if (userDoc.exists) return;
+        return tx.get(metaRef).then(function (metaDoc) {
+        var meta = metaDoc.exists ? (metaDoc.data() || {}) : {};
+        var totalUsers = parseInt(meta.totalUsers, 10);
+        if (isNaN(totalUsers) || totalUsers < 0) totalUsers = 0;
+        var isEarlyUser = totalUsers < EARLY_USER_LIMIT;
+        var docDefaults = {
+          profile: {
+            name: '',
+            username: username,
+            createdAt: now.toISOString()
+          },
+          settings: fallbackDefaults.settings,
+          stats: fallbackDefaults.stats,
+          quickLinks: fallbackDefaults.quickLinks,
+          customTopics: fallbackDefaults.customTopics,
+          customFormulas: fallbackDefaults.customFormulas,
+          bookmarks: fallbackDefaults.bookmarks,
+          isPremium: true,
+          isTrial: !isEarlyUser,
+          trialEnd: isEarlyUser ? null : trialEndDate,
+          hasPaid: false,
+          isEarlyUser: isEarlyUser,
+          createdAt: (typeof firebase !== 'undefined' && firebase.firestore && firebase.firestore.FieldValue)
+            ? firebase.firestore.FieldValue.serverTimestamp()
+            : now.toISOString()
+        };
+        tx.set(docRef, docDefaults, { merge: true });
+        tx.set(metaRef, { totalUsers: totalUsers + 1 }, { merge: true });
+        _memoryCache = docDefaults;
+        if (_memoryCache.createdAt && typeof _memoryCache.createdAt.toDate === 'function') {
+          _memoryCache.createdAt = _memoryCache.createdAt.toDate().toISOString();
+        }
+        });
+      });
+    }).catch(function (err) {
       console.warn('Firestore default document creation failed:', err);
+      docRef.set(fallbackDefaults, { merge: true }).catch(function (fallbackErr) {
+        console.warn('Firestore fallback default document creation failed:', fallbackErr);
+      });
+    });
+  }
+
+  function _toMillis(ts) {
+    if (!ts) return 0;
+    if (typeof ts === 'number') return ts;
+    if (typeof ts === 'string') {
+      var parsed = Date.parse(ts);
+      return isNaN(parsed) ? 0 : parsed;
+    }
+    if (typeof ts.toDate === 'function') {
+      try { return ts.toDate().getTime(); } catch (_) { return 0; }
+    }
+    if (ts instanceof Date) return ts.getTime();
+    return 0;
+  }
+
+  function _normalizeMonetization(data, docRef) {
+    if (!data) return;
+    var hasAll =
+      typeof data.isPremium === 'boolean' &&
+      typeof data.isTrial === 'boolean' &&
+      typeof data.hasPaid === 'boolean' &&
+      typeof data.isEarlyUser === 'boolean' &&
+      data.hasOwnProperty('trialEnd') &&
+      data.hasOwnProperty('createdAt');
+    if (hasAll) return;
+
+    var patch = {};
+    if (typeof data.isPremium !== 'boolean') patch.isPremium = true;
+    if (typeof data.isTrial !== 'boolean') patch.isTrial = false;
+    if (!data.hasOwnProperty('trialEnd')) patch.trialEnd = null;
+    if (typeof data.hasPaid !== 'boolean') patch.hasPaid = false;
+    if (typeof data.isEarlyUser !== 'boolean') patch.isEarlyUser = true;
+    if (!data.hasOwnProperty('createdAt')) patch.createdAt = new Date().toISOString();
+
+    var keys = Object.keys(patch);
+    if (keys.length === 0) return;
+
+    for (var i = 0; i < keys.length; i++) {
+      data[keys[i]] = patch[keys[i]];
+    }
+    docRef.set(patch, { merge: true }).catch(function (err) {
+      console.warn('Failed to normalize monetization fields:', err);
+    });
+  }
+
+  function _enforceTrialExpiry(data, docRef) {
+    if (!data || !data.isTrial) return;
+    var trialEndMs = _toMillis(data.trialEnd);
+    if (!trialEndMs || Date.now() <= trialEndMs) return;
+    data.isPremium = false;
+    data.isTrial = false;
+    docRef.set({ isPremium: false, isTrial: false }, { merge: true }).catch(function (err) {
+      console.warn('Failed to update expired trial:', err);
     });
   }
 
@@ -554,6 +664,43 @@ var FirestoreSync = (function () {
       } else {
         queueUpdate('profile', { password: password });
       }
+    },
+    getAccessState: function () {
+      if (!_memoryCache) return null;
+      return {
+        isPremium: _memoryCache.isPremium === true,
+        isTrial: _memoryCache.isTrial === true,
+        trialEnd: _memoryCache.trialEnd || null,
+        hasPaid: _memoryCache.hasPaid === true,
+        isEarlyUser: _memoryCache.isEarlyUser === true,
+        createdAt: _memoryCache.createdAt || null
+      };
+    },
+    unlockPremium: function (paymentId, callback) {
+      var docRef = _getUserDocRef();
+      if (!docRef) {
+        if (callback) callback('User not authenticated');
+        return;
+      }
+      var payload = {
+        isPremium: true,
+        hasPaid: true,
+        isTrial: false,
+        trialEnd: null
+      };
+      if (paymentId) payload.lastPaymentId = String(paymentId);
+      if (_memoryCache) {
+        _memoryCache.isPremium = true;
+        _memoryCache.hasPaid = true;
+        _memoryCache.isTrial = false;
+        _memoryCache.trialEnd = null;
+        if (paymentId) _memoryCache.lastPaymentId = String(paymentId);
+      }
+      docRef.set(payload, { merge: true }).then(function () {
+        if (callback) callback(null);
+      }).catch(function (err) {
+        if (callback) callback(err && err.message ? err.message : 'Premium unlock failed');
+      });
     }
   };
 })();
