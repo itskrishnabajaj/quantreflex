@@ -242,6 +242,9 @@ var _HEADER_LABELS = {
   'view-stats': { emoji: '📊', label: 'Analytics', view: 'stats' },
   'view-settings': { emoji: '⚙️', label: 'Settings', view: 'settings' }
 };
+function _handleTabPopAnimationEnd() {
+  this.classList.remove('tab-pop');
+}
 
 /**
  * Switch navigation and header icons based on theme.
@@ -275,9 +278,8 @@ function updateNavigationIcons(theme) {
     /* Re-attach animationend cleanup listener */
     var iconChild = navIcon.firstChild;
     if (iconChild) {
-      iconChild.addEventListener('animationend', function () {
-        this.classList.remove('tab-pop');
-      });
+      iconChild.removeEventListener('animationend', _handleTabPopAnimationEnd);
+      iconChild.addEventListener('animationend', _handleTabPopAnimationEnd);
     }
   }
 
@@ -391,14 +393,15 @@ function showExitSessionDialog(onConfirm) {
   _exitDialogShowing = true;
 
   var modal = document.getElementById('exitSessionModal');
+  function closeDialog() {
+    if (modal) modal.style.display = 'none';
+    _exitDialogShowing = false;
+  }
   if (!modal) {
     /* Fallback: use native confirm if modal element is missing */
-    if (confirm(_exitSessionMsg)) {
-      _exitDialogShowing = false;
-      onConfirm();
-    } else {
-      _exitDialogShowing = false;
-    }
+    var shouldExit = confirm(_exitSessionMsg);
+    closeDialog();
+    if (shouldExit) onConfirm();
     return;
   }
 
@@ -406,10 +409,11 @@ function showExitSessionDialog(onConfirm) {
 
   var cancelBtn = document.getElementById('exitSessionCancel');
   var confirmBtn = document.getElementById('exitSessionConfirm');
-
-  function closeDialog() {
-    modal.style.display = 'none';
-    _exitDialogShowing = false;
+  if (!cancelBtn || !confirmBtn) {
+    var fallbackExit = confirm(_exitSessionMsg);
+    closeDialog();
+    if (fallbackExit) onConfirm();
+    return;
   }
 
   cancelBtn.onclick = function () {
@@ -1053,9 +1057,8 @@ document.addEventListener('DOMContentLoaded', function () {
     (function (link) {
       var icon = link.querySelector('.nav-icon img') || link.querySelector('.nav-icon .nav-emoji');
       if (icon) {
-        icon.addEventListener('animationend', function () {
-          this.classList.remove('tab-pop');
-        });
+        icon.removeEventListener('animationend', _handleTabPopAnimationEnd);
+        icon.addEventListener('animationend', _handleTabPopAnimationEnd);
       }
     })(navLinks[i]);
 
@@ -1343,7 +1346,6 @@ document.addEventListener('DOMContentLoaded', function () {
 
 /* ---- Practice drill starter ---- */
 function startDrillFromPractice(modeKey, category, categoryLabel) {
-  _customPracticeActive = false;
   var modeSelect = document.getElementById('modeSelect');
   var categorySelect = document.getElementById('categorySelect');
   var customPracticeConfig = document.getElementById('customPracticeConfig');
@@ -1414,7 +1416,13 @@ var _CUSTOM_MIN_QUESTIONS = 1;
 var _CUSTOM_MAX_QUESTIONS = 100;
 
 /* Placeholder for future paywall integration. */
+function canAccessFeature(feature) {
+  return true;
+}
+
+/* Placeholder for future paywall integration. */
 function canAccessCustomMode(user) {
+  if (!canAccessFeature('custom_mode')) return false;
   return true;
 }
 

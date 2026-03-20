@@ -551,7 +551,7 @@ var Onboarding = (function () {
         answer: correctAnswer,
         category: actualCategory
       };
-      recordAnswer(isCorrect, actualCategory, isCorrect ? null : qData);
+      recordAnswer(isCorrect, 'onboarding', isCorrect ? null : qData);
     }
 
     if (isCorrect) {

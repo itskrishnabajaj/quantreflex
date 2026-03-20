@@ -290,6 +290,11 @@ var FirestoreSync = (function () {
   function _flushUpdates() {
     var docRef = _getUserDocRef();
     if (!docRef || Object.keys(_pendingUpdates).length === 0) return;
+    var currentUserId = FirebaseApp.getUserId();
+    if (!currentUserId || (_loadedUserId && currentUserId !== _loadedUserId)) {
+      _pendingUpdates = {};
+      return;
+    }
 
     var updates = {};
     var keys = Object.keys(_pendingUpdates);
