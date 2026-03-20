@@ -242,6 +242,9 @@ var _HEADER_LABELS = {
   'view-stats': { emoji: '📊', label: 'Analytics', view: 'stats' },
   'view-settings': { emoji: '⚙️', label: 'Settings', view: 'settings' }
 };
+function _handleTabPopAnimationEnd() {
+  this.classList.remove('tab-pop');
+}
 
 /**
  * Switch navigation and header icons based on theme.
@@ -275,9 +278,8 @@ function updateNavigationIcons(theme) {
     /* Re-attach animationend cleanup listener */
     var iconChild = navIcon.firstChild;
     if (iconChild) {
-      iconChild.addEventListener('animationend', function () {
-        this.classList.remove('tab-pop');
-      });
+      iconChild.removeEventListener('animationend', _handleTabPopAnimationEnd);
+      iconChild.addEventListener('animationend', _handleTabPopAnimationEnd);
     }
   }
 
@@ -390,15 +392,17 @@ function showExitSessionDialog(onConfirm) {
   if (_exitDialogShowing) return;
   _exitDialogShowing = true;
 
+  function closeDialog(modalEl) {
+    if (modalEl) modalEl.style.display = 'none';
+    _exitDialogShowing = false;
+  }
+
   var modal = document.getElementById('exitSessionModal');
   if (!modal) {
     /* Fallback: use native confirm if modal element is missing */
-    if (confirm(_exitSessionMsg)) {
-      _exitDialogShowing = false;
-      onConfirm();
-    } else {
-      _exitDialogShowing = false;
-    }
+    var shouldExit = confirm(_exitSessionMsg);
+    closeDialog(null);
+    if (shouldExit) onConfirm();
     return;
   }
 
@@ -406,25 +410,26 @@ function showExitSessionDialog(onConfirm) {
 
   var cancelBtn = document.getElementById('exitSessionCancel');
   var confirmBtn = document.getElementById('exitSessionConfirm');
-
-  function closeDialog() {
-    modal.style.display = 'none';
-    _exitDialogShowing = false;
+  if (!cancelBtn || !confirmBtn) {
+    var fallbackExit = confirm(_exitSessionMsg);
+    closeDialog(modal);
+    if (fallbackExit) onConfirm();
+    return;
   }
 
   cancelBtn.onclick = function () {
-    closeDialog();
+    closeDialog(modal);
     /* Session continues — do nothing else */
   };
 
   confirmBtn.onclick = function () {
-    closeDialog();
+    closeDialog(modal);
     onConfirm();
   };
 
   /* Close on overlay click (treat as cancel) */
   modal.onclick = function (e) {
-    if (e.target === modal) closeDialog();
+    if (e.target === modal) closeDialog(modal);
   };
 }
 
@@ -1053,9 +1058,8 @@ document.addEventListener('DOMContentLoaded', function () {
     (function (link) {
       var icon = link.querySelector('.nav-icon img') || link.querySelector('.nav-icon .nav-emoji');
       if (icon) {
-        icon.addEventListener('animationend', function () {
-          this.classList.remove('tab-pop');
-        });
+        icon.removeEventListener('animationend', _handleTabPopAnimationEnd);
+        icon.addEventListener('animationend', _handleTabPopAnimationEnd);
       }
     })(navLinks[i]);
 
@@ -1343,7 +1347,8 @@ document.addEventListener('DOMContentLoaded', function () {
 
 /* ---- Practice drill starter ---- */
 function startDrillFromPractice(modeKey, category, categoryLabel) {
-  _customPracticeActive = false;
+  /* Preserve custom selection mode only for custom sessions. */
+  if (modeKey !== 'custom') _customPracticeActive = false;
   var modeSelect = document.getElementById('modeSelect');
   var categorySelect = document.getElementById('categorySelect');
   var customPracticeConfig = document.getElementById('customPracticeConfig');
@@ -1414,7 +1419,21 @@ var _CUSTOM_MIN_QUESTIONS = 1;
 var _CUSTOM_MAX_QUESTIONS = 100;
 
 /* Placeholder for future paywall integration. */
+/**
+ * Central paywall access hook.
+ * Planned feature keys include: 'custom_mode', 'analytics_export', 'advanced_tests'.
+ * Gate checks should be centralized here once subscription state is available.
+ * @param {string} feature - feature key (e.g. 'custom_mode') to gate in future.
+ * @returns {boolean}
+ */
+function canAccessFeature(feature) {
+  return true;
+}
+
+/* Placeholder for future paywall integration. */
 function canAccessCustomMode(user) {
+  /* 'user' is reserved for future subscription checks. */
+  if (!canAccessFeature('custom_mode')) return false;
   return true;
 }
 
