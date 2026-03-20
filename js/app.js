@@ -1251,12 +1251,14 @@ document.addEventListener('DOMContentLoaded', function () {
           categorySelect.style.display = 'block';
           if (customPracticeConfig) customPracticeConfig.style.display = 'block';
           _resetCustomPracticeState();
+          _syncCustomPracticeSelectionUi();
           return;
         }
         _customPracticeActive = false;
         if (modeKey === 'focus') {
           modeSelect.style.display = 'none';
           categorySelect.style.display = 'block';
+          _syncCustomPracticeSelectionUi();
         } else if (modeKey === 'review') {
           startDrillFromPractice('review');
         } else {
@@ -1417,19 +1419,39 @@ function canAccessCustomMode(user) {
 }
 
 function _toggleCustomPracticeTopic(topicKey) {
+  if (!topicKey) return;
   var idx = selectedTopics.indexOf(topicKey);
   if (idx === -1) selectedTopics.push(topicKey);
   else selectedTopics.splice(idx, 1);
 }
 
 function _syncCustomPracticeSelectionUi() {
-  _ensureCustomPracticeDomCached();
-  var catBtns = _customPracticeDom.catBtns;
+  var catBtns = _getCustomPracticeCategoryButtons();
   if (!catBtns) return;
+  var availableTopics = {};
+  for (var j = 0; j < catBtns.length; j++) {
+    var key = catBtns[j].getAttribute('data-cat');
+    if (key) availableTopics[key] = true;
+  }
+  var normalized = [];
+  for (var k = 0; k < selectedTopics.length; k++) {
+    var topic = selectedTopics[k];
+    if (availableTopics[topic] && normalized.indexOf(topic) === -1) {
+      normalized.push(topic);
+    }
+  }
+  if (normalized.length !== selectedTopics.length) {
+    selectedTopics.splice.apply(selectedTopics, [0, selectedTopics.length].concat(normalized));
+  }
   for (var i = 0; i < catBtns.length; i++) {
     var topicKey = catBtns[i].getAttribute('data-cat');
     catBtns[i].classList.toggle('selected', selectedTopics.indexOf(topicKey) !== -1);
   }
+}
+
+function _getCustomPracticeCategoryButtons() {
+  _customPracticeDom.catBtns = document.querySelectorAll('#categorySelect .category-btn');
+  return _customPracticeDom.catBtns;
 }
 
 function _ensureCustomPracticeDomCached() {
@@ -1437,7 +1459,7 @@ function _ensureCustomPracticeDomCached() {
   if (!_customPracticeDom.value) _customPracticeDom.value = document.getElementById('customQuestionCountValue');
   if (!_customPracticeDom.text) _customPracticeDom.text = document.getElementById('customQuestionCountText');
   if (!_customPracticeDom.error) _customPracticeDom.error = document.getElementById('customModeError');
-  if (!_customPracticeDom.catBtns) _customPracticeDom.catBtns = document.querySelectorAll('.category-btn');
+  _getCustomPracticeCategoryButtons();
 }
 
 function _updateCustomQuestionCountUI() {
@@ -1450,18 +1472,14 @@ function _updateCustomQuestionCountUI() {
 
 function _resetCustomPracticeState() {
   _ensureCustomPracticeDomCached();
-  selectedTopics = [];
+  selectedTopics.splice(0, selectedTopics.length);
   _customPracticeState.totalQuestions = _CUSTOM_DEFAULT_QUESTIONS;
   var slider = _customPracticeDom.slider;
   if (slider) slider.value = String(_CUSTOM_DEFAULT_QUESTIONS);
   _updateCustomQuestionCountUI();
   var customErr = _customPracticeDom.error;
   if (customErr) customErr.textContent = '';
-  var catBtns = _customPracticeDom.catBtns;
-  if (!catBtns) return;
-  for (var i = 0; i < catBtns.length; i++) {
-    catBtns[i].classList.remove('selected');
-  }
+  _syncCustomPracticeSelectionUi();
 }
 
 /* ---- Learn view initializer ---- */
