@@ -1188,9 +1188,10 @@ document.addEventListener('DOMContentLoaded', function () {
     _customPracticeDom.value = document.getElementById('customQuestionCountValue');
     _customPracticeDom.text = document.getElementById('customQuestionCountText');
     _customPracticeDom.error = document.getElementById('customModeError');
+    if (!modeSelect || !categorySelect || !drillContainer) return;
 
     /* Mode card clicks */
-    var modeCards = modeSelect ? modeSelect.querySelectorAll('.mode-card') : [];
+    var modeCards = modeSelect.querySelectorAll('.mode-card');
     for (var i = 0; i < modeCards.length; i++) {
       modeCards[i].addEventListener('click', function () {
         SoundEngine.play('settingsToggle');

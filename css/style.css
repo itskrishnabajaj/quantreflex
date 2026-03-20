@@ -1984,6 +1984,7 @@ body.dark-mode .table-modal-title {
 }
 
 #categorySelect .category-grid {
+  /* Keeps category grid + custom settings + back button in one viewport */
   max-height: calc(100vh - 22rem);
   overflow: hidden;
 }
