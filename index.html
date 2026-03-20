@@ -206,20 +206,21 @@
 
       <!-- Category selection (shown when Focus Training is picked) -->
       <div id="categorySelect" style="display:none;">
+        <button class="back-button" id="backToModes" type="button" aria-label="Back to practice modes">←</button>
         <h3 class="category-select-title">Choose Category</h3>
         <div class="category-grid">
-          <button class="category-btn" data-cat="squares">Squares</button>
-          <button class="category-btn" data-cat="cubes">Cubes</button>
-          <button class="category-btn" data-cat="area">Area</button>
-          <button class="category-btn" data-cat="volume">Volume</button>
-          <button class="category-btn" data-cat="percentages">Percentages</button>
-          <button class="category-btn" data-cat="multiplication">Multiplication</button>
-          <button class="category-btn" data-cat="fractions">Fractions</button>
-          <button class="category-btn" data-cat="averages">Averages</button>
-          <button class="category-btn" data-cat="ratios">Ratios</button>
-          <button class="category-btn" data-cat="profit-loss">Profit &amp; Loss</button>
-          <button class="category-btn" data-cat="time-speed-distance">Time Speed Dist</button>
-          <button class="category-btn" data-cat="time-and-work">Time &amp; Work</button>
+          <button class="category-btn category-card" type="button" data-cat="squares">Squares</button>
+          <button class="category-btn category-card" type="button" data-cat="cubes">Cubes</button>
+          <button class="category-btn category-card" type="button" data-cat="area">Area</button>
+          <button class="category-btn category-card" type="button" data-cat="volume">Volume</button>
+          <button class="category-btn category-card" type="button" data-cat="percentages">Percentages</button>
+          <button class="category-btn category-card" type="button" data-cat="multiplication">Multiplication</button>
+          <button class="category-btn category-card" type="button" data-cat="fractions">Fractions</button>
+          <button class="category-btn category-card" type="button" data-cat="averages">Averages</button>
+          <button class="category-btn category-card" type="button" data-cat="ratios">Ratios</button>
+          <button class="category-btn category-card" type="button" data-cat="profit-loss">Profit &amp; Loss</button>
+          <button class="category-btn category-card" type="button" data-cat="time-speed-distance">Time Speed Dist</button>
+          <button class="category-btn category-card" type="button" data-cat="time-and-work">Time &amp; Work</button>
         </div>
         <div id="customPracticeConfig" class="custom-practice-config">
           <label class="secondary-text" for="customQuestionCount">Number of Questions</label>
@@ -231,7 +232,6 @@
           <p id="customModeError" class="custom-mode-error secondary-text"></p>
           <button class="btn accent custom-practice-start-btn" id="startCustomSessionBtn">Start Custom Session</button>
         </div>
-        <button class="btn category-back-btn" id="backToModes">← Back</button>
       </div>
 
       <!-- Drill engine renders here -->
