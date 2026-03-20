@@ -3,7 +3,7 @@
  * Caches all assets for offline use.
  */
 
-var CACHE_NAME = 'quant-reflex-v35';
+var CACHE_NAME = 'quant-reflex-v36';
 
 var ASSETS = [
   './',
@@ -25,6 +25,10 @@ var ASSETS = [
   './js/notifications.js',
   './js/soundEngine.js',
   './manifest.json',
+  './icons/icon-192.png',
+  './icons/icon-512.png',
+  './icons/icon-192-maskable.png',
+  './icons/icon-512-maskable.png',
   './icons/icon-192.svg',
   './icons/icon-512.svg',
   './appicons/tab/hometab.svg',
@@ -48,10 +52,23 @@ var CDN_SCRIPTS = [
   'https://www.gstatic.com/firebasejs/10.12.2/firebase-messaging-compat.js'
 ];
 
-/* Install: pre-cache all assets */
+/* Install: pre-cache all assets — resilient: one failing asset won't abort install */
 self.addEventListener('install', function (event) {
   event.waitUntil(
-    caches.open(CACHE_NAME).then(function (cache) { return cache.addAll(ASSETS); })
+    caches.open(CACHE_NAME).then(function (cache) {
+      return Promise.allSettled(
+        ASSETS.map(function (url) {
+          return fetch(url, { cache: 'no-cache' })
+            .then(function (response) {
+              if (!response.ok) throw new Error('Bad status ' + response.status + ' for ' + url);
+              return cache.put(url, response);
+            })
+            .catch(function (err) {
+              console.warn('[SW] Pre-cache skipped:', url, err.message);
+            });
+        })
+      );
+    })
   );
   self.skipWaiting();
 });
@@ -112,14 +129,21 @@ self.addEventListener('fetch', function (event) {
         }
         return response;
       }).catch(function () {
-        /* Network failed and not in cache — return an offline-safe response */
-        return new Response('', { status: 408, statusText: 'Offline' });
+        /* Network failed and not in cache — return null to let browser handle gracefully */
+        return new Response('Service Unavailable', { status: 503, statusText: 'Service Unavailable' });
       });
     })
   );
 });
 
 /* ---- Push Notification Handling ---- */
+
+/* Handle postMessage from app to skip waiting (update flow) */
+self.addEventListener('message', function (event) {
+  if (event.data && event.data.type === 'SKIP_WAITING') {
+    self.skipWaiting();
+  }
+});
 
 /* Motivational messages for background push notifications */
 var PUSH_MESSAGES = [
