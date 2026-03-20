@@ -38,6 +38,7 @@ var Onboarding = (function () {
   var _numpadFocusHandler = null;
   var _numpadClickHandler = null;
   var _numpadTouchHandler = null;
+  var _numpadPointerdownHandler = null;
   var _numpadVisibilityHandler = null;
   var _numpadPageshowHandler = null;
   var _numpadEnsuring = false; /* re-entry guard for ensureNumpadVisibleForActiveInput */
@@ -470,9 +471,11 @@ var Onboarding = (function () {
     _numpadFocusHandler = function () { ensureNumpadVisibleForActiveInput(); };
     _numpadClickHandler = function () { ensureNumpadVisibleForActiveInput(); };
     _numpadTouchHandler = function () { ensureNumpadVisibleForActiveInput(); };
+    _numpadPointerdownHandler = function () { ensureNumpadVisibleForActiveInput(); };
     inputEl.addEventListener('focus', _numpadFocusHandler);
     inputEl.addEventListener('click', _numpadClickHandler);
     inputEl.addEventListener('touchstart', _numpadTouchHandler, { passive: true });
+    inputEl.addEventListener('pointerdown', _numpadPointerdownHandler);
 
     /* Re-show numpad when the page becomes visible again (back-swipe / tab switch) */
     _numpadVisibilityHandler = function () {
@@ -508,6 +511,7 @@ var Onboarding = (function () {
       if (_numpadFocusHandler) _numpadBoundInput.removeEventListener('focus', _numpadFocusHandler);
       if (_numpadClickHandler) _numpadBoundInput.removeEventListener('click', _numpadClickHandler);
       if (_numpadTouchHandler) _numpadBoundInput.removeEventListener('touchstart', _numpadTouchHandler);
+      if (_numpadPointerdownHandler) _numpadBoundInput.removeEventListener('pointerdown', _numpadPointerdownHandler);
     }
     if (_numpadVisibilityHandler) document.removeEventListener('visibilitychange', _numpadVisibilityHandler);
     if (_numpadPageshowHandler) window.removeEventListener('pageshow', _numpadPageshowHandler);
@@ -515,6 +519,7 @@ var Onboarding = (function () {
     _numpadFocusHandler = null;
     _numpadClickHandler = null;
     _numpadTouchHandler = null;
+    _numpadPointerdownHandler = null;
     _numpadVisibilityHandler = null;
     _numpadPageshowHandler = null;
     _numpadEnsuring = false;
