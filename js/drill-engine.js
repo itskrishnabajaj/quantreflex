@@ -77,10 +77,23 @@ function createDrillEngine(container, opts) {
         '<h2>' + mode + '</h2>' +
         '<p>' + subtitle + '</p>' +
         '<button id="startBtn" class="btn accent">START</button>' +
+        '<button id="startBackBtn" class="btn">← Back</button>' +
       '</div>';
     hideCustomNumpad();
     _exitDrillSession();
     container.querySelector('#startBtn').addEventListener('click', begin);
+    container.querySelector('#startBackBtn').addEventListener('click', function () {
+      cleanup();
+      _exitDrillSession();
+      if (typeof FirestoreSync !== 'undefined') {
+        FirestoreSync.endDrillBatch();
+      }
+      if (onFinish) {
+        onFinish('practice');
+      } else {
+        Router.showView('practice');
+      }
+    });
   }
 
   function renderQuestion() {
@@ -95,7 +108,7 @@ function createDrillEngine(container, opts) {
       : count;
     var progressPct = displayCount > 0 ? Math.min(100, Math.round(((current) / displayCount) * 100)) : 0;
     container.innerHTML =
-      '<button class="drill-exit-btn" id="drillExitBtn" aria-label="Exit session">&times;</button>' +
+      '<button class="drill-exit-btn" id="drillExitBtn" aria-label="Back to practice">← Back</button>' +
       '<div class="card center-content fade-in">' +
         '<p class="drill-progress">Question ' + (current + 1) + ' / ' + displayCount + '</p>' +
         '<div class="drill-progress-bar"><div class="drill-progress-fill" style="width:' + progressPct + '%"></div></div>' +

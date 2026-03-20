@@ -325,6 +325,7 @@ function _enterDrillSession() {
   var nav = document.querySelector('.bottom-nav');
   if (nav) nav.style.display = 'none';
   document.body.classList.add('drill-session-active');
+  document.documentElement.classList.add('drill-session-active');
 }
 
 /**
@@ -339,7 +340,24 @@ function _exitDrillSession() {
   var nav = document.querySelector('.bottom-nav');
   if (nav) nav.style.display = '';
   document.body.classList.remove('drill-session-active');
+  document.documentElement.classList.remove('drill-session-active');
   hideCustomNumpad();
+}
+
+function _resetPracticeUiToModes() {
+  _customPracticeActive = false;
+  var modeSelect = document.getElementById('modeSelect');
+  var categorySelect = document.getElementById('categorySelect');
+  var customPracticeConfig = document.getElementById('customPracticeConfig');
+  var drillContainer = document.getElementById('drillContainer');
+  if (modeSelect) modeSelect.style.display = 'block';
+  if (categorySelect) categorySelect.style.display = 'none';
+  if (customPracticeConfig) customPracticeConfig.style.display = 'none';
+  if (drillContainer) {
+    drillContainer.style.display = 'none';
+    drillContainer.innerHTML = '';
+  }
+  _resetCustomPracticeState();
 }
 
 /**
@@ -1156,20 +1174,7 @@ document.addEventListener('DOMContentLoaded', function () {
       FirestoreSync.endDrillBatch();
     }
     _exitDrillSession();
-    _customPracticeActive = false;
-    /* Reset practice view state */
-    var modeSelect = document.getElementById('modeSelect');
-    var categorySelect = document.getElementById('categorySelect');
-    var customPracticeConfig = document.getElementById('customPracticeConfig');
-    var drillContainer = document.getElementById('drillContainer');
-    if (modeSelect) modeSelect.style.display = 'block';
-    if (categorySelect) categorySelect.style.display = 'none';
-    if (customPracticeConfig) customPracticeConfig.style.display = 'none';
-    if (drillContainer) {
-      drillContainer.style.display = 'none';
-      drillContainer.innerHTML = '';
-    }
-    _resetCustomPracticeState();
+    _resetPracticeUiToModes();
   });
 
   Router.onInit('practice', function () {
@@ -1185,7 +1190,7 @@ document.addEventListener('DOMContentLoaded', function () {
     _customPracticeDom.error = document.getElementById('customModeError');
 
     /* Mode card clicks */
-    var modeCards = document.querySelectorAll('.mode-card');
+    var modeCards = modeSelect ? modeSelect.querySelectorAll('.mode-card') : [];
     for (var i = 0; i < modeCards.length; i++) {
       modeCards[i].addEventListener('click', function () {
         SoundEngine.play('settingsToggle');
@@ -1259,11 +1264,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
     /* Back button */
     document.getElementById('backToModes').addEventListener('click', function () {
-      _customPracticeActive = false;
-      categorySelect.style.display = 'none';
-      if (customPracticeConfig) customPracticeConfig.style.display = 'none';
-      modeSelect.style.display = 'block';
-      _resetCustomPracticeState();
+      _resetPracticeUiToModes();
     });
   });
 
@@ -1302,7 +1303,7 @@ function startDrillFromPractice(modeKey, category, categoryLabel) {
     reflex: { count: 10, timeLimitSec: null, perQuestionSec: 15,   category: null, mode: '🧠 Reflex Drill' },
     timed:  { count: 10, timeLimitSec: 180,  perQuestionSec: null, category: null, mode: '⏱ Timed Test' },
     focus:  { count: 10, timeLimitSec: null, perQuestionSec: null, category: null, mode: '🎯 Focus Training' },
-    custom: { count: _customPracticeState.totalQuestions, timeLimitSec: null, perQuestionSec: null, category: null, topics: _customPracticeState.topics.slice(), mode: '⚡ Custom Training Mode' },
+    custom: { count: _customPracticeState.totalQuestions, timeLimitSec: null, perQuestionSec: null, category: null, topics: _customPracticeState.topics.slice(), mode: '✨ Custom Training' },
     review: { count: 10, timeLimitSec: null, perQuestionSec: null, category: null, mode: '🔄 Review Mistakes', reviewMode: true }
   };
 
@@ -1322,6 +1323,9 @@ function startDrillFromPractice(modeKey, category, categoryLabel) {
       FirestoreSync.endDrillBatch();
     }
     _exitDrillSession();
+    if (view === 'practice') {
+      _resetPracticeUiToModes();
+    }
     Router.showView(view);
   };
 
