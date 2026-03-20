@@ -201,6 +201,8 @@ window.addEventListener('beforeinstallprompt', function (e) {
 var _CATEGORY_LABELS = {
   'squares': 'Squares',
   'cubes': 'Cubes',
+  'area': 'Area',
+  'volume': 'Volume',
   'fractions': 'Fractions',
   'percentages': 'Percentages',
   'multiplication': 'Multiplication',
@@ -479,7 +481,7 @@ var QUICK_LINKS_KEY = 'quant_quick_links';
 var AVAILABLE_QUICK_LINKS = [
   { id: 'fractionTable', icon: '📐', title: 'Fraction → Percentage', desc: 'Master common fraction-to-percentage conversions.', type: 'learn' },
   { id: 'tablesContainer', icon: '✖️', title: 'Multiplication Tables', desc: 'Review tables from 1 to 30.', type: 'learn' },
-  { id: 'formulaSections', icon: '📝', title: 'Quant Formulas', desc: 'Profit & Loss, Ratios, Averages, TSD formulas.', type: 'learn' },
+  { id: 'formulaSections', icon: '📝', title: 'Quant Formulas', desc: 'Percentages, ratios, averages, area, volume and more.', type: 'learn' },
   { id: 'mentalTricks', icon: '💡', title: 'Shortcut Tricks', desc: 'Mental math tricks for faster calculations.', type: 'learn' },
   { id: 'squaresSection', icon: '🔢', title: 'Squares & Cubes', desc: 'Quick reference for squares and cubes.', type: 'learn' },
   { id: 'practice', icon: '🎯', title: 'Practice Drills', desc: 'Jump into practice drills and tests.', type: 'nav' },

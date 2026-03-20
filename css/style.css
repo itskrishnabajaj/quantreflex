@@ -504,6 +504,17 @@ body.dark-mode .drill-exit-btn:active {
   color: #2563eb;
   margin: 0 0 .75rem;
 }
+.learn-group-subtitle { margin-bottom: 1rem; }
+.category-select-title { margin-bottom: .75rem; }
+.custom-practice-meta-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: .75rem;
+  margin-top: .35rem;
+}
+.custom-practice-start-btn { margin-top: .75rem; width: 100%; }
+.category-back-btn { margin-top: 1rem; }
 
 /* ---- Learn Search ---- */
 .learn-search-container {
@@ -1420,8 +1431,38 @@ body.dark-mode .info-quote p { color: #94a3b8; }
   padding: .5rem .75rem;
   border-radius: .75rem;
   font-size: .9rem;
-  margin: .4rem 0;
+  margin: .4rem 0 .5rem;
   color: #0f172a;
+  line-height: 1.55;
+  overflow-wrap: anywhere;
+}
+.formula-block {
+  padding: .5rem 0 .65rem;
+  border-bottom: 1px solid #e2e8f0;
+}
+.formula-block:last-of-type {
+  border-bottom: none;
+  padding-bottom: .2rem;
+}
+.formula-block-title {
+  margin: 0 0 .35rem;
+  color: #0f172a;
+  font-size: .98rem;
+  font-weight: 700;
+}
+.formula-label {
+  font-size: .78rem;
+  text-transform: uppercase;
+  letter-spacing: .04em;
+  color: #64748b;
+  font-weight: 700;
+  margin-top: .2rem;
+}
+.formula-tip {
+  margin: .2rem 0 0;
+  color: #475569;
+  line-height: 1.5;
+  font-size: .88rem;
 }
 
 /* ---- Secondary Text ---- */
@@ -1540,6 +1581,10 @@ body.dark-mode .formula-text {
   background: #334155;
   color: #e2e8f0;
 }
+body.dark-mode .formula-block { border-bottom-color: #334155; }
+body.dark-mode .formula-block-title { color: #f8fafc; }
+body.dark-mode .formula-label { color: #94a3b8; }
+body.dark-mode .formula-tip { color: #cbd5e1; }
 body.dark-mode .section-title { color: #60a5fa; }
 body.dark-mode .category-stat-row { border-bottom-color: #334155; }
 body.dark-mode .cat-accuracy { color: #60a5fa; }
@@ -1637,6 +1682,7 @@ body.dark-mode .learn-jump-btn:active {
   padding: .65rem;
   margin-top: .5rem;
   margin-bottom: 1rem;
+  width: 100%;
   background: #eff6ff;
   color: #2563eb;
   border: 1px dashed #93c5fd;
@@ -3069,6 +3115,10 @@ body.theme-playful .formula-text {
   background: #f0efec;
   color: #1a1a2e;
 }
+body.theme-playful .formula-block { border-bottom-color: #e2ded6; }
+body.theme-playful .formula-block-title { color: #1a1a2e; }
+body.theme-playful .formula-label { color: #7a8795; }
+body.theme-playful .formula-tip { color: #4b5563; }
 
 body.theme-playful .feedback.correct { background: rgba(22,163,74,.08); }
 body.theme-playful .feedback.wrong   { background: rgba(220,38,38,.08); }
@@ -3505,6 +3555,10 @@ body.theme-playful.dark-mode .formula-text {
   background: rgba(22,27,45,.7);
   color: #e6edf3;
 }
+body.theme-playful.dark-mode .formula-block { border-bottom-color: rgba(255,255,255,.08); }
+body.theme-playful.dark-mode .formula-block-title { color: #f8fafc; }
+body.theme-playful.dark-mode .formula-label { color: #9ba7b4; }
+body.theme-playful.dark-mode .formula-tip { color: #cbd5e1; }
 
 body.theme-playful.dark-mode .feedback.correct { background: rgba(63,185,80,.12); }
 body.theme-playful.dark-mode .feedback.wrong   { background: rgba(248,81,73,.12); }
