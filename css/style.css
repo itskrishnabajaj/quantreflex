@@ -1994,6 +1994,7 @@ body.dark-mode .table-modal-title {
   flex-direction: column;
   gap: 0;
   max-height: calc(100vh - 12rem);
+  max-height: calc(100dvh - 12rem);
   overflow-y: auto;
   -webkit-overflow-scrolling: touch;
   scrollbar-width: none;
@@ -2012,6 +2013,7 @@ body.dark-mode .table-modal-title {
 
 #categorySelect {
   max-height: calc(100vh - 12rem);
+  max-height: calc(100dvh - 12rem);
   overflow: hidden;
   display: flex;
   flex-direction: column;
@@ -2020,7 +2022,21 @@ body.dark-mode .table-modal-title {
 #categorySelect .category-grid {
   /* Keeps category grid + custom settings + back button in one viewport */
   max-height: calc(100vh - 22rem);
+  max-height: calc(100dvh - 22rem);
   overflow: hidden;
+}
+
+@media (max-height: 560px) {
+  #categorySelect {
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+    padding-bottom: .5rem;
+  }
+
+  #categorySelect .category-grid {
+    max-height: none;
+    overflow: visible;
+  }
 }
 
 /* ---- Stats Grid Improvements ---- */
