@@ -1251,12 +1251,14 @@ document.addEventListener('DOMContentLoaded', function () {
           categorySelect.style.display = 'block';
           if (customPracticeConfig) customPracticeConfig.style.display = 'block';
           _resetCustomPracticeState();
+          _syncCustomPracticeSelectionUi();
           return;
         }
         _customPracticeActive = false;
         if (modeKey === 'focus') {
           modeSelect.style.display = 'none';
           categorySelect.style.display = 'block';
+          _syncCustomPracticeSelectionUi();
         } else if (modeKey === 'review') {
           startDrillFromPractice('review');
         } else {
@@ -1266,22 +1268,23 @@ document.addEventListener('DOMContentLoaded', function () {
     }
 
     /* Category button clicks */
-    var catBtns = document.querySelectorAll('.category-btn');
+    var catBtns = categorySelect.querySelectorAll('.category-btn');
     _customPracticeDom.catBtns = catBtns;
-    for (var j = 0; j < catBtns.length; j++) {
-      catBtns[j].addEventListener('click', function () {
-        if (!_tryPracticeAction()) return;
-        SoundEngine.play('settingsToggle');
-        var cat = this.getAttribute('data-cat');
-        if (_customPracticeActive) {
-          _toggleCustomPracticeTopic(cat);
-          _syncCustomPracticeSelectionUi();
-          if (_customPracticeDom.error) _customPracticeDom.error.textContent = '';
-          return;
-        }
-        startDrillFromPractice('focus', cat, this.textContent);
-      });
-    }
+    categorySelect.addEventListener('click', function (e) {
+      var target = e.target;
+      if (!target || !target.classList || !target.classList.contains('category-btn')) return;
+      if (!_tryPracticeAction()) return;
+      SoundEngine.play('settingsToggle');
+      var cat = target.getAttribute('data-cat');
+      if (!cat) return;
+      if (_customPracticeActive) {
+        _toggleCustomPracticeTopic(cat);
+        _syncCustomPracticeSelectionUi();
+        if (_customPracticeDom.error) _customPracticeDom.error.textContent = '';
+        return;
+      }
+      startDrillFromPractice('focus', cat, target.textContent);
+    });
 
     if (customSlider) {
       customSlider.addEventListener('input', function () {
@@ -1299,7 +1302,7 @@ document.addEventListener('DOMContentLoaded', function () {
         if (!canAccessCustomMode(user)) {
           return;
         }
-        if (_customPracticeState.topics.length === 0) {
+        if (selectedTopics.length === 0) {
           if (_customPracticeDom.error) _customPracticeDom.error.textContent = 'Please select at least one topic';
           return;
         }
@@ -1308,9 +1311,12 @@ document.addEventListener('DOMContentLoaded', function () {
     }
 
     /* Back button */
-    document.getElementById('backToModes').addEventListener('click', function () {
-      _resetPracticeUiToModes();
-    });
+    var backToModesBtn = document.getElementById('backToModes');
+    if (backToModesBtn) {
+      backToModesBtn.addEventListener('click', function () {
+        _resetPracticeUiToModes();
+      });
+    }
   });
 
   /* ---- LEARN VIEW: lazy init ---- */
@@ -1349,7 +1355,7 @@ function startDrillFromPractice(modeKey, category, categoryLabel) {
     reflex: { count: 10, timeLimitSec: null, perQuestionSec: 15,   category: null, mode: '🧠 Reflex Drill' },
     timed:  { count: 10, timeLimitSec: 180,  perQuestionSec: null, category: null, mode: '⏱ Timed Test' },
     focus:  { count: 10, timeLimitSec: null, perQuestionSec: null, category: null, mode: '🎯 Focus Training' },
-    custom: { count: _customPracticeState.totalQuestions, timeLimitSec: null, perQuestionSec: null, category: null, topics: _customPracticeState.topics.slice(), mode: '📑 Custom Training' },
+    custom: { count: _customPracticeState.totalQuestions, timeLimitSec: null, perQuestionSec: null, category: null, topics: selectedTopics.slice(), mode: '📑 Custom Training' },
     review: { count: 10, timeLimitSec: null, perQuestionSec: null, category: null, mode: '🔄 Review Mistakes', reviewMode: true }
   };
 
@@ -1392,9 +1398,9 @@ function _startPracticeEngine(drillContainer, config) {
 }
 
 var _customPracticeState = {
-  topics: [],
   totalQuestions: 20
 };
+var selectedTopics = [];
 var _customPracticeDom = {
   slider: null,
   value: null,
@@ -1413,19 +1419,39 @@ function canAccessCustomMode(user) {
 }
 
 function _toggleCustomPracticeTopic(topicKey) {
-  var idx = _customPracticeState.topics.indexOf(topicKey);
-  if (idx === -1) _customPracticeState.topics.push(topicKey);
-  else _customPracticeState.topics.splice(idx, 1);
+  if (!topicKey) return;
+  var idx = selectedTopics.indexOf(topicKey);
+  if (idx === -1) selectedTopics.push(topicKey);
+  else selectedTopics.splice(idx, 1);
 }
 
 function _syncCustomPracticeSelectionUi() {
-  _ensureCustomPracticeDomCached();
-  var catBtns = _customPracticeDom.catBtns;
+  var catBtns = _getCustomPracticeCategoryButtons();
   if (!catBtns) return;
+  var availableTopics = {};
+  for (var j = 0; j < catBtns.length; j++) {
+    var key = catBtns[j].getAttribute('data-cat');
+    if (key) availableTopics[key] = true;
+  }
+  var normalized = [];
+  for (var k = 0; k < selectedTopics.length; k++) {
+    var topic = selectedTopics[k];
+    if (availableTopics[topic] && normalized.indexOf(topic) === -1) {
+      normalized.push(topic);
+    }
+  }
+  if (normalized.length !== selectedTopics.length) {
+    selectedTopics.splice.apply(selectedTopics, [0, selectedTopics.length].concat(normalized));
+  }
   for (var i = 0; i < catBtns.length; i++) {
     var topicKey = catBtns[i].getAttribute('data-cat');
-    catBtns[i].classList.toggle('selected', _customPracticeState.topics.indexOf(topicKey) !== -1);
+    catBtns[i].classList.toggle('selected', selectedTopics.indexOf(topicKey) !== -1);
   }
+}
+
+function _getCustomPracticeCategoryButtons() {
+  _customPracticeDom.catBtns = document.querySelectorAll('#categorySelect .category-btn');
+  return _customPracticeDom.catBtns;
 }
 
 function _ensureCustomPracticeDomCached() {
@@ -1433,7 +1459,7 @@ function _ensureCustomPracticeDomCached() {
   if (!_customPracticeDom.value) _customPracticeDom.value = document.getElementById('customQuestionCountValue');
   if (!_customPracticeDom.text) _customPracticeDom.text = document.getElementById('customQuestionCountText');
   if (!_customPracticeDom.error) _customPracticeDom.error = document.getElementById('customModeError');
-  if (!_customPracticeDom.catBtns) _customPracticeDom.catBtns = document.querySelectorAll('.category-btn');
+  _getCustomPracticeCategoryButtons();
 }
 
 function _updateCustomQuestionCountUI() {
@@ -1446,18 +1472,14 @@ function _updateCustomQuestionCountUI() {
 
 function _resetCustomPracticeState() {
   _ensureCustomPracticeDomCached();
-  _customPracticeState.topics = [];
+  selectedTopics.splice(0, selectedTopics.length);
   _customPracticeState.totalQuestions = _CUSTOM_DEFAULT_QUESTIONS;
   var slider = _customPracticeDom.slider;
   if (slider) slider.value = String(_CUSTOM_DEFAULT_QUESTIONS);
   _updateCustomQuestionCountUI();
   var customErr = _customPracticeDom.error;
   if (customErr) customErr.textContent = '';
-  var catBtns = _customPracticeDom.catBtns;
-  if (!catBtns) return;
-  for (var i = 0; i < catBtns.length; i++) {
-    catBtns[i].classList.remove('selected');
-  }
+  _syncCustomPracticeSelectionUi();
 }
 
 /* ---- Learn view initializer ---- */
