@@ -1,9 +1,9 @@
 /**
- * Service Worker for Quant Reflex Trainer (SPA)
+ * Service Worker for QuantReflex (SPA)
  * Caches all assets for offline use.
  */
 
-var CACHE_NAME = 'quant-reflex-v37';
+var CACHE_NAME = 'quant-reflex-v38';
 
 var ASSETS = [
   './',
@@ -164,12 +164,12 @@ self.addEventListener('push', function (event) {
     try {
       data = event.data.json();
     } catch (e) {
-      data = { notification: { title: 'Quant Reflex Trainer', body: event.data.text() } };
+      data = { notification: { title: 'QuantReflex', body: event.data.text() } };
     }
   }
 
   var notif = data.notification || {};
-  var title = notif.title || 'Quant Reflex Trainer';
+  var title = notif.title || 'QuantReflex';
   var body = notif.body || (PUSH_MESSAGES.length > 0 ? PUSH_MESSAGES[Math.floor(Math.random() * PUSH_MESSAGES.length)].body : 'Time to practice mental math!');
 
   var options = {
