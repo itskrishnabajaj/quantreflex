@@ -2,6 +2,51 @@
  * paywall.js — Premium access control + paywall + Razorpay flow
  */
 
+(function (global) {
+var RAZORPAY_LIVE_KEY = 'rzp_live_STanzIgCpSAfL7';
+var _LOCKED_FEATURES = {
+  custom_training: true,
+  review_mistakes: true,
+  add_formula: true,
+  add_topic: true,
+  performance_insights: true,
+  category_accuracy: true,
+  hard_mode: true,
+  skip_question: true,
+  advanced_theme: true,
+  daily_goal_limit: true
+};
+var _paywallModalOpen = false;
+var _paywallClosing = false;
+var _paywallPaymentBusy = false;
+var _paywallUnlockInFlight = false;
+var _paywallLastPaymentId = '';
+var _paywallUpgradeBtn = null;
+var _paywallEscHandler = null;
+var _paywallGuestPromptAt = 0;
+var _unlockGuard = {};
+
+function _toMillis(value) {
+  if (!value) return 0;
+  if (typeof value === 'number') return value;
+  if (value instanceof Date) return value.getTime();
+  if (typeof value === 'string') {
+    var parsed = Date.parse(value);
+    return isNaN(parsed) ? 0 : parsed;
+  }
+  if (typeof value.toDate === 'function') {
+    try { return value.toDate().getTime(); } catch (_) { return 0; }
+  }
+  return 0;
+}
+
+function _resetPaymentGuards(enableButton) {
+  _paywallPaymentBusy = false;
+  _paywallUnlockInFlight = false;
+  _paywallLastPaymentId = '';
+  if (enableButton && _paywallUpgradeBtn) _paywallUpgradeBtn.disabled = false;
+}
+
 function _getAccessUserState() {
   if (typeof FirestoreSync !== 'undefined' && typeof FirestoreSync.getAccessState === 'function') {
     var state = FirestoreSync.getAccessState();
@@ -11,20 +56,16 @@ function _getAccessUserState() {
 }
 
 function canAccess(feature, user) {
-  if (user && user.isPremium) return true;
-  var lockedFeatures = {
-    custom_training: true,
-    review_mistakes: true,
-    add_formula: true,
-    add_topic: true,
-    performance_insights: true,
-    category_accuracy: true,
-    hard_mode: true,
-    skip_question: true,
-    advanced_theme: true,
-    daily_goal_limit: true
-  };
-  return !lockedFeatures[feature];
+  var normalizedUser = user || _getAccessUserState();
+  if (normalizedUser && normalizedUser.hasPaid === true) return true;
+  if (normalizedUser && normalizedUser.isEarlyUser === true) return true;
+  if (normalizedUser && normalizedUser.isTrial === true) {
+    if (!normalizedUser.trialEnd) return true;
+    var trialEndMs = _toMillis(normalizedUser.trialEnd);
+    if (trialEndMs && Date.now() <= trialEndMs) return true;
+  }
+  if (normalizedUser && normalizedUser.isPremium === true && normalizedUser.isTrial !== true) return true;
+  return !_LOCKED_FEATURES[feature];
 }
 
 function canAccessFeature(feature) {
@@ -76,22 +117,47 @@ function _getPaywallCopy(featureType) {
 }
 
 function _closePaywallModal() {
+  if (_paywallClosing) return;
   var overlay = document.getElementById('paywallModalOverlay');
-  if (!overlay) return;
+  if (!overlay) {
+    _paywallModalOpen = false;
+    _paywallClosing = false;
+    return;
+  }
+  _paywallClosing = true;
   overlay.classList.add('closing');
   document.body.classList.remove('paywall-open');
+  _paywallUpgradeBtn = null;
+  if (_paywallEscHandler) {
+    document.removeEventListener('keydown', _paywallEscHandler);
+    _paywallEscHandler = null;
+  }
   setTimeout(function () {
     if (overlay.parentNode) overlay.parentNode.removeChild(overlay);
+    _paywallModalOpen = false;
+    _paywallClosing = false;
   }, 220);
 }
 
 function unlockPremium(userId, paymentId) {
+  var unlockToken = arguments.length > 2 ? arguments[2] : null;
+  if (unlockToken !== _unlockGuard) return;
+  if (_paywallUnlockInFlight) return;
+  if (!_paywallPaymentBusy || _paywallLastPaymentId !== String(paymentId || '')) {
+    showToast('Payment validation failed. Please retry.');
+    return;
+  }
   if (typeof Auth !== 'undefined' && typeof Auth.getUserId === 'function') {
     var currentUser = Auth.getUserId();
-    if (currentUser && userId && currentUser !== userId) return;
+    if (currentUser && userId && currentUser !== userId) {
+      _resetPaymentGuards(true);
+      return;
+    }
   }
   if (typeof FirestoreSync !== 'undefined' && typeof FirestoreSync.unlockPremium === 'function') {
+    _paywallUnlockInFlight = true;
     FirestoreSync.unlockPremium(paymentId, function (err) {
+      _resetPaymentGuards(true);
       if (err) {
         showToast('Unable to unlock premium. Please try again.');
         return;
@@ -101,11 +167,17 @@ function unlockPremium(userId, paymentId) {
       var currentView = Router.getCurrentView ? Router.getCurrentView() : 'home';
       if (currentView && Router.showView) Router.showView(currentView);
     });
+    return;
   }
+  _resetPaymentGuards(true);
+  showToast('Unable to unlock premium. Please try again.');
 }
 
 function verifyPaymentResponse(response) {
-  return !!(response && response.razorpay_payment_id);
+  if (!response || typeof response !== 'object') return false;
+  if (typeof response.razorpay_payment_id !== 'string') return false;
+  var id = response.razorpay_payment_id.trim();
+  return id.length > 0 && id.length <= 128;
 }
 
 function _loadRazorpayScript(callback) {
@@ -129,45 +201,56 @@ function _loadRazorpayScript(callback) {
 }
 
 function openPayment(userId) {
+  if (_paywallPaymentBusy || _paywallUnlockInFlight) return;
+  _paywallPaymentBusy = true;
+  if (_paywallUpgradeBtn) _paywallUpgradeBtn.disabled = true;
   _loadRazorpayScript(function (loadErr) {
     if (loadErr || typeof Razorpay === 'undefined') {
+      _resetPaymentGuards(true);
       showToast('Payment service is unavailable right now.');
       return;
     }
     var options = {
-      key: 'rzp_live_STanzIgCpSAfL7',
+      key: RAZORPAY_LIVE_KEY,
       amount: 6900,
       currency: 'INR',
       name: 'QuantReflex',
       description: 'Lifetime Premium Access',
       modal: {
         ondismiss: function () {
+          _resetPaymentGuards(true);
           showToast('Payment cancelled. You can upgrade anytime.');
         }
       },
       handler: function (response) {
         if (!verifyPaymentResponse(response)) {
+          _resetPaymentGuards(true);
           showToast('Payment verification failed. Please retry.');
           return;
         }
-        unlockPremium(userId, response.razorpay_payment_id);
+        _paywallLastPaymentId = String(response.razorpay_payment_id).trim();
+        unlockPremium(userId, response.razorpay_payment_id, _unlockGuard);
       }
     };
     try {
       var rzp = new Razorpay(options);
       rzp.on('payment.failed', function () {
+        _resetPaymentGuards(true);
         showToast('Payment failed. Please try again.');
       });
       rzp.open();
     } catch (_) {
+      _resetPaymentGuards(true);
       showToast('Could not open payment. Check your network and retry.');
     }
   });
 }
 
 function showPaywall(featureType) {
+  if (_paywallModalOpen || _paywallClosing) return;
   var existing = document.getElementById('paywallModalOverlay');
   if (existing) return;
+  _paywallModalOpen = true;
   var copy = _getPaywallCopy(featureType);
   var userId = (typeof Auth !== 'undefined' && typeof Auth.getUserId === 'function') ? Auth.getUserId() : '';
   var overlay = document.createElement('div');
@@ -192,13 +275,21 @@ function showPaywall(featureType) {
   });
   document.body.appendChild(overlay);
   document.body.classList.add('paywall-open');
+  _paywallEscHandler = function (event) {
+    if (event.key === 'Escape') _closePaywallModal();
+  };
+  document.addEventListener('keydown', _paywallEscHandler);
 
   var closeBtn = overlay.querySelector('.paywall-close');
   if (closeBtn) closeBtn.addEventListener('click', _closePaywallModal);
   var upgradeBtn = overlay.querySelector('.paywall-upgrade');
   if (upgradeBtn) {
+    _paywallUpgradeBtn = upgradeBtn;
     upgradeBtn.addEventListener('click', function () {
       if (!userId) {
+        var now = Date.now();
+        if (now - _paywallGuestPromptAt < 900) return;
+        _paywallGuestPromptAt = now;
         showToast('Please login to continue payment.');
         return;
       }
@@ -206,3 +297,12 @@ function showPaywall(featureType) {
     });
   }
 }
+
+global.canAccess = canAccess;
+global.canAccessFeature = canAccessFeature;
+global.canAccessCustomMode = canAccessCustomMode;
+global.showPaywall = showPaywall;
+global.openPayment = openPayment;
+global.verifyPaymentResponse = verifyPaymentResponse;
+global.unlockPremium = unlockPremium;
+})(window);
