@@ -33,6 +33,15 @@ var Onboarding = (function () {
   var _questionAttempt = 0;       /* 0-based: tracks which attempt (0, 1, 2) */
   var _currentQuestion = null;    /* current question object {text, answer} */
 
+  /* Numpad re-show tracking — prevents duplicate listener stacking */
+  var _numpadBoundInput = null;
+  var _numpadFocusHandler = null;
+  var _numpadClickHandler = null;
+  var _numpadTouchHandler = null;
+  var _numpadVisibilityHandler = null;
+  var _numpadPageshowHandler = null;
+  var _numpadEnsuring = false; /* re-entry guard for ensureNumpadVisibleForActiveInput */
+
   /** Escape HTML special characters to prevent XSS when inserting user text */
   function _escapeHtml(str) {
     if (!str) return '';
@@ -435,9 +444,13 @@ var Onboarding = (function () {
 
   /**
    * Show the custom numpad for the onboarding first question.
+   * Attaches re-show listeners so tapping/focusing the input after a back
+   * swipe or navigation event reliably brings the numpad back.
    */
   function _showOnboardingNumpad(inputEl) {
     if (typeof showCustomNumpad !== 'function') return;
+    /* Remove any previously bound listeners before re-binding */
+    _removeNumpadListeners();
     /* Raise numpad above onboarding overlay */
     var numpad = document.getElementById('customNumpad');
     if (numpad) numpad.style.zIndex = '10001';
@@ -449,6 +462,62 @@ var Onboarding = (function () {
     showCustomNumpad(inputEl, function () {
       _checkOnboardingAnswer();
     });
+
+    /* Track which input is active so the re-show guard knows its target */
+    _numpadBoundInput = inputEl;
+
+    /* Re-show numpad whenever the input is interacted with */
+    _numpadFocusHandler = function () { ensureNumpadVisibleForActiveInput(); };
+    _numpadClickHandler = function () { ensureNumpadVisibleForActiveInput(); };
+    _numpadTouchHandler = function () { ensureNumpadVisibleForActiveInput(); };
+    inputEl.addEventListener('focus', _numpadFocusHandler);
+    inputEl.addEventListener('click', _numpadClickHandler);
+    inputEl.addEventListener('touchstart', _numpadTouchHandler, { passive: true });
+
+    /* Re-show numpad when the page becomes visible again (back-swipe / tab switch) */
+    _numpadVisibilityHandler = function () {
+      if (!document.hidden) ensureNumpadVisibleForActiveInput();
+    };
+    _numpadPageshowHandler = function () { ensureNumpadVisibleForActiveInput(); };
+    document.addEventListener('visibilitychange', _numpadVisibilityHandler);
+    window.addEventListener('pageshow', _numpadPageshowHandler);
+  }
+
+  /**
+   * Restore numpad visibility for the active onboarding input when it has
+   * been hidden by navigation/swipe without user intent.
+   * Re-entry guard prevents infinite loops if re-showing triggers another event.
+   */
+  function ensureNumpadVisibleForActiveInput() {
+    if (_numpadEnsuring) return;
+    if (!_numpadBoundInput) return;
+    if (!_overlay || _overlay.style.display === 'none') return;
+    var numpad = document.getElementById('customNumpad');
+    if (numpad && !numpad.classList.contains('visible')) {
+      _numpadEnsuring = true;
+      _showOnboardingNumpad(_numpadBoundInput);
+      _numpadEnsuring = false;
+    }
+  }
+
+  /**
+   * Remove all numpad re-show listeners attached by _showOnboardingNumpad.
+   */
+  function _removeNumpadListeners() {
+    if (_numpadBoundInput) {
+      if (_numpadFocusHandler) _numpadBoundInput.removeEventListener('focus', _numpadFocusHandler);
+      if (_numpadClickHandler) _numpadBoundInput.removeEventListener('click', _numpadClickHandler);
+      if (_numpadTouchHandler) _numpadBoundInput.removeEventListener('touchstart', _numpadTouchHandler);
+    }
+    if (_numpadVisibilityHandler) document.removeEventListener('visibilitychange', _numpadVisibilityHandler);
+    if (_numpadPageshowHandler) window.removeEventListener('pageshow', _numpadPageshowHandler);
+    _numpadBoundInput = null;
+    _numpadFocusHandler = null;
+    _numpadClickHandler = null;
+    _numpadTouchHandler = null;
+    _numpadVisibilityHandler = null;
+    _numpadPageshowHandler = null;
+    _numpadEnsuring = false;
   }
 
   /**
@@ -617,9 +686,10 @@ var Onboarding = (function () {
   }
 
   /**
-   * Clean up numpad overrides and hide it.
+   * Clean up numpad overrides, listeners, and hide it.
    */
   function _cleanupNumpad() {
+    _removeNumpadListeners();
     var numpad = document.getElementById('customNumpad');
     if (numpad) { numpad.style.zIndex = ''; numpad.style.bottom = ''; }
     if (_overlay) _overlay.style.pointerEvents = '';

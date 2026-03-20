@@ -114,40 +114,27 @@ function genPercentage() {
 
   if (diff === 'easy') {
     percentages = [5, 10, 20, 25, 50];
-    bases = [100, 200, 400, 500, 1000];
+    bases = [80, 120, 160, 200, 240, 400, 500, 600, 800];
   } else if (diff === 'hard') {
     percentages = [5, 8, 12, 15, 18, 20, 25, 30, 37, 40, 50, 60, 75];
-    bases = [120, 160, 200, 240, 300, 360, 400, 480, 500, 600, 720, 840, 960, 1000, 1200];
+    bases = [120, 144, 160, 175, 200, 225, 240, 288, 300, 360, 400, 432, 480, 500, 576, 600, 720, 840, 960, 1200];
   } else {
     percentages = [5, 10, 12, 15, 20, 25, 30, 40, 50, 60, 75];
-    bases = null; /* use original random logic */
+    /* Curated non-trivial bases that avoid being simple multiples of 100 */
+    bases = [60, 80, 120, 125, 150, 160, 175, 200, 225, 240, 250, 280, 320, 360, 400, 450, 480, 500, 560, 600, 720];
   }
 
+  /* Pick from curated lists ensuring whole-number results */
   var p, b, result;
-  if (bases) {
-    /* Pick from curated lists ensuring whole-number results */
-    var maxAttempts = 50;
-    do {
-      p = pick(percentages);
-      b = pick(bases);
-      result = (p / 100) * b;
-      maxAttempts--;
-    } while (result !== Math.floor(result) && maxAttempts > 0);
-    if (result !== Math.floor(result)) {
-      p = 10; b = 200; result = 20;
-    }
-  } else {
+  var maxAttempts = 60;
+  do {
     p = pick(percentages);
-    var pctAttempts = 0;
-    do {
-      b = randInt(2, 20) * pick([10, 20, 25, 50, 100]);
-      result = (p / 100) * b;
-      pctAttempts++;
-    } while (result !== Math.floor(result) && pctAttempts < 50);
-    /* Fallback to guaranteed whole-number result */
-    if (result !== Math.floor(result)) {
-      p = 10; b = 200; result = 20;
-    }
+    b = pick(bases);
+    result = (p / 100) * b;
+    maxAttempts--;
+  } while (result !== Math.floor(result) && maxAttempts > 0);
+  if (result !== Math.floor(result)) {
+    p = 10; b = 200; result = 20;
   }
 
   return { question: p + '% of ' + b + ' = ?', answer: result, category: 'percentages' };
@@ -306,6 +293,12 @@ function genProfitLoss() {
   var diff = _getDifficulty();
   var type = randInt(0, 2);
 
+  /* Varied CP pools — avoid all-round-100 figures */
+  var cpEasy   = [100, 120, 150, 200, 250, 300, 400, 500];
+  var cpMedium = [120, 125, 144, 150, 160, 175, 200, 225, 240, 250, 288, 300, 360, 400, 450, 480, 500];
+  var cpHard   = [125, 144, 160, 175, 200, 225, 240, 250, 280, 288, 300, 320, 360, 375, 400, 432, 450, 480, 500, 560, 600];
+  var cpPool   = diff === 'easy' ? cpEasy : (diff === 'hard' ? cpHard : cpMedium);
+
   if (type === 0) {
     /* Find SP given CP and profit% — ensure whole-number result */
     var profitOpts = diff === 'easy' ? [10, 20, 25, 50] : (diff === 'hard' ? [5, 8, 10, 12, 15, 20, 25, 30, 40, 50] : [5, 10, 15, 20, 25, 30, 40, 50]);
@@ -313,10 +306,10 @@ function genProfitLoss() {
     var cp, sp;
     var plAttempts = 0;
     do {
-      cp = randInt(1, 10) * 100;
+      cp = pick(cpPool);
       sp = cp * (1 + profitPct / 100);
       plAttempts++;
-    } while (sp !== Math.floor(sp) && plAttempts < 30);
+    } while (sp !== Math.floor(sp) && plAttempts < 40);
     if (sp !== Math.floor(sp)) { cp = 200; profitPct = 25; sp = 250; }
     return { question: 'CP = ' + cp + ', Profit = ' + profitPct + '%. SP = ?', answer: sp, category: 'profit-loss' };
   } else if (type === 1) {
@@ -326,17 +319,25 @@ function genProfitLoss() {
     var cp2, sp2;
     var plAttempts2 = 0;
     do {
-      cp2 = randInt(1, 10) * 100;
+      cp2 = pick(cpPool);
       sp2 = cp2 * (1 - lossPct / 100);
       plAttempts2++;
-    } while (sp2 !== Math.floor(sp2) && plAttempts2 < 30);
+    } while (sp2 !== Math.floor(sp2) && plAttempts2 < 40);
     if (sp2 !== Math.floor(sp2)) { cp2 = 200; lossPct = 20; sp2 = 160; }
     return { question: 'CP = ' + cp2 + ', Loss = ' + lossPct + '%. SP = ?', answer: sp2, category: 'profit-loss' };
   } else {
     /* Find profit% given CP and SP */
-    var cp3 = randInt(1, 10) * 100;
     var profitPct2 = pick([10, 15, 20, 25, 30, 50]);
-    var sp3 = Math.round(cp3 * (1 + profitPct2 / 100));
+    var cp3 = pick(cpPool);
+    var sp3;
+    var p3Attempts = 0;
+    do {
+      sp3 = cp3 * (1 + profitPct2 / 100);
+      if (sp3 === Math.floor(sp3)) break;
+      cp3 = pick(cpPool);
+      p3Attempts++;
+    } while (p3Attempts < 20);
+    if (!sp3 || sp3 !== Math.floor(sp3)) { cp3 = 200; profitPct2 = 25; sp3 = 250; }
     return { question: 'CP = ' + cp3 + ', SP = ' + sp3 + '. Profit% = ?', answer: profitPct2, category: 'profit-loss' };
   }
 }
@@ -346,23 +347,31 @@ function genTSD() {
   var diff = _getDifficulty();
   var type = randInt(0, 2);
 
+  /* Varied speed pools — avoid always-multiples-of-10 */
+  var speedEasy   = [30, 40, 45, 50, 60, 75, 80, 90, 100];
+  var speedMedium = [25, 30, 35, 36, 40, 45, 48, 50, 54, 56, 60, 70, 72, 75, 80, 90, 96];
+  var speedHard   = [36, 40, 45, 48, 50, 54, 56, 60, 64, 72, 75, 80, 90, 96, 100, 108, 112, 120];
+  var speedPool   = diff === 'easy' ? speedEasy : (diff === 'hard' ? speedHard : speedMedium);
+
+  var timeMaxEasy   = 5;
+  var timeMaxMedium = 8;
+  var timeMaxHard   = 10;
+  var tMax = diff === 'easy' ? timeMaxEasy : (diff === 'hard' ? timeMaxHard : timeMaxMedium);
+
   if (type === 0) {
     /* Find distance given speed and time */
-    var sMin = diff === 'easy' ? 2 : (diff === 'hard' ? 3 : 2);
-    var sMax = diff === 'easy' ? 8 : (diff === 'hard' ? 15 : 12);
-    var tMax = diff === 'easy' ? 5 : (diff === 'hard' ? 10 : 8);
-    var speed = randInt(sMin, sMax) * 10;
+    var speed = pick(speedPool);
     var time = randInt(2, tMax);
     return { question: 'Speed = ' + speed + ' km/h, Time = ' + time + ' hrs. Distance = ?', answer: speed * time, category: 'time-speed-distance' };
   } else if (type === 1) {
     /* Find time given speed and distance */
-    var speed2 = randInt(2, 10) * 10;
+    var speed2 = pick(speedPool);
     var time2 = randInt(2, 6);
     var dist = speed2 * time2;
     return { question: 'Speed = ' + speed2 + ' km/h, Distance = ' + dist + ' km. Time = ?', answer: time2, category: 'time-speed-distance' };
   } else {
     /* Find speed given distance and time */
-    var speed3 = randInt(2, 12) * 10;
+    var speed3 = pick(speedPool);
     var time3 = randInt(2, 6);
     var dist2 = speed3 * time3;
     return { question: 'Distance = ' + dist2 + ' km, Time = ' + time3 + ' hrs. Speed = ?', answer: speed3, category: 'time-speed-distance' };
@@ -428,6 +437,19 @@ var categoryGenerators = {
   'time-and-work': genTimeWork
 };
 
+/* ---- recent-question tracker (anti-repetition across calls) ---- */
+var _recentQuestions = [];
+var _MAX_RECENT = 8;
+
+function _recordRecentQuestion(questionText) {
+  _recentQuestions.push(questionText);
+  if (_recentQuestions.length > _MAX_RECENT) _recentQuestions.shift();
+}
+
+function _wasRecentlyAsked(questionText) {
+  return _recentQuestions.indexOf(questionText) !== -1;
+}
+
 /* ---- public API ---- */
 
 var generators = [genSquare, genCube, genFraction, genPercentage, genMultiplication,
@@ -451,22 +473,25 @@ function generateQuestion() {
 function generateQuestions(n, category) {
   var gen = category && categoryGenerators[category] ? categoryGenerators[category] : null;
   var qs = [];
-  var seen = {}; /* track question strings to avoid repeats */
-  var maxAttempts = n * 5; /* prevent infinite loops */
+  var seen = {}; /* track question strings to avoid repeats within this batch */
+  var maxAttempts = n * 8; /* prevent infinite loops */
   var attempts = 0;
 
   while (qs.length < n && attempts < maxAttempts) {
     var q = gen ? gen() : generateQuestion();
     attempts++;
-    /* Skip if we've already generated this exact question */
-    if (seen[q.question]) continue;
+    /* Skip exact duplicates within batch or recently-asked questions */
+    if (seen[q.question] || _wasRecentlyAsked(q.question)) continue;
     seen[q.question] = true;
+    _recordRecentQuestion(q.question);
     qs.push(q);
   }
 
   /* Fill remaining if deduplication exhausted attempts */
   while (qs.length < n) {
-    qs.push(gen ? gen() : generateQuestion());
+    var qFill = gen ? gen() : generateQuestion();
+    _recordRecentQuestion(qFill.question);
+    qs.push(qFill);
   }
 
   return qs;
