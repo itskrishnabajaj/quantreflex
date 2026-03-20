@@ -120,7 +120,66 @@ if ('serviceWorker' in navigator) {
   window.addEventListener('load', function () {
     navigator.serviceWorker
       .register('./service-worker.js')
+      .then(function (registration) {
+        /* Detect a new SW waiting to activate and prompt user to reload */
+        function onUpdateFound() {
+          var newWorker = registration.installing;
+          if (!newWorker) return;
+          newWorker.addEventListener('statechange', function () {
+            if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
+              /* New version is ready — show a lightweight toast / reload prompt */
+              _showUpdateToast();
+            }
+          });
+        }
+
+        if (registration.waiting && navigator.serviceWorker.controller) {
+          _showUpdateToast();
+        }
+        registration.addEventListener('updatefound', onUpdateFound);
+
+        /* Guard against infinite reload loops: only reload once per session */
+        navigator.serviceWorker.addEventListener('controllerchange', function () {
+          if (window._swReloading) return;
+          window._swReloading = true;
+          window.location.reload();
+        });
+      })
       .catch(function (err) { console.warn('SW registration failed:', err); });
+  });
+}
+
+/* Show a non-blocking "Update available" banner at the bottom of the screen */
+function _showUpdateToast() {
+  if (document.getElementById('_swUpdateToast')) return;
+  var toast = document.createElement('div');
+  toast.id = '_swUpdateToast';
+  toast.setAttribute('role', 'status');
+  toast.style.cssText = [
+    'position:fixed', 'bottom:72px', 'left:50%', 'transform:translateX(-50%)',
+    'background:#1e293b', 'color:#f8fafc', 'padding:10px 18px',
+    'border-radius:10px', 'font-size:14px', 'z-index:99999',
+    'display:flex', 'align-items:center', 'gap:12px',
+    'box-shadow:0 4px 16px rgba(0,0,0,.35)', 'max-width:90vw'
+  ].join(';');
+  var label = document.createElement('span');
+  label.textContent = '🔄 Update available';
+  var btn = document.createElement('button');
+  btn.id = '_swUpdateBtn';
+  btn.textContent = 'Reload';
+  btn.style.cssText = 'background:#2563eb;color:#fff;border:none;border-radius:6px;padding:4px 10px;cursor:pointer;font-size:13px;';
+  toast.appendChild(label);
+  toast.appendChild(btn);
+  document.body.appendChild(toast);
+  btn.addEventListener('click', function () {
+    navigator.serviceWorker.getRegistration().then(function (reg) {
+      if (reg && reg.waiting) {
+        reg.waiting.postMessage({ type: 'SKIP_WAITING' });
+      } else {
+        window.location.reload();
+      }
+    });
+    toast.remove();
   });
 }
 
