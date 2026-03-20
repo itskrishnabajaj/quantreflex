@@ -1270,15 +1270,15 @@ document.addEventListener('DOMContentLoaded', function () {
     _customPracticeDom.catBtns = catBtns;
     for (var j = 0; j < catBtns.length; j++) {
       catBtns[j].addEventListener('click', function () {
+        if (!_tryPracticeAction()) return;
         SoundEngine.play('settingsToggle');
         var cat = this.getAttribute('data-cat');
         if (_customPracticeActive) {
           _toggleCustomPracticeTopic(cat);
-          this.classList.toggle('selected', _customPracticeState.topics.indexOf(cat) !== -1);
+          _syncCustomPracticeSelectionUi();
           if (_customPracticeDom.error) _customPracticeDom.error.textContent = '';
           return;
         }
-        if (!_tryPracticeAction()) return;
         startDrillFromPractice('focus', cat, this.textContent);
       });
     }
@@ -1349,7 +1349,7 @@ function startDrillFromPractice(modeKey, category, categoryLabel) {
     reflex: { count: 10, timeLimitSec: null, perQuestionSec: 15,   category: null, mode: '🧠 Reflex Drill' },
     timed:  { count: 10, timeLimitSec: 180,  perQuestionSec: null, category: null, mode: '⏱ Timed Test' },
     focus:  { count: 10, timeLimitSec: null, perQuestionSec: null, category: null, mode: '🎯 Focus Training' },
-    custom: { count: _customPracticeState.totalQuestions, timeLimitSec: null, perQuestionSec: null, category: null, topics: _customPracticeState.topics.slice(), mode: '✨ Custom Training' },
+    custom: { count: _customPracticeState.totalQuestions, timeLimitSec: null, perQuestionSec: null, category: null, topics: _customPracticeState.topics.slice(), mode: '📑 Custom Training' },
     review: { count: 10, timeLimitSec: null, perQuestionSec: null, category: null, mode: '🔄 Review Mistakes', reviewMode: true }
   };
 
@@ -1416,6 +1416,16 @@ function _toggleCustomPracticeTopic(topicKey) {
   var idx = _customPracticeState.topics.indexOf(topicKey);
   if (idx === -1) _customPracticeState.topics.push(topicKey);
   else _customPracticeState.topics.splice(idx, 1);
+}
+
+function _syncCustomPracticeSelectionUi() {
+  _ensureCustomPracticeDomCached();
+  var catBtns = _customPracticeDom.catBtns;
+  if (!catBtns) return;
+  for (var i = 0; i < catBtns.length; i++) {
+    var topicKey = catBtns[i].getAttribute('data-cat');
+    catBtns[i].classList.toggle('selected', _customPracticeState.topics.indexOf(topicKey) !== -1);
+  }
 }
 
 function _ensureCustomPracticeDomCached() {
