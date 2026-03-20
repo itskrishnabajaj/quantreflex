@@ -32,8 +32,7 @@ function canAccessFeature(feature) {
 }
 
 function canAccessCustomMode(user) {
-  if (!canAccess('custom_training', user || _getAccessUserState())) return false;
-  return true;
+  return canAccess('custom_training', user || _getAccessUserState());
 }
 
 function _getPaywallCopy(featureType) {
