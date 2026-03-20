@@ -1154,6 +1154,7 @@ document.addEventListener('DOMContentLoaded', function () {
       FirestoreSync.endDrillBatch();
     }
     _exitDrillSession();
+    _customPracticeActive = false;
     /* Reset practice view state */
     var modeSelect = document.getElementById('modeSelect');
     var categorySelect = document.getElementById('categorySelect');
@@ -1176,6 +1177,10 @@ document.addEventListener('DOMContentLoaded', function () {
     var drillContainer = document.getElementById('drillContainer');
     var customSlider = document.getElementById('customQuestionCount');
     var customStartBtn = document.getElementById('startCustomSessionBtn');
+    _customPracticeDom.slider = customSlider;
+    _customPracticeDom.value = document.getElementById('customQuestionCountValue');
+    _customPracticeDom.text = document.getElementById('customQuestionCountText');
+    _customPracticeDom.error = document.getElementById('customModeError');
 
     /* Mode card clicks */
     var modeCards = document.querySelectorAll('.mode-card');
@@ -1191,12 +1196,14 @@ document.addEventListener('DOMContentLoaded', function () {
           return;
         }
         if (modeKey === 'custom') {
+          _customPracticeActive = true;
           modeSelect.style.display = 'none';
           categorySelect.style.display = 'block';
           if (customPracticeConfig) customPracticeConfig.style.display = 'block';
           _resetCustomPracticeState();
           return;
         }
+        _customPracticeActive = false;
         if (modeKey === 'focus') {
           modeSelect.style.display = 'none';
           categorySelect.style.display = 'block';
@@ -1210,15 +1217,15 @@ document.addEventListener('DOMContentLoaded', function () {
 
     /* Category button clicks */
     var catBtns = document.querySelectorAll('.category-btn');
+    _customPracticeDom.catBtns = catBtns;
     for (var j = 0; j < catBtns.length; j++) {
       catBtns[j].addEventListener('click', function () {
         SoundEngine.play('settingsToggle');
         var cat = this.getAttribute('data-cat');
-        if (customPracticeConfig && customPracticeConfig.style.display === 'block') {
+        if (_customPracticeActive) {
           _toggleCustomPracticeTopic(cat);
           this.classList.toggle('selected', _customPracticeState.topics.indexOf(cat) !== -1);
-          var customErr = document.getElementById('customModeError');
-          if (customErr) customErr.textContent = '';
+          if (_customPracticeDom.error) _customPracticeDom.error.textContent = '';
           return;
         }
         startDrillFromPractice('focus', cat, this.textContent);
@@ -1241,8 +1248,7 @@ document.addEventListener('DOMContentLoaded', function () {
           return;
         }
         if (_customPracticeState.topics.length === 0) {
-          var customErr = document.getElementById('customModeError');
-          if (customErr) customErr.textContent = 'Please select at least one topic';
+          if (_customPracticeDom.error) _customPracticeDom.error.textContent = 'Please select at least one topic';
           return;
         }
         startDrillFromPractice('custom');
@@ -1251,6 +1257,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
     /* Back button */
     document.getElementById('backToModes').addEventListener('click', function () {
+      _customPracticeActive = false;
       categorySelect.style.display = 'none';
       if (customPracticeConfig) customPracticeConfig.style.display = 'none';
       modeSelect.style.display = 'block';
@@ -1282,6 +1289,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
 /* ---- Practice drill starter ---- */
 function startDrillFromPractice(modeKey, category, categoryLabel) {
+  _customPracticeActive = false;
   var modeSelect = document.getElementById('modeSelect');
   var categorySelect = document.getElementById('categorySelect');
   var customPracticeConfig = document.getElementById('customPracticeConfig');
@@ -1335,6 +1343,14 @@ var _customPracticeState = {
   topics: [],
   totalQuestions: 20
 };
+var _customPracticeDom = {
+  slider: null,
+  value: null,
+  text: null,
+  error: null,
+  catBtns: null
+};
+var _customPracticeActive = false;
 var _CUSTOM_DEFAULT_QUESTIONS = 20;
 var _CUSTOM_MIN_QUESTIONS = 1;
 var _CUSTOM_MAX_QUESTIONS = 100;
@@ -1350,22 +1366,33 @@ function _toggleCustomPracticeTopic(topicKey) {
   else _customPracticeState.topics.splice(idx, 1);
 }
 
+function _ensureCustomPracticeDomCached() {
+  if (!_customPracticeDom.slider) _customPracticeDom.slider = document.getElementById('customQuestionCount');
+  if (!_customPracticeDom.value) _customPracticeDom.value = document.getElementById('customQuestionCountValue');
+  if (!_customPracticeDom.text) _customPracticeDom.text = document.getElementById('customQuestionCountText');
+  if (!_customPracticeDom.error) _customPracticeDom.error = document.getElementById('customModeError');
+  if (!_customPracticeDom.catBtns) _customPracticeDom.catBtns = document.querySelectorAll('.category-btn');
+}
+
 function _updateCustomQuestionCountUI() {
-  var valueEl = document.getElementById('customQuestionCountValue');
-  var textEl = document.getElementById('customQuestionCountText');
+  _ensureCustomPracticeDomCached();
+  var valueEl = _customPracticeDom.value;
+  var textEl = _customPracticeDom.text;
   if (valueEl) valueEl.textContent = String(_customPracticeState.totalQuestions);
   if (textEl) textEl.textContent = 'You will solve ' + _customPracticeState.totalQuestions + ' questions';
 }
 
 function _resetCustomPracticeState() {
+  _ensureCustomPracticeDomCached();
   _customPracticeState.topics = [];
   _customPracticeState.totalQuestions = _CUSTOM_DEFAULT_QUESTIONS;
-  var slider = document.getElementById('customQuestionCount');
+  var slider = _customPracticeDom.slider;
   if (slider) slider.value = String(_CUSTOM_DEFAULT_QUESTIONS);
   _updateCustomQuestionCountUI();
-  var customErr = document.getElementById('customModeError');
+  var customErr = _customPracticeDom.error;
   if (customErr) customErr.textContent = '';
-  var catBtns = document.querySelectorAll('.category-btn');
+  var catBtns = _customPracticeDom.catBtns;
+  if (!catBtns) return;
   for (var i = 0; i < catBtns.length; i++) {
     catBtns[i].classList.remove('selected');
   }

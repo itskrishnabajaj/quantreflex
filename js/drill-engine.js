@@ -54,6 +54,14 @@ function createDrillEngine(container, opts) {
   var autoAdvanceTimer = null;
   var answered = false; /* prevents double-counting */
   var reviewOriginalCount = 0; /* track original count for review mode cap */
+  var ui = {
+    globalTimerEl: null,
+    perQTimerEl: null,
+    answerInputEl: null,
+    submitBtnEl: null,
+    feedbackEl: null,
+    cardEl: null
+  };
 
   /* ---- render helpers ---- */
 
@@ -98,6 +106,12 @@ function createDrillEngine(container, opts) {
         '<div id="feedback" class="feedback"></div>' +
         '<button id="submitBtn" class="btn accent">Submit</button>' +
       '</div>';
+    ui.globalTimerEl = container.querySelector('#globalTimer');
+    ui.perQTimerEl = container.querySelector('#perQTimer');
+    ui.answerInputEl = container.querySelector('#answerInput');
+    ui.submitBtnEl = container.querySelector('#submitBtn');
+    ui.feedbackEl = container.querySelector('#feedback');
+    ui.cardEl = container.querySelector('.card');
 
     /* Exit button handler — uses custom in-app dialog to prevent
        the TWA/WebView bug where native confirm() can end the session
@@ -124,8 +138,8 @@ function createDrillEngine(container, opts) {
       }
     });
 
-    var input = container.querySelector('#answerInput');
-    var submitBtn = container.querySelector('#submitBtn');
+    var input = ui.answerInputEl;
+    var submitBtn = ui.submitBtnEl;
     /* Auto-focus input with delay to ensure DOM is ready */
     setTimeout(function () { input.focus(); }, 50);
 
@@ -154,7 +168,7 @@ function createDrillEngine(container, opts) {
         recordAnswer(false, q.category, q, 0);
         nextQuestion();
       });
-      var card = container.querySelector('.card');
+      var card = ui.cardEl;
       if (card) card.appendChild(skipBtn);
     }
 
@@ -246,27 +260,27 @@ function createDrillEngine(container, opts) {
       if (typeof triggerHaptic === 'function') triggerHaptic([40, 30, 40]);
     }
 
-    var feedback = container.querySelector('#feedback');
+    var feedback = ui.feedbackEl;
     feedback.textContent = correct ? '✓ Correct!' : '✗ Answer: ' + expected;
     feedback.className = 'feedback ' + (correct ? 'correct' : 'wrong');
 
     /* Add animation class — shake on wrong, pop on correct */
     feedback.classList.add('feedback-anim');
     if (!correct) {
-      var card = container.querySelector('.card');
+      var card = ui.cardEl;
       if (card) card.classList.add('feedback-shake');
       setTimeout(function () { if (card) card.classList.remove('feedback-shake'); }, 400);
     }
 
     /* Replace submit with next */
-    var submitBtn = container.querySelector('#submitBtn');
+    var submitBtn = ui.submitBtnEl;
     submitBtn.textContent = current + 1 < count ? 'Next →' : 'See Results';
     submitBtn.onclick = nextQuestion;
 
     /* Focus next button for keyboard navigation */
     submitBtn.focus();
 
-    container.querySelector('#answerInput').disabled = true;
+    ui.answerInputEl.disabled = true;
 
     /* Auto-advance on correct answer after a short delay for feedback visibility */
     if (correct && current + 1 < count) {
@@ -358,7 +372,7 @@ function createDrillEngine(container, opts) {
     if (!timeLimit) return;
     var remaining = timeLimit;
     function tick() {
-      var el = container.querySelector('#globalTimer');
+      var el = ui.globalTimerEl;
       if (el) el.textContent = '⏱ ' + remaining + 's';
       if (remaining <= 0) { clearInterval(overallTimer); overallTimer = null; finish(); return; }
       remaining--;
@@ -372,7 +386,7 @@ function createDrillEngine(container, opts) {
   function startPerQTimer() {
     var remaining = perQLimit;
     function tick() {
-      var el = container.querySelector('#perQTimer');
+      var el = ui.perQTimerEl;
       if (el) el.textContent = '⏱ ' + remaining + 's';
       if (remaining <= 0) {
         clearInterval(perQTimer);
