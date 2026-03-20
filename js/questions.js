@@ -491,11 +491,11 @@ function _buildCustomTopicOrder(topicKeys, totalCount) {
     order.push(valid[r % valid.length]);
   }
 
-  for (var s = order.length - 1; s > 0; s--) {
-    var j = Math.floor(Math.random() * (s + 1));
-    var tmp = order[s];
-    order[s] = order[j];
-    order[j] = tmp;
+  for (var currentIndex = order.length - 1; currentIndex > 0; currentIndex--) {
+    var randomIndex = Math.floor(Math.random() * (currentIndex + 1));
+    var temp = order[currentIndex];
+    order[currentIndex] = order[randomIndex];
+    order[randomIndex] = temp;
   }
 
   return order;
@@ -512,7 +512,7 @@ function generateQuestions(n, category, topics) {
   while (qs.length < n && attempts < maxAttempts) {
     var q;
     if (topicOrder && topicOrder.length) {
-      var topicKey = topicOrder[qs.length] || topicOrder[topicOrder.length - 1];
+      var topicKey = topicOrder[qs.length];
       var topicGen = categoryGenerators[topicKey];
       q = topicGen ? topicGen() : generateQuestion();
     } else {
@@ -530,7 +530,7 @@ function generateQuestions(n, category, topics) {
   while (qs.length < n) {
     var qFill;
     if (topicOrder && topicOrder.length) {
-      var fillTopicKey = topicOrder[qs.length % topicOrder.length];
+      var fillTopicKey = topicOrder[qs.length];
       var fillTopicGen = categoryGenerators[fillTopicKey];
       qFill = fillTopicGen ? fillTopicGen() : generateQuestion();
     } else {

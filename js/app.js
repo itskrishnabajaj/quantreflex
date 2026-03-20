@@ -1284,15 +1284,7 @@ function startDrillFromPractice(modeKey, category, categoryLabel) {
   modeSelect.style.display = 'none';
   categorySelect.style.display = 'none';
   drillContainer.style.display = 'block';
-
-  /* Cleanup previous engine if any */
-  if (_activeDrillEngine) {
-    _activeDrillEngine.cleanup();
-  }
-
-  var engine = createDrillEngine(drillContainer, config);
-  _activeDrillEngine = engine;
-  engine.start();
+  _startPracticeEngine(drillContainer, config);
 }
 
 function startCustomDrillFromPractice(customConfig) {
@@ -1331,11 +1323,13 @@ function startCustomDrillFromPractice(customConfig) {
   if (categorySelect) categorySelect.style.display = 'none';
   if (customModePanel) customModePanel.style.display = 'none';
   if (drillContainer) drillContainer.style.display = 'block';
+  _startPracticeEngine(drillContainer, config);
+}
 
+function _startPracticeEngine(drillContainer, config) {
   if (_activeDrillEngine) {
     _activeDrillEngine.cleanup();
   }
-
   var engine = createDrillEngine(drillContainer, config);
   _activeDrillEngine = engine;
   engine.start();

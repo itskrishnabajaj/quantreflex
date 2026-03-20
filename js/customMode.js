@@ -14,6 +14,10 @@ var CustomMode = (function () {
     { key: 'time-and-work', label: 'Time & Work' }
   ];
 
+  /* Placeholder for future paywall/access control.
+     `user` will be the current Auth user object and can later be checked for
+     plan/subscription fields before allowing custom mode access.
+     TODO(paywall): replace this with entitlement checks once plans launch. */
   function canAccessCustomMode(user) {
     return true;
   }
