@@ -470,54 +470,15 @@ function generateQuestion() {
  * @param {string} [category] - optional category filter
  * @returns {Array<{ question: string, answer: number|string, category: string }>}
  */
-function _buildCustomTopicOrder(topicKeys, totalCount) {
-  var valid = [];
-  for (var i = 0; i < topicKeys.length; i++) {
-    if (categoryGenerators[topicKeys[i]]) valid.push(topicKeys[i]);
-  }
-  if (!valid.length) return [];
-
-  var base = Math.floor(totalCount / valid.length);
-  var remainder = totalCount % valid.length;
-  var order = [];
-
-  for (var b = 0; b < base; b++) {
-    for (var v = 0; v < valid.length; v++) {
-      order.push(valid[v]);
-    }
-  }
-
-  for (var r = 0; r < remainder; r++) {
-    order.push(valid[r % valid.length]);
-  }
-
-  for (var currentIndex = order.length - 1; currentIndex > 0; currentIndex--) {
-    var randomIndex = Math.floor(Math.random() * (currentIndex + 1));
-    var temp = order[currentIndex];
-    order[currentIndex] = order[randomIndex];
-    order[randomIndex] = temp;
-  }
-
-  return order;
-}
-
-function generateQuestions(n, category, topics) {
+function generateQuestions(n, category) {
   var gen = category && categoryGenerators[category] ? categoryGenerators[category] : null;
-  var topicOrder = Array.isArray(topics) && topics.length ? _buildCustomTopicOrder(topics, n) : null;
   var qs = [];
   var seen = {}; /* track question strings to avoid repeats within this batch */
   var maxAttempts = n * 8; /* prevent infinite loops */
   var attempts = 0;
 
   while (qs.length < n && attempts < maxAttempts) {
-    var q;
-    if (topicOrder && topicOrder.length) {
-      var topicKey = topicOrder[qs.length];
-      var topicGen = categoryGenerators[topicKey];
-      q = topicGen ? topicGen() : generateQuestion();
-    } else {
-      q = gen ? gen() : generateQuestion();
-    }
+    var q = gen ? gen() : generateQuestion();
     attempts++;
     /* Skip exact duplicates within batch or recently-asked questions */
     if (seen[q.question] || _wasRecentlyAsked(q.question)) continue;
@@ -528,14 +489,7 @@ function generateQuestions(n, category, topics) {
 
   /* Fill remaining if deduplication exhausted attempts */
   while (qs.length < n) {
-    var qFill;
-    if (topicOrder && topicOrder.length) {
-      var fillTopicKey = topicOrder[qs.length];
-      var fillTopicGen = categoryGenerators[fillTopicKey];
-      qFill = fillTopicGen ? fillTopicGen() : generateQuestion();
-    } else {
-      qFill = gen ? gen() : generateQuestion();
-    }
+    var qFill = gen ? gen() : generateQuestion();
     _recordRecentQuestion(qFill.question);
     qs.push(qFill);
   }

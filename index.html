@@ -10,7 +10,6 @@
   <link rel="icon" type="image/svg+xml" href="icons/icon-192.svg" />
   <link rel="apple-touch-icon" href="icons/icon-192.png" />
   <link rel="stylesheet" href="css/style.css" />
-  <link rel="stylesheet" href="css/customMode.css" />
 </head>
 <body>
 
@@ -220,33 +219,17 @@
           <button class="category-btn" data-cat="time-speed-distance">Time Speed Dist</button>
           <button class="category-btn" data-cat="time-and-work">Time &amp; Work</button>
         </div>
-        <button class="btn" id="backToModes" style="margin-top:1rem;">← Back</button>
-      </div>
-
-      <!-- Custom Training Mode -->
-      <div id="customModePanel" class="custom-mode-panel" style="display:none;">
-        <div class="custom-mode-header">
-          <h3>Custom Training Mode ⚡</h3>
-          <p>Build your own practice session</p>
-        </div>
-
-        <div class="custom-mode-section">
-          <p class="custom-mode-label">Select Topics</p>
-          <div id="customTopicGrid" class="custom-topic-grid"></div>
-          <p id="customModeError" class="custom-mode-error" role="alert" aria-live="polite"></p>
-        </div>
-
-        <div class="custom-mode-section">
-          <label class="custom-mode-label" for="customQuestionCount">Number of Questions</label>
-          <input id="customQuestionCount" class="custom-range" type="range" min="1" max="100" value="20" />
-          <div class="custom-range-meta">
-            <span id="customQuestionCountValue">20</span>
-            <span id="customQuestionCountText">You will solve 20 questions</span>
+        <div id="customPracticeConfig" class="custom-practice-config">
+          <label class="secondary-text" for="customQuestionCount">Number of Questions</label>
+          <input id="customQuestionCount" class="custom-question-range" type="range" min="1" max="100" value="20" />
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-top:.35rem;">
+            <strong id="customQuestionCountValue">20</strong>
+            <span class="secondary-text" id="customQuestionCountText">You will solve 20 questions</span>
           </div>
+          <p id="customModeError" class="custom-mode-error secondary-text"></p>
+          <button class="btn accent" id="startCustomSessionBtn" style="margin-top:.75rem;width:100%;">Start Custom Session</button>
         </div>
-
-        <button id="startCustomSessionBtn" class="btn accent custom-start-btn">Start Custom Session</button>
-        <button class="btn custom-back-btn" id="backToModesFromCustom">← Back</button>
+        <button class="btn" id="backToModes" style="margin-top:1rem;">← Back</button>
       </div>
 
       <!-- Drill engine renders here -->
@@ -960,7 +943,6 @@
   <script src="js/notifications.js"></script>
   <script src="js/soundEngine.js"></script>
   <script src="js/drill-engine.js"></script>
-  <script src="js/customMode.js"></script>
   <script src="js/onboarding.js"></script>
   <script src="js/router.js"></script>
   <script src="js/app.js"></script>

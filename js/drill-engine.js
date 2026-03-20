@@ -25,7 +25,7 @@
  * @param {number|null} opts.timeLimitSec    - overall time limit in seconds (null = unlimited)
  * @param {number|null} opts.perQuestionSec  - per-question time limit in seconds (null = unlimited)
  * @param {string|null} opts.category        - question category filter (null = all)
- * @param {string[]|null} opts.topics        - multi-topic filters for custom mode
+ * @param {string[]|null} opts.topics        - optional custom mode topic list
  * @param {string}      opts.mode            - drill mode label for display
  * @param {boolean}     opts.reviewMode      - if true, use mistake review questions
  * @param {function}    opts.onFinish        - callback when drill finishes (for SPA navigation)
@@ -396,6 +396,48 @@ function createDrillEngine(container, opts) {
 
   /* ---- begin drill ---- */
 
+  function _generateCustomTopicQuestions(totalCount, topicKeys) {
+    var validTopics = [];
+    var topicSeen = {};
+    for (var i = 0; i < topicKeys.length; i++) {
+      var topicKey = topicKeys[i];
+      if (categoryGenerators[topicKey] && !topicSeen[topicKey]) {
+        validTopics.push(topicKey);
+        topicSeen[topicKey] = true;
+      }
+    }
+
+    if (!validTopics.length) {
+      return generateQuestions(totalCount, null);
+    }
+
+    var eachCount = Math.floor(totalCount / validTopics.length);
+    var remainder = totalCount % validTopics.length;
+    var assembled = [];
+
+    for (var v = 0; v < validTopics.length; v++) {
+      var perTopic = eachCount + (v < remainder ? 1 : 0);
+      if (perTopic <= 0) continue;
+      var topicQuestions = generateQuestions(perTopic, validTopics[v]);
+      for (var q = 0; q < topicQuestions.length; q++) {
+        assembled.push(topicQuestions[q]);
+      }
+    }
+
+    _shuffleInPlace(assembled);
+
+    return assembled.slice(0, totalCount);
+  }
+
+  function _shuffleInPlace(arr) {
+    for (var currentIndex = arr.length - 1; currentIndex > 0; currentIndex--) {
+      var randomIndex = Math.floor(Math.random() * (currentIndex + 1));
+      var tempQuestion = arr[currentIndex];
+      arr[currentIndex] = arr[randomIndex];
+      arr[randomIndex] = tempQuestion;
+    }
+  }
+
   function begin() {
     /* Mark session as active and hide nav for immersive experience */
     _enterDrillSession();
@@ -426,8 +468,10 @@ function createDrillEngine(container, opts) {
       }
       count = questions.length; /* May be less than requested */
       reviewOriginalCount = count;
+    } else if (topics && topics.length) {
+      questions = _generateCustomTopicQuestions(count, topics);
     } else {
-      questions = generateQuestions(count, category, topics); /* questions.js */
+      questions = generateQuestions(count, category); /* questions.js */
     }
     current = 0;
     score = 0;

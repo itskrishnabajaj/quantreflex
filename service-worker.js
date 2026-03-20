@@ -3,20 +3,18 @@
  * Caches all assets for offline use.
  */
 
-var CACHE_NAME = 'quant-reflex-v40';
+var CACHE_NAME = 'quant-reflex-v41';
 
 var ASSETS = [
   './',
   './index.html',
   './css/style.css',
-  './css/customMode.css',
   './js/firebase.js',
   './js/auth.js',
   './js/firestore-sync.js',
   './js/app.js',
   './js/router.js',
   './js/drill-engine.js',
-  './js/customMode.js',
   './js/onboarding.js',
   './js/questions.js',
   './js/progress.js',

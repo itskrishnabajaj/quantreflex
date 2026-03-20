@@ -1157,27 +1157,25 @@ document.addEventListener('DOMContentLoaded', function () {
     /* Reset practice view state */
     var modeSelect = document.getElementById('modeSelect');
     var categorySelect = document.getElementById('categorySelect');
+    var customPracticeConfig = document.getElementById('customPracticeConfig');
     var drillContainer = document.getElementById('drillContainer');
     if (modeSelect) modeSelect.style.display = 'block';
     if (categorySelect) categorySelect.style.display = 'none';
+    if (customPracticeConfig) customPracticeConfig.style.display = 'none';
     if (drillContainer) {
       drillContainer.style.display = 'none';
       drillContainer.innerHTML = '';
     }
-    if (typeof CustomMode !== 'undefined' && typeof CustomMode.reset === 'function') {
-      CustomMode.reset();
-      CustomMode.hidePanel();
-    }
+    _resetCustomPracticeState();
   });
 
   Router.onInit('practice', function () {
     var modeSelect = document.getElementById('modeSelect');
     var categorySelect = document.getElementById('categorySelect');
+    var customPracticeConfig = document.getElementById('customPracticeConfig');
     var drillContainer = document.getElementById('drillContainer');
-
-    if (typeof CustomMode !== 'undefined' && typeof CustomMode.init === 'function') {
-      CustomMode.init();
-    }
+    var customSlider = document.getElementById('customQuestionCount');
+    var customStartBtn = document.getElementById('startCustomSessionBtn');
 
     /* Mode card clicks */
     var modeCards = document.querySelectorAll('.mode-card');
@@ -1193,9 +1191,10 @@ document.addEventListener('DOMContentLoaded', function () {
           return;
         }
         if (modeKey === 'custom') {
-          if (typeof CustomMode !== 'undefined' && typeof CustomMode.showPanel === 'function') {
-            CustomMode.showPanel();
-          }
+          modeSelect.style.display = 'none';
+          categorySelect.style.display = 'block';
+          if (customPracticeConfig) customPracticeConfig.style.display = 'block';
+          _resetCustomPracticeState();
           return;
         }
         if (modeKey === 'focus') {
@@ -1215,14 +1214,47 @@ document.addEventListener('DOMContentLoaded', function () {
       catBtns[j].addEventListener('click', function () {
         SoundEngine.play('settingsToggle');
         var cat = this.getAttribute('data-cat');
+        if (customPracticeConfig && customPracticeConfig.style.display === 'block') {
+          _toggleCustomPracticeTopic(cat);
+          this.classList.toggle('selected', _customPracticeState.topics.indexOf(cat) !== -1);
+          var customErr = document.getElementById('customModeError');
+          if (customErr) customErr.textContent = '';
+          return;
+        }
         startDrillFromPractice('focus', cat, this.textContent);
+      });
+    }
+
+    if (customSlider) {
+      customSlider.addEventListener('input', function () {
+        var val = parseInt(customSlider.value, 10);
+        if (isNaN(val)) val = _CUSTOM_DEFAULT_QUESTIONS;
+        _customPracticeState.totalQuestions = Math.max(_CUSTOM_MIN_QUESTIONS, Math.min(_CUSTOM_MAX_QUESTIONS, val));
+        _updateCustomQuestionCountUI();
+      });
+    }
+
+    if (customStartBtn) {
+      customStartBtn.addEventListener('click', function () {
+        var user = (typeof Auth !== 'undefined' && typeof Auth.getCurrentUser === 'function') ? Auth.getCurrentUser() : null;
+        if (!canAccessCustomMode(user)) {
+          return;
+        }
+        if (_customPracticeState.topics.length === 0) {
+          var customErr = document.getElementById('customModeError');
+          if (customErr) customErr.textContent = 'Please select at least one topic';
+          return;
+        }
+        startDrillFromPractice('custom');
       });
     }
 
     /* Back button */
     document.getElementById('backToModes').addEventListener('click', function () {
       categorySelect.style.display = 'none';
+      if (customPracticeConfig) customPracticeConfig.style.display = 'none';
       modeSelect.style.display = 'block';
+      _resetCustomPracticeState();
     });
   });
 
@@ -1252,6 +1284,7 @@ document.addEventListener('DOMContentLoaded', function () {
 function startDrillFromPractice(modeKey, category, categoryLabel) {
   var modeSelect = document.getElementById('modeSelect');
   var categorySelect = document.getElementById('categorySelect');
+  var customPracticeConfig = document.getElementById('customPracticeConfig');
   var drillContainer = document.getElementById('drillContainer');
 
   var modes = {
@@ -1259,6 +1292,7 @@ function startDrillFromPractice(modeKey, category, categoryLabel) {
     reflex: { count: 10, timeLimitSec: null, perQuestionSec: 15,   category: null, mode: '🧠 Reflex Drill' },
     timed:  { count: 10, timeLimitSec: 180,  perQuestionSec: null, category: null, mode: '⏱ Timed Test' },
     focus:  { count: 10, timeLimitSec: null, perQuestionSec: null, category: null, mode: '🎯 Focus Training' },
+    custom: { count: _customPracticeState.totalQuestions, timeLimitSec: null, perQuestionSec: null, category: null, topics: _customPracticeState.topics.slice(), mode: '⚡ Custom Training Mode' },
     review: { count: 10, timeLimitSec: null, perQuestionSec: null, category: null, mode: '🔄 Review Mistakes', reviewMode: true }
   };
 
@@ -1283,46 +1317,8 @@ function startDrillFromPractice(modeKey, category, categoryLabel) {
 
   modeSelect.style.display = 'none';
   categorySelect.style.display = 'none';
+  if (customPracticeConfig) customPracticeConfig.style.display = 'none';
   drillContainer.style.display = 'block';
-  _startPracticeEngine(drillContainer, config);
-}
-
-function startCustomDrillFromPractice(customConfig) {
-  if (!customConfig || !customConfig.topics || !customConfig.topics.length) return;
-  var modeSelect = document.getElementById('modeSelect');
-  var categorySelect = document.getElementById('categorySelect');
-  var customModePanel = document.getElementById('customModePanel');
-  var drillContainer = document.getElementById('drillContainer');
-
-  var count = parseInt(customConfig.totalQuestions, 10);
-  if (isNaN(count)) count = 20;
-  count = Math.max(1, Math.min(100, count));
-
-  var config = {
-    count: count,
-    timeLimitSec: null,
-    perQuestionSec: null,
-    category: null,
-    topics: customConfig.topics.slice(),
-    mode: '⚡ Custom Training Mode'
-  };
-
-  config.onFinish = function (view) {
-    if (_activeDrillEngine) {
-      _activeDrillEngine.cleanup();
-      _activeDrillEngine = null;
-    }
-    if (_drillSessionActive && typeof FirestoreSync !== 'undefined') {
-      FirestoreSync.endDrillBatch();
-    }
-    _exitDrillSession();
-    Router.showView(view);
-  };
-
-  if (modeSelect) modeSelect.style.display = 'none';
-  if (categorySelect) categorySelect.style.display = 'none';
-  if (customModePanel) customModePanel.style.display = 'none';
-  if (drillContainer) drillContainer.style.display = 'block';
   _startPracticeEngine(drillContainer, config);
 }
 
@@ -1333,6 +1329,46 @@ function _startPracticeEngine(drillContainer, config) {
   var engine = createDrillEngine(drillContainer, config);
   _activeDrillEngine = engine;
   engine.start();
+}
+
+var _customPracticeState = {
+  topics: [],
+  totalQuestions: 20
+};
+var _CUSTOM_DEFAULT_QUESTIONS = 20;
+var _CUSTOM_MIN_QUESTIONS = 1;
+var _CUSTOM_MAX_QUESTIONS = 100;
+
+/* Placeholder for future paywall integration. */
+function canAccessCustomMode(user) {
+  return true;
+}
+
+function _toggleCustomPracticeTopic(topicKey) {
+  var idx = _customPracticeState.topics.indexOf(topicKey);
+  if (idx === -1) _customPracticeState.topics.push(topicKey);
+  else _customPracticeState.topics.splice(idx, 1);
+}
+
+function _updateCustomQuestionCountUI() {
+  var valueEl = document.getElementById('customQuestionCountValue');
+  var textEl = document.getElementById('customQuestionCountText');
+  if (valueEl) valueEl.textContent = String(_customPracticeState.totalQuestions);
+  if (textEl) textEl.textContent = 'You will solve ' + _customPracticeState.totalQuestions + ' questions';
+}
+
+function _resetCustomPracticeState() {
+  _customPracticeState.topics = [];
+  _customPracticeState.totalQuestions = _CUSTOM_DEFAULT_QUESTIONS;
+  var slider = document.getElementById('customQuestionCount');
+  if (slider) slider.value = String(_CUSTOM_DEFAULT_QUESTIONS);
+  _updateCustomQuestionCountUI();
+  var customErr = document.getElementById('customModeError');
+  if (customErr) customErr.textContent = '';
+  var catBtns = document.querySelectorAll('.category-btn');
+  for (var i = 0; i < catBtns.length; i++) {
+    catBtns[i].classList.remove('selected');
+  }
 }
 
 /* ---- Learn view initializer ---- */
