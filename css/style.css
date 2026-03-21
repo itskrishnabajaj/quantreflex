@@ -200,6 +200,18 @@ a { color: inherit; text-decoration: none; }
   overflow: hidden;
 }
 
+/* Web browser mode: allow full page scrolling while keeping PWA immersive behavior */
+html.web-mode,
+body.web-mode {
+  height: auto;
+  overflow-y: auto;
+}
+
+body.web-mode .container {
+  min-height: 100vh;
+  overflow: visible;
+}
+
 header {
   text-align: center;
   padding: 1.5rem 0 .75rem;
@@ -2244,6 +2256,11 @@ body.dark-mode .table-modal-title {
   display: flex;
   flex-direction: column;
   padding-top: 2.15rem;
+}
+
+body.web-mode #categorySelect {
+  max-height: none;
+  overflow: visible;
 }
 
 @media (max-height: 560px) {

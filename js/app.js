@@ -12,6 +12,23 @@
  *   8. Manage customizable quick study links
  */
 
+/* ---- Detect runtime mode (PWA standalone vs browser tab) ---- */
+(function () {
+  var isPWA = false;
+  try {
+    isPWA = !!(
+      (window.matchMedia && (
+        window.matchMedia('(display-mode: standalone)').matches ||
+        window.matchMedia('(display-mode: fullscreen)').matches
+      )) ||
+      navigator.standalone === true
+    );
+  } catch (_) { /* ignore */ }
+
+  document.documentElement.classList.add(isPWA ? 'pwa-mode' : 'web-mode');
+  document.body.classList.add(isPWA ? 'pwa-mode' : 'web-mode');
+})();
+
 /* ---- Apply dark mode, theme and reduced motion from settings immediately ---- */
 (function () {
   try {
