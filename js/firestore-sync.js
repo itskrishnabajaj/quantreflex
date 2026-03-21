@@ -303,7 +303,7 @@ var FirestoreSync = (function () {
     if (hasAll) return;
 
     var patch = {};
-    if (typeof data.isPremium !== 'boolean') patch.isPremium = (data.isTrial === true) ? true : false;
+    if (typeof data.isPremium !== 'boolean') patch.isPremium = false;
     if (typeof data.isTrial !== 'boolean') patch.isTrial = false;
     if (!data.hasOwnProperty('trialEnd')) patch.trialEnd = null;
     if (typeof data.hasPaid !== 'boolean') patch.hasPaid = false;

@@ -84,8 +84,8 @@ function initSettingsView() {
   var accessState = (typeof FirestoreSync !== 'undefined' && typeof FirestoreSync.getAccessState === 'function')
     ? FirestoreSync.getAccessState()
     : {};
-  var trialEndMs = _toMillis(accessState ? accessState.trialEnd : null);
-  var isTrialUser = !!(accessState && accessState.isTrial && (!trialEndMs || Date.now() <= trialEndMs));
+  var trialEndMs = _toMillis(accessState.trialEnd);
+  var isTrialUser = !!(accessState && accessState.isTrial && trialEndMs > 0 && Date.now() <= trialEndMs);
 
   var darkToggle = document.getElementById('darkModeToggle');
   var soundToggle = document.getElementById('soundToggle');
@@ -360,7 +360,7 @@ function updateAboutUserStatus() {
     ? (FirestoreSync.getAccessState() || {})
     : {};
   var trialEndMs = _toMillis(accessState.trialEnd);
-  var trialActive = accessState.isTrial === true && (!trialEndMs || Date.now() <= trialEndMs);
+  var trialActive = accessState.isTrial === true && trialEndMs > 0 && Date.now() <= trialEndMs;
   var message = 'Free user';
   if (accessState.isEarlyUser === true) {
     message = '🎉 Thank you for being one of our first users! You’ve unlocked lifetime premium.';
