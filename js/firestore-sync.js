@@ -152,8 +152,11 @@ var FirestoreSync = (function () {
         }
       } else {
         /* First time: create document with default data */
-        _createDefaultDocument();
-        _loadedUserId = currentUserId;
+        _createDefaultDocument(function (created) {
+          if (created) _loadedUserId = currentUserId;
+          if (callback) callback(!!created);
+        });
+        return;
       }
       if (callback) callback(true);
     }).catch(function (err) {
@@ -168,20 +171,86 @@ var FirestoreSync = (function () {
    * Always uses clean defaults — never reads from localStorage to prevent
    * data leakage from a previously logged-in user.
    */
-  function _createDefaultDocument() {
+  function assignUserTier(db, userId, baseUserData) {
+    var userRef = db.collection('users').doc(userId);
+    var metaRef = db.collection('appMeta').doc('global');
+
+    return db.runTransaction(function (tx) {
+      return tx.get(userRef).then(function (userDoc) {
+        if (userDoc.exists) {
+          return userDoc.data() || null;
+        }
+        return tx.get(metaRef).then(function (metaDoc) {
+          var totalUsers = 0;
+          if (!metaDoc.exists) {
+            tx.set(metaRef, { totalUsers: 0 }, { merge: true });
+          } else {
+            var meta = metaDoc.data() || {};
+            totalUsers = parseInt(meta.totalUsers, 10);
+            if (isNaN(totalUsers) || totalUsers < 0) totalUsers = 0;
+          }
+
+          var userNumber = totalUsers + 1;
+          var nowMs = Date.now();
+          var userData = {
+            profile: baseUserData.profile,
+            settings: baseUserData.settings,
+            stats: baseUserData.stats,
+            quickLinks: baseUserData.quickLinks,
+            customTopics: baseUserData.customTopics,
+            customFormulas: baseUserData.customFormulas,
+            bookmarks: baseUserData.bookmarks,
+            userNumber: userNumber,
+            createdAt: (typeof firebase !== 'undefined' && firebase.firestore && firebase.firestore.FieldValue)
+              ? firebase.firestore.FieldValue.serverTimestamp()
+              : new Date(nowMs).toISOString()
+          };
+
+          if (userNumber <= EARLY_USER_LIMIT) {
+            userData.isPremium = true;
+            userData.isEarlyUser = true;
+            userData.isTrial = false;
+            userData.hasPaid = false;
+            userData.trialEnd = null;
+          } else {
+            userData.isPremium = true;
+            userData.isTrial = true;
+            userData.isEarlyUser = false;
+            userData.hasPaid = false;
+            userData.trialEnd = nowMs + (TRIAL_DAYS * 24 * 60 * 60 * 1000);
+          }
+
+          tx.set(userRef, userData, { merge: true });
+          tx.update(metaRef, { totalUsers: userNumber });
+          return userData;
+        });
+      });
+    });
+  }
+
+  function _createDefaultDocument(callback) {
     var docRef = _getUserDocRef();
-    if (!docRef) return;
+    if (!docRef) {
+      if (callback) callback(false);
+      return;
+    }
     var db = FirebaseApp.getDb();
-    if (!db) return;
+    if (!db) {
+      if (callback) callback(false);
+      return;
+    }
 
     var userId = FirebaseApp.getUserId();
+    if (!userId) {
+      if (callback) callback(false);
+      return;
+    }
     var username = userId || 'user';
     /* Extract display username from Firebase Auth email */
     if (typeof Auth !== 'undefined' && Auth.getCurrentUser() && Auth.getCurrentUser().email) {
       username = Auth.getCurrentUser().email.split('@')[0];
     }
     var now = new Date();
-    var trialEndMs = now.getTime() + (TRIAL_DAYS * 24 * 60 * 60 * 1000);
     var fallbackDefaults = {
       profile: {
         name: '',
@@ -216,9 +285,6 @@ var FirestoreSync = (function () {
       createdAt: now.toISOString()
     };
 
-    _memoryCache = fallbackDefaults;
-    _dataLoaded = true;
-
     /* Write clean defaults to localStorage so the app has consistent state */
     try {
       localStorage.setItem('quant_reflex_settings', JSON.stringify(fallbackDefaults.settings));
@@ -228,62 +294,15 @@ var FirestoreSync = (function () {
       localStorage.setItem('quant_custom_formulas', JSON.stringify(fallbackDefaults.customFormulas));
       localStorage.setItem('quant_bookmarks', JSON.stringify(fallbackDefaults.bookmarks));
     } catch (_) {}
-    var metaRef = db.collection('appMeta').doc('global');
 
-    db.runTransaction(function (tx) {
-      return tx.get(docRef).then(function (userDoc) {
-        if (userDoc.exists) return;
-        return tx.get(metaRef).then(function (metaDoc) {
-        var meta = metaDoc.exists ? (metaDoc.data() || {}) : {};
-        var totalUsers = parseInt(meta.totalUsers, 10);
-        if (isNaN(totalUsers) || totalUsers < 0) totalUsers = 0;
-        var userNumber = totalUsers + 1;
-        var isEarlyUser = totalUsers < EARLY_USER_LIMIT;
-        var monetizationState = isEarlyUser
-          ? {
-              isPremium: true,
-              isEarlyUser: true,
-              isTrial: false,
-              hasPaid: false,
-              trialEnd: null
-            }
-          : {
-              isPremium: true,
-              isEarlyUser: false,
-              isTrial: true,
-              hasPaid: false,
-              trialEnd: trialEndMs
-            };
-        var docDefaults = {
-          profile: {
-            name: '',
-            username: username,
-            createdAt: now.toISOString()
-          },
-          settings: fallbackDefaults.settings,
-          stats: fallbackDefaults.stats,
-          quickLinks: fallbackDefaults.quickLinks,
-          customTopics: fallbackDefaults.customTopics,
-          customFormulas: fallbackDefaults.customFormulas,
-          bookmarks: fallbackDefaults.bookmarks,
-          userNumber: userNumber,
-          isPremium: monetizationState.isPremium,
-          isTrial: monetizationState.isTrial,
-          trialEnd: monetizationState.trialEnd,
-          hasPaid: monetizationState.hasPaid,
-          isEarlyUser: monetizationState.isEarlyUser,
-          createdAt: (typeof firebase !== 'undefined' && firebase.firestore && firebase.firestore.FieldValue)
-            ? firebase.firestore.FieldValue.serverTimestamp()
-            : now.toISOString()
-        };
-        tx.set(docRef, docDefaults, { merge: true });
-        tx.set(metaRef, { totalUsers: totalUsers + 1 }, { merge: true });
-        _memoryCache = docDefaults;
-        if (_memoryCache.createdAt && typeof _memoryCache.createdAt.toDate === 'function') {
-          _memoryCache.createdAt = _memoryCache.createdAt.toDate().toISOString();
-        }
-        });
-      });
+    assignUserTier(db, userId, fallbackDefaults).then(function (userData) {
+      if (!userData) userData = fallbackDefaults;
+      _memoryCache = userData;
+      _dataLoaded = true;
+      if (_memoryCache.createdAt && typeof _memoryCache.createdAt.toDate === 'function') {
+        _memoryCache.createdAt = _memoryCache.createdAt.toDate().toISOString();
+      }
+      if (callback) callback(true);
     }).catch(function (err) {
       console.warn('Firestore default document creation failed:', err);
       fallbackDefaults.isPremium = false;
@@ -292,6 +311,10 @@ var FirestoreSync = (function () {
       fallbackDefaults.trialEnd = null;
       docRef.set(fallbackDefaults, { merge: true }).catch(function (fallbackErr) {
         console.warn('Firestore fallback default document creation failed:', fallbackErr);
+      }).finally(function () {
+        _memoryCache = fallbackDefaults;
+        _dataLoaded = true;
+        if (callback) callback(true);
       });
     });
   }
