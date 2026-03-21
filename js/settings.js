@@ -8,6 +8,19 @@
 
 var SETTINGS_KEY = 'quant_reflex_settings';
 var _logoutInFlight = false;
+var _activeModalLocks = 0;
+
+function _lockModalScroll() {
+  _activeModalLocks += 1;
+  document.body.classList.add('paywall-open');
+}
+
+function _unlockModalScroll() {
+  if (_activeModalLocks > 0) _activeModalLocks -= 1;
+  if (_activeModalLocks > 0) return;
+  if (document.getElementById('paywallModalOverlay')) return;
+  document.body.classList.remove('paywall-open');
+}
 
 function loadSettings() {
   try {
@@ -401,6 +414,7 @@ function openClearDataModal() {
   if (confirmModal) confirmModal.style.display = 'none';
 
   modal.style.display = 'flex';
+  _lockModalScroll();
 
   var cancelBtn = document.getElementById('clearDataCancel');
   var optionBtns = modal.querySelectorAll('.clear-option-btn');
@@ -408,6 +422,7 @@ function openClearDataModal() {
   /* Cancel */
   function closeModal() {
     modal.style.display = 'none';
+    _unlockModalScroll();
   }
   cancelBtn.onclick = closeModal;
   modal.onclick = function (e) {
@@ -443,9 +458,11 @@ function openClearConfirmModal(type) {
   };
   textEl.textContent = messages[type] || 'Are you sure?';
   modal.style.display = 'flex';
+  _lockModalScroll();
 
   function closeModal() {
     modal.style.display = 'none';
+    _unlockModalScroll();
   }
   cancelBtn.onclick = closeModal;
   modal.onclick = function (e) {
@@ -542,6 +559,7 @@ function openProfileModal() {
   var modal = document.getElementById('profileModal');
   if (!modal) return;
   modal.style.display = 'flex';
+  _lockModalScroll();
 
   var nameInput = document.getElementById('profileName');
   var usernameInput = document.getElementById('profileUsername');
@@ -597,6 +615,7 @@ function openProfileModal() {
 
   function closeModal() {
     modal.style.display = 'none';
+    _unlockModalScroll();
   }
 
   cancelBtn.onclick = closeModal;
@@ -645,12 +664,14 @@ function openDeleteAccountModal() {
   var modal = document.getElementById('deleteAccountModal');
   if (!modal) return;
   modal.style.display = 'flex';
+  _lockModalScroll();
 
   var cancelBtn = document.getElementById('deleteAccountCancel');
   var confirmBtn = document.getElementById('deleteAccountConfirm');
 
   function closeModal() {
     modal.style.display = 'none';
+    _unlockModalScroll();
   }
 
   cancelBtn.onclick = closeModal;
@@ -712,6 +733,7 @@ function openInfoModal(modalId) {
   var modal = document.getElementById(modalId);
   if (!modal) return;
   modal.style.display = 'block';
+  _lockModalScroll();
   modal.classList.remove('closing');
   SoundEngine.play('tableModal');
 
@@ -725,6 +747,7 @@ function openInfoModal(modalId) {
     setTimeout(function () {
       modal.style.display = 'none';
       modal.classList.remove('closing');
+      _unlockModalScroll();
     }, 200);
   }
 
