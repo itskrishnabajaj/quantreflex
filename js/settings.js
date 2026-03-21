@@ -81,6 +81,10 @@ function showToast(message, duration) {
  */
 function initSettingsView() {
   var settings = loadSettings();
+  var accessState = (typeof FirestoreSync !== 'undefined' && typeof FirestoreSync.getAccessState === 'function')
+    ? FirestoreSync.getAccessState()
+    : {};
+  var isTrialUser = !!(accessState && accessState.isTrial);
 
   var darkToggle = document.getElementById('darkModeToggle');
   var soundToggle = document.getElementById('soundToggle');
@@ -261,6 +265,7 @@ function initSettingsView() {
   var aboutBtn = document.getElementById('openAbout');
   if (aboutBtn) {
     rebind(aboutBtn, 'click', function () {
+      updateAboutUserStatus();
       openInfoModal('aboutModal');
     });
   }
@@ -318,6 +323,17 @@ function initSettingsView() {
     });
   }
 
+  var trialUpgradeSection = document.getElementById('trialUpgradeSection');
+  if (trialUpgradeSection) {
+    trialUpgradeSection.style.display = isTrialUser ? 'block' : 'none';
+  }
+  var trialUpgradeBtn = document.getElementById('trialUpgradeBtn');
+  if (trialUpgradeBtn) {
+    rebind(trialUpgradeBtn, 'click', function () {
+      showPaywall('settings');
+    });
+  }
+
   /* PWA install button */
   var installCard = document.getElementById('installCard');
   var installBtn = document.getElementById('installBtn');
@@ -334,6 +350,23 @@ function initSettingsView() {
 
   /* Apply reduced motion on load */
   document.body.classList.toggle('reduced-motion', !!settings.reducedMotion);
+}
+
+function updateAboutUserStatus() {
+  var statusEl = document.getElementById('aboutUserStatusMessage');
+  if (!statusEl) return;
+  var accessState = (typeof FirestoreSync !== 'undefined' && typeof FirestoreSync.getAccessState === 'function')
+    ? (FirestoreSync.getAccessState() || {})
+    : {};
+  var message = 'Free user';
+  if (accessState.isEarlyUser === true) {
+    message = '🎉 Thank you for being one of our first users! You’ve unlocked lifetime premium.';
+  } else if (accessState.hasPaid === true) {
+    message = '💙 Thank you for trusting us and upgrading to premium.';
+  } else if (accessState.isTrial === true) {
+    message = '⏳ You are currently on a premium trial.';
+  }
+  statusEl.textContent = message;
 }
 
 /**

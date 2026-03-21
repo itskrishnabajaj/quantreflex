@@ -267,6 +267,10 @@ var FirestoreSync = (function () {
       });
     }).catch(function (err) {
       console.warn('Firestore default document creation failed:', err);
+      fallbackDefaults.isPremium = false;
+      fallbackDefaults.isEarlyUser = false;
+      fallbackDefaults.isTrial = false;
+      fallbackDefaults.trialEnd = null;
       docRef.set(fallbackDefaults, { merge: true }).catch(function (fallbackErr) {
         console.warn('Firestore fallback default document creation failed:', fallbackErr);
       });
@@ -299,11 +303,11 @@ var FirestoreSync = (function () {
     if (hasAll) return;
 
     var patch = {};
-    if (typeof data.isPremium !== 'boolean') patch.isPremium = true;
+    if (typeof data.isPremium !== 'boolean') patch.isPremium = (data.isTrial === true) ? true : false;
     if (typeof data.isTrial !== 'boolean') patch.isTrial = false;
     if (!data.hasOwnProperty('trialEnd')) patch.trialEnd = null;
     if (typeof data.hasPaid !== 'boolean') patch.hasPaid = false;
-    if (typeof data.isEarlyUser !== 'boolean') patch.isEarlyUser = true;
+    if (typeof data.isEarlyUser !== 'boolean') patch.isEarlyUser = false;
     if (!data.hasOwnProperty('createdAt')) patch.createdAt = new Date().toISOString();
 
     var keys = Object.keys(patch);

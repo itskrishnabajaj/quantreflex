@@ -52,7 +52,7 @@ function _getAccessUserState() {
     var state = FirestoreSync.getAccessState();
     if (state) return state;
   }
-  return { isPremium: true };
+  return { isPremium: false, isTrial: false, hasPaid: false, isEarlyUser: false, trialEnd: null };
 }
 
 function canAccess(feature, user) {
@@ -305,4 +305,9 @@ global.showPaywall = showPaywall;
 global.openPayment = openPayment;
 global.verifyPaymentResponse = verifyPaymentResponse;
 global.unlockPremium = unlockPremium;
+global.Paywall = {
+  canAccess: canAccess,
+  canAccessFeature: canAccessFeature,
+  showPaywall: showPaywall
+};
 })(window);
