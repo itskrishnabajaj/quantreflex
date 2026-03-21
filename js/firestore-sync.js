@@ -178,7 +178,7 @@ var FirestoreSync = (function () {
     return db.runTransaction(function (tx) {
       return tx.get(userRef).then(function (userDoc) {
         if (userDoc.exists) {
-          return userDoc.data() || null;
+          return userDoc.data() || {};
         }
         return tx.get(metaRef).then(function (metaDoc) {
           var totalUsers = 0;
@@ -221,7 +221,7 @@ var FirestoreSync = (function () {
           }
 
           tx.set(userRef, userData, { merge: true });
-          tx.update(metaRef, { totalUsers: userNumber });
+          tx.set(metaRef, { totalUsers: userNumber }, { merge: true });
           return userData;
         });
       });
@@ -276,7 +276,7 @@ var FirestoreSync = (function () {
       customTopics: [],
       customFormulas: {},
       bookmarks: [],
-      userNumber: null,
+      userNumber: 0,
       isPremium: false,
       isTrial: false,
       trialEnd: null,
@@ -295,9 +295,8 @@ var FirestoreSync = (function () {
       localStorage.setItem('quant_bookmarks', JSON.stringify(fallbackDefaults.bookmarks));
     } catch (_) {}
 
-    assignUserTier(db, userId, fallbackDefaults).then(function (userData) {
-      if (!userData) userData = fallbackDefaults;
-      _memoryCache = userData;
+    assignUserTier(db, userId, fallbackDefaults).then(function (resolvedUserData) {
+      _memoryCache = resolvedUserData;
       _dataLoaded = true;
       if (_memoryCache.createdAt && typeof _memoryCache.createdAt.toDate === 'function') {
         _memoryCache.createdAt = _memoryCache.createdAt.toDate().toISOString();
@@ -309,9 +308,12 @@ var FirestoreSync = (function () {
       fallbackDefaults.isEarlyUser = false;
       fallbackDefaults.isTrial = false;
       fallbackDefaults.trialEnd = null;
-      docRef.set(fallbackDefaults, { merge: true }).catch(function (fallbackErr) {
+      docRef.set(fallbackDefaults, { merge: true }).then(function () {
+        _memoryCache = fallbackDefaults;
+        _dataLoaded = true;
+        if (callback) callback(true);
+      }).catch(function (fallbackErr) {
         console.warn('Firestore fallback default document creation failed:', fallbackErr);
-      }).finally(function () {
         _memoryCache = fallbackDefaults;
         _dataLoaded = true;
         if (callback) callback(true);
