@@ -181,14 +181,9 @@ var FirestoreSync = (function () {
           return userDoc.data() || {};
         }
         return tx.get(metaRef).then(function (metaDoc) {
-          var totalUsers = 0;
-          if (!metaDoc.exists) {
-            tx.set(metaRef, { totalUsers: 0 }, { merge: true });
-          } else {
-            var meta = metaDoc.data() || {};
-            totalUsers = parseInt(meta.totalUsers, 10);
-            if (isNaN(totalUsers) || totalUsers < 0) totalUsers = 0;
-          }
+          var meta = metaDoc.exists ? (metaDoc.data() || {}) : {};
+          var totalUsers = parseInt(meta.totalUsers, 10);
+          if (isNaN(totalUsers) || totalUsers < 0) totalUsers = 0;
 
           var userNumber = totalUsers + 1;
           var nowMs = Date.now();
@@ -297,6 +292,8 @@ var FirestoreSync = (function () {
 
     assignUserTier(db, userId, fallbackDefaults).then(function (resolvedUserData) {
       _memoryCache = resolvedUserData;
+      _normalizeMonetization(_memoryCache, docRef);
+      _enforceTrialExpiry(_memoryCache, docRef);
       _dataLoaded = true;
       if (_memoryCache.createdAt && typeof _memoryCache.createdAt.toDate === 'function') {
         _memoryCache.createdAt = _memoryCache.createdAt.toDate().toISOString();
@@ -308,16 +305,9 @@ var FirestoreSync = (function () {
       fallbackDefaults.isEarlyUser = false;
       fallbackDefaults.isTrial = false;
       fallbackDefaults.trialEnd = null;
-      docRef.set(fallbackDefaults, { merge: true }).then(function () {
-        _memoryCache = fallbackDefaults;
-        _dataLoaded = true;
-        if (callback) callback(true);
-      }).catch(function (fallbackErr) {
-        console.warn('Firestore fallback default document creation failed:', fallbackErr);
-        _memoryCache = fallbackDefaults;
-        _dataLoaded = true;
-        if (callback) callback(true);
-      });
+      _memoryCache = fallbackDefaults;
+      _dataLoaded = false;
+      if (callback) callback(false);
     });
   }
 
@@ -365,15 +355,35 @@ var FirestoreSync = (function () {
     });
   }
 
+  function _persistTrialExpiry(docRef) {
+    if (_trialExpiryPersistInFlight) return;
+    var db = FirebaseApp.getDb();
+    if (!db || !docRef) return;
+    _trialExpiryPersistInFlight = true;
+    db.runTransaction(function (tx) {
+      return tx.get(docRef).then(function (doc) {
+        if (!doc.exists) return;
+        var liveData = doc.data() || {};
+        if (liveData.hasPaid === true || liveData.isTrial !== true) return;
+        var trialEndMs = _toMillis(liveData.trialEnd);
+        if (!trialEndMs || Date.now() <= trialEndMs) return;
+        tx.set(docRef, { isPremium: false, isTrial: false, trialEnd: null }, { merge: true });
+      });
+    }).catch(function (err) {
+      console.warn('Failed to persist trial expiry:', err);
+    }).finally(function () {
+      _trialExpiryPersistInFlight = false;
+    });
+  }
+
   function _enforceTrialExpiry(data, docRef) {
     if (!data || !data.isTrial) return;
     var trialEndMs = _toMillis(data.trialEnd);
     if (!trialEndMs || Date.now() <= trialEndMs) return;
     data.isPremium = false;
     data.isTrial = false;
-    docRef.set({ isPremium: false, isTrial: false }, { merge: true }).catch(function (err) {
-      console.warn('Failed to update expired trial:', err);
-    });
+    data.trialEnd = null;
+    _persistTrialExpiry(docRef);
   }
 
   /**
@@ -720,17 +730,8 @@ var FirestoreSync = (function () {
         if (trialEndMs > 0 && Date.now() > trialEndMs) {
           _memoryCache.isPremium = false;
           _memoryCache.isTrial = false;
-          if (!_trialExpiryPersistInFlight) {
-            var docRef = _getUserDocRef();
-            if (docRef) {
-              _trialExpiryPersistInFlight = true;
-              docRef.set({ isPremium: false, isTrial: false }, { merge: true }).catch(function (err) {
-                console.warn('Failed to persist trial expiry from access state:', err);
-              }).finally(function () {
-                _trialExpiryPersistInFlight = false;
-              });
-            }
-          }
+          _memoryCache.trialEnd = null;
+          _persistTrialExpiry(_getUserDocRef());
         }
       }
       return {
