@@ -24,7 +24,7 @@ var FirestoreSync = (function () {
   var _dataLoaded = false; /* Whether initial load has completed */
   var _drillActive = false; /* Whether a drill is in progress (defers syncing) */
   var _loadedUserId = null; /* UID whose data is currently loaded — detects user switches */
-  var _writeChain = Promise.resolve();
+  var _trialExpiryPersistInFlight = false;
   var SYNC_DEBOUNCE_MS = 2000; /* batch updates every 2 seconds */
   var EARLY_USER_LIMIT = 121;
   var TRIAL_DAYS = 7;
@@ -50,77 +50,6 @@ var FirestoreSync = (function () {
         localStorage.removeItem(_USER_STORAGE_KEYS[i]);
       }
     } catch (_) {}
-  }
-
-  function _defaultSettings() {
-    return {
-      darkMode: false, sound: true, vibration: true, difficulty: 'medium',
-      dailyGoal: 50, reducedMotion: false, skipEnabled: false, notificationsEnabled: false,
-      theme: 'classic'
-    };
-  }
-
-  function _defaultStats() {
-    return {
-      totalAttempted: 0, totalCorrect: 0,
-      bestStreak: 0, currentStreak: 0,
-      drillSessions: 0, timedTestSessions: 0,
-      dailyStreak: 0, bestDailyStreak: 0, lastActiveDate: null,
-      lastPracticeDate: null,
-      todayAttempted: 0, todayCorrect: 0,
-      categoryStats: {}, mistakes: [],
-      responseTimes: [], dailyHistory: {}
-    };
-  }
-
-  function _cloneDefault(data) {
-    try {
-      return JSON.parse(JSON.stringify(data));
-    } catch (_) {
-      return data;
-    }
-  }
-
-  function _logFirestoreError(error) {
-    console.error('Firestore error:', error);
-  }
-
-  function _enqueueMergeWrite(docRef, data) {
-    if (!docRef || !data) return Promise.resolve();
-    _writeChain = _writeChain.catch(function (error) {
-      _logFirestoreError(error);
-    }).then(function () {
-      console.log('Writing to Firestore:', data);
-      return docRef.set(data, { merge: true });
-    });
-    return _writeChain.catch(function (error) {
-      _logFirestoreError(error);
-      throw error;
-    });
-  }
-
-  function _queueNestedUpdate(prefix, value) {
-    if (!value || typeof value !== 'object' || Array.isArray(value)) {
-      queueUpdate(prefix, value);
-      return;
-    }
-    var keys = Object.keys(value);
-    for (var i = 0; i < keys.length; i++) {
-      var key = keys[i];
-      var nextValue = value[key];
-      var nextPath = prefix + '.' + key;
-      if (
-        nextValue &&
-        typeof nextValue === 'object' &&
-        !Array.isArray(nextValue) &&
-        typeof nextValue.toDate !== 'function' &&
-        !(nextValue instanceof Date)
-      ) {
-        _queueNestedUpdate(nextPath, nextValue);
-      } else {
-        queueUpdate(nextPath, nextValue);
-      }
-    }
   }
 
   /**
@@ -197,25 +126,16 @@ var FirestoreSync = (function () {
     docRef.get().then(function (doc) {
       if (doc.exists) {
         var data = doc.data();
-        console.log('User data loaded:', data);
         _normalizeMonetization(data, docRef);
-        var safeSettings = (data && data.settings && typeof data.settings === 'object' && !Array.isArray(data.settings))
-          ? data.settings
-          : _cloneDefault(_defaultSettings());
-        var safeStats = (data && data.stats && typeof data.stats === 'object' && !Array.isArray(data.stats))
-          ? data.stats
-          : _cloneDefault(_defaultStats());
-        data.settings = safeSettings;
-        data.stats = safeStats;
         _memoryCache = data;
         _enforceTrialExpiry(_memoryCache, docRef);
         _dataLoaded = true;
         _loadedUserId = currentUserId;
         /* Merge Firestore data into localStorage (Firestore is source of truth) */
-        if (safeSettings) {
+        if (data.settings) {
           try { localStorage.setItem('quant_reflex_settings', JSON.stringify(data.settings)); } catch (_) {}
         }
-        if (safeStats) {
+        if (data.stats) {
           try { localStorage.setItem('quant_reflex_progress', JSON.stringify(data.stats)); } catch (_) {}
         }
         if (data.quickLinks) {
@@ -237,7 +157,6 @@ var FirestoreSync = (function () {
       }
       if (callback) callback(true);
     }).catch(function (err) {
-      _logFirestoreError(err);
       console.warn('Firestore load failed:', err);
       _dataLoaded = true; /* Mark as loaded to prevent retries */
       if (callback) callback(false);
@@ -263,15 +182,27 @@ var FirestoreSync = (function () {
     }
     var now = new Date();
     var trialEndMs = now.getTime() + (TRIAL_DAYS * 24 * 60 * 60 * 1000);
-    var defaultSettings = _defaultSettings();
     var fallbackDefaults = {
       profile: {
         name: '',
         username: username,
         createdAt: now.toISOString()
       },
-      settings: defaultSettings,
-      stats: _defaultStats(),
+      settings: {
+        darkMode: false, sound: true, vibration: true, difficulty: 'medium',
+        dailyGoal: 50, reducedMotion: false, skipEnabled: false, notificationsEnabled: false,
+        theme: 'classic'
+      },
+      stats: {
+        totalAttempted: 0, totalCorrect: 0,
+        bestStreak: 0, currentStreak: 0,
+        drillSessions: 0, timedTestSessions: 0,
+        dailyStreak: 0, bestDailyStreak: 0, lastActiveDate: null,
+        lastPracticeDate: null,
+        todayAttempted: 0, todayCorrect: 0,
+        categoryStats: {}, mistakes: [],
+        responseTimes: [], dailyHistory: {}
+      },
       quickLinks: ['fractionTable', 'tablesContainer', 'formulaSections', 'mentalTricks'],
       customTopics: [],
       customFormulas: {},
@@ -351,14 +282,12 @@ var FirestoreSync = (function () {
         });
       });
     }).catch(function (err) {
-      _logFirestoreError(err);
       console.warn('Firestore default document creation failed:', err);
       fallbackDefaults.isPremium = false;
       fallbackDefaults.isEarlyUser = false;
       fallbackDefaults.isTrial = false;
       fallbackDefaults.trialEnd = null;
-      _enqueueMergeWrite(docRef, fallbackDefaults).catch(function (fallbackErr) {
-        _logFirestoreError(fallbackErr);
+      docRef.set(fallbackDefaults, { merge: true }).catch(function (fallbackErr) {
         console.warn('Firestore fallback default document creation failed:', fallbackErr);
       });
     });
@@ -403,8 +332,7 @@ var FirestoreSync = (function () {
     for (var i = 0; i < keys.length; i++) {
       data[keys[i]] = patch[keys[i]];
     }
-    _enqueueMergeWrite(docRef, patch).catch(function (err) {
-      _logFirestoreError(err);
+    docRef.set(patch, { merge: true }).catch(function (err) {
       console.warn('Failed to normalize monetization fields:', err);
     });
   }
@@ -415,6 +343,9 @@ var FirestoreSync = (function () {
     if (!trialEndMs || Date.now() <= trialEndMs) return;
     data.isPremium = false;
     data.isTrial = false;
+    docRef.set({ isPremium: false, isTrial: false }, { merge: true }).catch(function (err) {
+      console.warn('Failed to update expired trial:', err);
+    });
   }
 
   /**
@@ -452,8 +383,7 @@ var FirestoreSync = (function () {
     } catch (_) {}
 
     if (Object.keys(data).length > 0) {
-      _enqueueMergeWrite(docRef, data).catch(function (err) {
-        _logFirestoreError(err);
+      docRef.set(data, { merge: true }).catch(function (err) {
         console.warn('Firestore push failed:', err);
       });
     }
@@ -504,8 +434,7 @@ var FirestoreSync = (function () {
     }
     _pendingUpdates = {};
 
-    _enqueueMergeWrite(docRef, updates).catch(function (err) {
-      _logFirestoreError(err);
+    docRef.set(updates, { merge: true }).catch(function (err) {
       console.warn('Firestore batch update failed:', err);
     });
   }
@@ -515,7 +444,7 @@ var FirestoreSync = (function () {
    * @param {object} settings
    */
   function syncSettings(settings) {
-    _queueNestedUpdate('settings', settings);
+    queueUpdate('settings', settings);
   }
 
   /**
@@ -523,7 +452,7 @@ var FirestoreSync = (function () {
    * @param {object} stats
    */
   function syncStats(stats) {
-    _queueNestedUpdate('stats', stats);
+    queueUpdate('stats', stats);
   }
 
   /**
@@ -568,7 +497,6 @@ var FirestoreSync = (function () {
 
     sessionData.timestamp = new Date().toISOString();
     docRef.collection('practiceSessions').add(sessionData).catch(function (err) {
-      _logFirestoreError(err);
       console.warn('Failed to save practice session:', err);
     });
   }
@@ -596,7 +524,7 @@ var FirestoreSync = (function () {
       try { localStorage.setItem('quant_reflex_progress', JSON.stringify(resetStats)); } catch (_) {}
       if (_memoryCache) _memoryCache.stats = resetStats;
       if (docRef) {
-        _enqueueMergeWrite(docRef, { stats: resetStats }).then(function () {
+        docRef.set({ stats: resetStats }, { merge: true }).then(function () {
           if (callback) callback(null);
         }).catch(function (err) {
           if (callback) callback(err.message);
@@ -614,7 +542,7 @@ var FirestoreSync = (function () {
         _memoryCache.bookmarks = [];
       }
       if (docRef) {
-        _enqueueMergeWrite(docRef, { customFormulas: {}, customTopics: [], bookmarks: [] }).then(function () {
+        docRef.set({ customFormulas: {}, customTopics: [], bookmarks: [] }, { merge: true }).then(function () {
           if (callback) callback(null);
         }).catch(function (err) {
           if (callback) callback(err.message);
@@ -623,8 +551,22 @@ var FirestoreSync = (function () {
         if (callback) callback(null);
       }
     } else if (type === 'all') {
-      var defaultSettings = _defaultSettings();
-      var defaultStats = _defaultStats();
+      var defaultSettings = {
+        darkMode: false, sound: true, vibration: true, difficulty: 'medium',
+        dailyGoal: 50, reducedMotion: false, skipEnabled: false, notificationsEnabled: false,
+        theme: 'classic'
+      };
+      var defaultStats = {
+        totalAttempted: 0, totalCorrect: 0,
+        bestStreak: 0, currentStreak: 0,
+        drillSessions: 0, timedTestSessions: 0,
+        dailyStreak: 0, bestDailyStreak: 0,
+        lastActiveDate: null,
+        lastPracticeDate: null,
+        todayAttempted: 0, todayCorrect: 0,
+        categoryStats: {}, mistakes: [],
+        responseTimes: [], dailyHistory: {}
+      };
       try {
         localStorage.setItem('quant_reflex_settings', JSON.stringify(defaultSettings));
         localStorage.setItem('quant_reflex_progress', JSON.stringify(defaultStats));
@@ -652,7 +594,7 @@ var FirestoreSync = (function () {
       _memoryCache = resetAll;
       if (existingProfile) _memoryCache.profile = existingProfile;
       if (docRef) {
-        _enqueueMergeWrite(docRef, resetAll).then(function () {
+        docRef.set(resetAll, { merge: true }).then(function () {
           if (callback) callback(null);
         }).catch(function (err) {
           if (callback) callback(err.message);
@@ -750,6 +692,17 @@ var FirestoreSync = (function () {
         if (trialEndMs > 0 && Date.now() > trialEndMs) {
           _memoryCache.isPremium = false;
           _memoryCache.isTrial = false;
+          if (!_trialExpiryPersistInFlight) {
+            var docRef = _getUserDocRef();
+            if (docRef) {
+              _trialExpiryPersistInFlight = true;
+              docRef.set({ isPremium: false, isTrial: false }, { merge: true }).catch(function (err) {
+                console.warn('Failed to persist trial expiry from access state:', err);
+              }).finally(function () {
+                _trialExpiryPersistInFlight = false;
+              });
+            }
+          }
         }
       }
       return {
@@ -781,7 +734,7 @@ var FirestoreSync = (function () {
         _memoryCache.trialEnd = null;
         if (paymentId) _memoryCache.lastPaymentId = String(paymentId);
       }
-      _enqueueMergeWrite(docRef, payload).then(function () {
+      docRef.set(payload, { merge: true }).then(function () {
         if (callback) callback(null);
       }).catch(function (err) {
         if (callback) callback(err && err.message ? err.message : 'Premium unlock failed');
