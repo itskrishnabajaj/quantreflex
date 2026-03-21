@@ -205,11 +205,17 @@ html.web-mode,
 body.web-mode {
   height: auto;
   overflow-y: auto;
+  overscroll-behavior-y: auto;
 }
 
 body.web-mode .container {
   min-height: 100vh;
+  min-height: 100dvh;
   overflow: visible;
+}
+
+body.web-mode:not(.paywall-open):not(.drill-session-active) {
+  overflow-y: auto;
 }
 
 header {
