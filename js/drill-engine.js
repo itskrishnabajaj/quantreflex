@@ -170,7 +170,8 @@ function createDrillEngine(container, opts) {
 
     /* Skip button — only when skip setting is enabled and difficulty is not hard */
     var _skipSettings = typeof loadSettings === 'function' ? loadSettings() : {};
-    if (_skipSettings.skipEnabled && _skipSettings.difficulty !== 'hard') {
+    var _skipFeatureAccess = (typeof canAccessFeature === 'function') ? canAccessFeature('skip_question') : true;
+    if (_skipFeatureAccess && _skipSettings.skipEnabled && _skipSettings.difficulty !== 'hard') {
       var skipBtn = document.createElement('button');
       skipBtn.className = 'btn skip-btn';
       skipBtn.textContent = 'Skip →';

@@ -206,9 +206,9 @@ var FirestoreSync = (function () {
       customTopics: [],
       customFormulas: {},
       bookmarks: [],
-      isPremium: true,
-      isTrial: true,
-      trialEnd: trialEndDate,
+      isPremium: false,
+      isTrial: false,
+      trialEnd: null,
       hasPaid: false,
       isEarlyUser: false,
       createdAt: now.toISOString()

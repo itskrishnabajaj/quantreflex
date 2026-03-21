@@ -84,7 +84,8 @@ function initSettingsView() {
   var accessState = (typeof FirestoreSync !== 'undefined' && typeof FirestoreSync.getAccessState === 'function')
     ? FirestoreSync.getAccessState()
     : {};
-  var isTrialUser = !!(accessState && accessState.isTrial);
+  var trialEndMs = _toMillis(accessState ? accessState.trialEnd : null);
+  var isTrialUser = !!(accessState && accessState.isTrial && (!trialEndMs || Date.now() <= trialEndMs));
 
   var darkToggle = document.getElementById('darkModeToggle');
   var soundToggle = document.getElementById('soundToggle');
@@ -358,15 +359,31 @@ function updateAboutUserStatus() {
   var accessState = (typeof FirestoreSync !== 'undefined' && typeof FirestoreSync.getAccessState === 'function')
     ? (FirestoreSync.getAccessState() || {})
     : {};
+  var trialEndMs = _toMillis(accessState.trialEnd);
+  var trialActive = accessState.isTrial === true && (!trialEndMs || Date.now() <= trialEndMs);
   var message = 'Free user';
   if (accessState.isEarlyUser === true) {
     message = '🎉 Thank you for being one of our first users! You’ve unlocked lifetime premium.';
   } else if (accessState.hasPaid === true) {
     message = '💙 Thank you for trusting us and upgrading to premium.';
-  } else if (accessState.isTrial === true) {
+  } else if (trialActive) {
     message = '⏳ You are currently on a premium trial.';
   }
   statusEl.textContent = message;
+}
+
+function _toMillis(value) {
+  if (!value) return 0;
+  if (typeof value === 'number') return value;
+  if (value instanceof Date) return value.getTime();
+  if (typeof value === 'string') {
+    var parsed = Date.parse(value);
+    return isNaN(parsed) ? 0 : parsed;
+  }
+  if (typeof value.toDate === 'function') {
+    try { return value.toDate().getTime(); } catch (_) { return 0; }
+  }
+  return 0;
 }
 
 /**

@@ -95,6 +95,10 @@ function isBookmarked(formulaId) {
 /* ---- Custom formula CRUD ---- */
 
 function addCustomFormula(topicId, formula) {
+  if (typeof canAccessFeature === 'function' && !canAccessFeature('add_formula')) {
+    if (typeof showPaywall === 'function') showPaywall('add_formula');
+    return null;
+  }
   var formulas = loadCustomFormulas();
   if (!formulas[topicId]) formulas[topicId] = [];
   formula.id = 'cf_' + Date.now() + '_' + Math.random().toString(36).substr(2, 5);
@@ -139,6 +143,10 @@ function getCustomFormulasForTopic(topicId) {
 /* ---- Custom topic CRUD ---- */
 
 function addCustomTopic(name) {
+  if (typeof canAccessFeature === 'function' && !canAccessFeature('add_topic')) {
+    if (typeof showPaywall === 'function') showPaywall('add_topic');
+    return null;
+  }
   var topics = loadCustomTopics();
   var topic = {
     id: 'ct_' + Date.now() + '_' + Math.random().toString(36).substr(2, 5),

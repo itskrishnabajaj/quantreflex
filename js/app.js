@@ -1358,6 +1358,14 @@ document.addEventListener('DOMContentLoaded', function () {
 function startDrillFromPractice(modeKey, category, categoryLabel) {
   /* Preserve custom selection mode only for custom sessions. */
   if (modeKey !== 'custom') _customPracticeActive = false;
+  if (modeKey === 'custom' && !canAccessFeature('custom_training')) {
+    showPaywall('custom_training');
+    return;
+  }
+  if (modeKey === 'review' && !canAccessFeature('review_mistakes')) {
+    showPaywall('review_mistakes');
+    return;
+  }
   var modeSelect = document.getElementById('modeSelect');
   var categorySelect = document.getElementById('categorySelect');
   var customPracticeConfig = document.getElementById('customPracticeConfig');

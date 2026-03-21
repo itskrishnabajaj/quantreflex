@@ -3,7 +3,7 @@
  * Caches all assets for offline use.
  */
 
-var CACHE_NAME = 'quant-reflex-v53';
+var CACHE_NAME = 'quant-reflex-v54';
 
 var ASSETS = [
   './',
