@@ -207,6 +207,7 @@ var FirestoreSync = (function () {
       customTopics: [],
       customFormulas: {},
       bookmarks: [],
+      userNumber: null,
       isPremium: false,
       isTrial: false,
       trialEnd: null,
@@ -236,6 +237,7 @@ var FirestoreSync = (function () {
         var meta = metaDoc.exists ? (metaDoc.data() || {}) : {};
         var totalUsers = parseInt(meta.totalUsers, 10);
         if (isNaN(totalUsers) || totalUsers < 0) totalUsers = 0;
+        var userNumber = totalUsers + 1;
         var isEarlyUser = totalUsers < EARLY_USER_LIMIT;
         var monetizationState = isEarlyUser
           ? {
@@ -264,6 +266,7 @@ var FirestoreSync = (function () {
           customTopics: fallbackDefaults.customTopics,
           customFormulas: fallbackDefaults.customFormulas,
           bookmarks: fallbackDefaults.bookmarks,
+          userNumber: userNumber,
           isPremium: monetizationState.isPremium,
           isTrial: monetizationState.isTrial,
           trialEnd: monetizationState.trialEnd,
