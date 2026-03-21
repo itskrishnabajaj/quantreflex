@@ -24,6 +24,7 @@ var FirestoreSync = (function () {
   var _dataLoaded = false; /* Whether initial load has completed */
   var _drillActive = false; /* Whether a drill is in progress (defers syncing) */
   var _loadedUserId = null; /* UID whose data is currently loaded — detects user switches */
+  var _trialExpiryPersistInFlight = false;
   var SYNC_DEBOUNCE_MS = 2000; /* batch updates every 2 seconds */
   var EARLY_USER_LIMIT = 121;
   var TRIAL_DAYS = 7;
@@ -180,7 +181,7 @@ var FirestoreSync = (function () {
       username = Auth.getCurrentUser().email.split('@')[0];
     }
     var now = new Date();
-    var trialEndDate = new Date(now.getTime() + (TRIAL_DAYS * 24 * 60 * 60 * 1000));
+    var trialEndMs = now.getTime() + (TRIAL_DAYS * 24 * 60 * 60 * 1000);
     var fallbackDefaults = {
       profile: {
         name: '',
@@ -236,6 +237,21 @@ var FirestoreSync = (function () {
         var totalUsers = parseInt(meta.totalUsers, 10);
         if (isNaN(totalUsers) || totalUsers < 0) totalUsers = 0;
         var isEarlyUser = totalUsers < EARLY_USER_LIMIT;
+        var monetizationState = isEarlyUser
+          ? {
+              isPremium: true,
+              isEarlyUser: true,
+              isTrial: false,
+              hasPaid: false,
+              trialEnd: null
+            }
+          : {
+              isPremium: true,
+              isEarlyUser: false,
+              isTrial: true,
+              hasPaid: false,
+              trialEnd: trialEndMs
+            };
         var docDefaults = {
           profile: {
             name: '',
@@ -248,11 +264,11 @@ var FirestoreSync = (function () {
           customTopics: fallbackDefaults.customTopics,
           customFormulas: fallbackDefaults.customFormulas,
           bookmarks: fallbackDefaults.bookmarks,
-          isPremium: true,
-          isTrial: !isEarlyUser,
-          trialEnd: isEarlyUser ? null : trialEndDate,
-          hasPaid: false,
-          isEarlyUser: isEarlyUser,
+          isPremium: monetizationState.isPremium,
+          isTrial: monetizationState.isTrial,
+          trialEnd: monetizationState.trialEnd,
+          hasPaid: monetizationState.hasPaid,
+          isEarlyUser: monetizationState.isEarlyUser,
           createdAt: (typeof firebase !== 'undefined' && firebase.firestore && firebase.firestore.FieldValue)
             ? firebase.firestore.FieldValue.serverTimestamp()
             : now.toISOString()
@@ -671,6 +687,24 @@ var FirestoreSync = (function () {
     },
     getAccessState: function () {
       if (!_memoryCache) return null;
+      if (_memoryCache.isTrial === true) {
+        var trialEndMs = _toMillis(_memoryCache.trialEnd);
+        if (trialEndMs > 0 && Date.now() > trialEndMs) {
+          _memoryCache.isPremium = false;
+          _memoryCache.isTrial = false;
+          if (!_trialExpiryPersistInFlight) {
+            var docRef = _getUserDocRef();
+            if (docRef) {
+              _trialExpiryPersistInFlight = true;
+              docRef.set({ isPremium: false, isTrial: false }, { merge: true }).catch(function (err) {
+                console.warn('Failed to persist trial expiry from access state:', err);
+              }).finally(function () {
+                _trialExpiryPersistInFlight = false;
+              });
+            }
+          }
+        }
+      }
       return {
         isPremium: _memoryCache.isPremium === true,
         isTrial: _memoryCache.isTrial === true,
