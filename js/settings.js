@@ -593,8 +593,7 @@ function openProfileModal() {
   if (passwordInput) {
     passwordInput.type = 'password';
     passwordInput.placeholder = '\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022';
-    /* Load stored password from Firestore cache */
-    passwordInput.value = profile.password || '';
+    passwordInput.value = '';
   }
   if (passwordToggle) {
     passwordToggle.textContent = '👁️';

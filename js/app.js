@@ -829,7 +829,6 @@ document.addEventListener('DOMContentLoaded', function () {
   var loginScreen = document.getElementById('loginScreen');
   var container = document.querySelector('.container');
   var bottomNav = document.querySelector('.bottom-nav');
-  var _pendingPassword = null; /* Temporarily holds password from login/signup for Firestore storage */
   var _authRequestInFlight = false;
   var _authViewToken = 0;
 
@@ -858,11 +857,6 @@ document.addEventListener('DOMContentLoaded', function () {
             document.body.classList.toggle('dark-mode', !!s.darkMode);
             if (typeof applyTheme === 'function') applyTheme(s.theme || 'classic');
           } catch (_) { /* ignore */ }
-          /* Store pending password from login/signup to Firestore profile */
-          if (_pendingPassword && FirestoreSync.updateProfilePassword) {
-            FirestoreSync.updateProfilePassword(_pendingPassword);
-            _pendingPassword = null;
-          }
         }
         /* Check onboarding BEFORE showing main UI */
         _launchOnboardingOrShowMain();
@@ -990,8 +984,6 @@ document.addEventListener('DOMContentLoaded', function () {
           if (err) {
             showError(err);
           } else {
-            /* Capture password for Firestore profile storage */
-            _pendingPassword = password;
             /* Clear form fields for security */
             if (loginUsername) loginUsername.value = '';
             if (loginPassword) loginPassword.value = '';
@@ -1016,8 +1008,6 @@ document.addEventListener('DOMContentLoaded', function () {
           if (err) {
             showError(err);
           } else {
-            /* Capture password for Firestore profile storage */
-            _pendingPassword = password;
             /* Clear form fields for security */
             if (loginUsername) loginUsername.value = '';
             if (loginPassword) loginPassword.value = '';
