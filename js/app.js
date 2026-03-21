@@ -23,7 +23,7 @@
       )) ||
       navigator.standalone === true
     );
-  } catch (_) { /* ignore */ }
+  } catch (e) { /* ignore */ }
 
   document.documentElement.classList.add(isPWA ? 'pwa-mode' : 'web-mode');
   document.body.classList.add(isPWA ? 'pwa-mode' : 'web-mode');
