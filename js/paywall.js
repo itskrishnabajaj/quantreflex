@@ -16,6 +16,8 @@ var _LOCKED_FEATURES = {
   advanced_theme: true,
   daily_goal_limit: true
 };
+var PAYWALL_DEBOUNCE_MS = 280;
+var PAYMENT_TIMEOUT_MS = 120000;
 var _paywallModalOpen = false;
 var _paywallClosing = false;
 var _paywallPaymentBusy = false;
@@ -24,6 +26,8 @@ var _paywallLastPaymentId = '';
 var _paywallUpgradeBtn = null;
 var _paywallEscHandler = null;
 var _paywallGuestPromptAt = 0;
+var _paywallLastOpenAt = 0;
+var _paymentSafetyTimer = null;
 var _unlockGuard = {};
 
 function _toMillis(value) {
@@ -41,6 +45,10 @@ function _toMillis(value) {
 }
 
 function _resetPaymentGuards(enableButton) {
+  if (_paymentSafetyTimer) {
+    clearTimeout(_paymentSafetyTimer);
+    _paymentSafetyTimer = null;
+  }
   _paywallPaymentBusy = false;
   _paywallUnlockInFlight = false;
   _paywallLastPaymentId = '';
@@ -52,7 +60,7 @@ function _getAccessUserState() {
     var state = FirestoreSync.getAccessState();
     if (state) return state;
   }
-  return { isPremium: true };
+  return { isPremium: false, isTrial: false, hasPaid: false, isEarlyUser: false, trialEnd: null };
 }
 
 function canAccess(feature, user) {
@@ -60,9 +68,8 @@ function canAccess(feature, user) {
   if (normalizedUser && normalizedUser.hasPaid === true) return true;
   if (normalizedUser && normalizedUser.isEarlyUser === true) return true;
   if (normalizedUser && normalizedUser.isTrial === true) {
-    if (!normalizedUser.trialEnd) return true;
     var trialEndMs = _toMillis(normalizedUser.trialEnd);
-    if (trialEndMs && Date.now() <= trialEndMs) return true;
+    if (trialEndMs > 0 && Date.now() <= trialEndMs) return true;
   }
   if (normalizedUser && normalizedUser.isPremium === true && normalizedUser.isTrial !== true) return true;
   return !_LOCKED_FEATURES[feature];
@@ -122,6 +129,7 @@ function _closePaywallModal() {
   if (!overlay) {
     _paywallModalOpen = false;
     _paywallClosing = false;
+    document.body.classList.remove('paywall-open');
     return;
   }
   _paywallClosing = true;
@@ -204,6 +212,10 @@ function openPayment(userId) {
   if (_paywallPaymentBusy || _paywallUnlockInFlight) return;
   _paywallPaymentBusy = true;
   if (_paywallUpgradeBtn) _paywallUpgradeBtn.disabled = true;
+  if (_paymentSafetyTimer) clearTimeout(_paymentSafetyTimer);
+  _paymentSafetyTimer = setTimeout(function () {
+    _resetPaymentGuards(true);
+  }, PAYMENT_TIMEOUT_MS);
   _loadRazorpayScript(function (loadErr) {
     if (loadErr || typeof Razorpay === 'undefined') {
       _resetPaymentGuards(true);
@@ -247,9 +259,25 @@ function openPayment(userId) {
 }
 
 function showPaywall(featureType) {
+  var now = Date.now();
+  if (now - _paywallLastOpenAt < PAYWALL_DEBOUNCE_MS) return;
   if (_paywallModalOpen || _paywallClosing) return;
   var existing = document.getElementById('paywallModalOverlay');
-  if (existing) return;
+  if (existing) {
+    document.body.classList.add('paywall-open');
+    if (_paywallEscHandler) {
+      document.removeEventListener('keydown', _paywallEscHandler);
+      _paywallEscHandler = null;
+    }
+    _paywallEscHandler = function (event) {
+      if (event.key === 'Escape') _closePaywallModal();
+    };
+    document.addEventListener('keydown', _paywallEscHandler);
+    _paywallUpgradeBtn = existing.querySelector('.paywall-upgrade');
+    _paywallModalOpen = true;
+    return;
+  }
+  _paywallLastOpenAt = now;
   _paywallModalOpen = true;
   var copy = _getPaywallCopy(featureType);
   var userId = (typeof Auth !== 'undefined' && typeof Auth.getUserId === 'function') ? Auth.getUserId() : '';
@@ -305,4 +333,9 @@ global.showPaywall = showPaywall;
 global.openPayment = openPayment;
 global.verifyPaymentResponse = verifyPaymentResponse;
 global.unlockPremium = unlockPremium;
+global.Paywall = {
+  canAccess: canAccess,
+  canAccessFeature: canAccessFeature,
+  showPaywall: showPaywall
+};
 })(window);

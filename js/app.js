@@ -1326,6 +1326,7 @@ document.addEventListener('DOMContentLoaded', function () {
     var backToModesBtn = document.getElementById('backToModes');
     if (backToModesBtn) {
       backToModesBtn.addEventListener('click', function () {
+        _exitDrillSession();
         _resetPracticeUiToModes();
       });
     }
@@ -1357,6 +1358,14 @@ document.addEventListener('DOMContentLoaded', function () {
 function startDrillFromPractice(modeKey, category, categoryLabel) {
   /* Preserve custom selection mode only for custom sessions. */
   if (modeKey !== 'custom') _customPracticeActive = false;
+  if (modeKey === 'custom' && !canAccessFeature('custom_training')) {
+    showPaywall('custom_training');
+    return;
+  }
+  if (modeKey === 'review' && !canAccessFeature('review_mistakes')) {
+    showPaywall('review_mistakes');
+    return;
+  }
   var modeSelect = document.getElementById('modeSelect');
   var categorySelect = document.getElementById('categorySelect');
   var customPracticeConfig = document.getElementById('customPracticeConfig');
@@ -1714,8 +1723,11 @@ function renderStatsView() {
   if (insightsEl) {
     if (!canSeeInsights) {
       insightsEl.innerHTML =
-        '<button class="stat-card stat-card-locked" id="unlockInsightsBtn" type="button">' +
-          '<div class="value value-sm">🔒 Premium Insights</div><div class="label">Unlock strongest/weakest analysis and trends</div>' +
+        '<button class="stats-insights-locked" id="unlockInsightsBtn" type="button">' +
+          '<div class="stats-insights-locked-content">' +
+            '<p class="stats-insights-locked-title">Unlock Performance Insights 🔒</p>' +
+            '<p class="stats-insights-locked-cta">Upgrade to view detailed insights</p>' +
+          '</div>' +
         '</button>';
       var unlockInsightsBtn = document.getElementById('unlockInsightsBtn');
       if (unlockInsightsBtn) {

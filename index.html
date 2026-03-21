@@ -206,7 +206,7 @@
 
       <!-- Category selection (shown when Focus Training is picked) -->
       <div id="categorySelect" style="display:none;">
-        <button class="back-button" id="backToModes" type="button" aria-label="Back to practice modes">←</button>
+        <button class="session-exit drill-exit-btn" id="backToModes" type="button" aria-label="Close and return to practice modes">✕</button>
         <h3 class="category-select-title">Choose Category</h3>
         <div class="category-grid">
           <button class="category-btn category-card" type="button" data-cat="squares">Squares</button>
@@ -579,12 +579,28 @@
           <div class="settings-row-block">
             <h3>🗑️ Clear Data</h3>
             <p class="secondary-text" style="margin-bottom:.75rem;">Clear specific data or reset everything</p>
-            <button id="clearDataBtn" class="btn" style="background:#fee2e2;color:#dc2626;">Clear Data</button>
+            <button id="clearDataBtn" class="btn settings-action-btn settings-action-danger">Clear Data</button>
           </div>
         </div>
       </div>
 
-      <!-- SECTION 7 — Account Management -->
+      <!-- SECTION 7 — Premium Upgrade (Trial users only) -->
+      <div class="settings-section" id="trialUpgradeSection" style="display:none;">
+        <h3 class="settings-section-title">Premium</h3>
+        <div class="settings-section-card trial-upgrade-card">
+          <h3 class="trial-upgrade-title">Upgrade to Premium 🚀</h3>
+          <ul class="trial-upgrade-list">
+            <li>Custom Training Mode</li>
+            <li>Review Mistakes</li>
+            <li>Performance Insights</li>
+            <li>Hard Difficulty</li>
+            <li>Advanced Themes</li>
+          </ul>
+          <button id="trialUpgradeBtn" class="btn accent trial-upgrade-btn" type="button">Unlock for ₹69</button>
+        </div>
+      </div>
+
+      <!-- SECTION 8 — Account Management -->
       <div class="settings-section">
         <h3 class="settings-section-title">Account</h3>
         <div class="settings-section-card">
@@ -597,11 +613,11 @@
           </div>
           <div class="settings-row-divider"></div>
           <div class="settings-row-block">
-            <button id="logoutBtn" class="btn" style="background:#fef3c7;color:#92400e;width:100%;">🚪 Log Out</button>
+            <button id="logoutBtn" class="btn settings-action-btn" type="button">🚪 Log Out</button>
           </div>
           <div class="settings-row-divider"></div>
           <div class="settings-row-block">
-            <button id="deleteAccountBtn" class="btn" style="background:#fee2e2;color:#dc2626;width:100%;">🗑️ Delete Account</button>
+            <button id="deleteAccountBtn" class="btn settings-action-btn settings-action-danger" type="button">🗑️ Delete Account</button>
           </div>
         </div>
       </div>
@@ -819,6 +835,13 @@
           <h4>Current Version</h4>
           <p class="info-version">Version 1.0.26</p>
           <p>Stable release. All core features are live: multi-mode practice, learn vault, analytics, themes, custom formulas, and push notifications.</p>
+        </div>
+      </div>
+
+      <div class="info-section guide-animate-section">
+        <h3 class="info-section-title">👤 Your Plan</h3>
+        <div class="info-block">
+          <p id="aboutUserStatusMessage" class="about-user-status-text">Free user</p>
         </div>
       </div>
 

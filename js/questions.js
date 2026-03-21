@@ -26,7 +26,11 @@ var PI = 3.14;
 function _getDifficulty() {
   try {
     var s = JSON.parse(localStorage.getItem('quant_reflex_settings') || '{}');
-    return s.difficulty || 'medium';
+    var selectedDifficulty = s.difficulty || 'medium';
+    if (selectedDifficulty === 'hard' && typeof canAccessFeature === 'function' && !canAccessFeature('hard_mode')) {
+      return 'medium';
+    }
+    return selectedDifficulty;
   } catch (_) { return 'medium'; }
 }
 

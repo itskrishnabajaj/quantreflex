@@ -547,18 +547,6 @@ body.dark-mode .drill-exit-btn:active {
 }
 .custom-practice-start-btn { margin-top: .75rem; width: 100%; }
 .category-back-btn { margin-top: 1rem; }
-.back-button {
-  position: absolute;
-  top: 12px;
-  left: 12px;
-  font-size: 16px;
-  line-height: 1;
-  cursor: pointer;
-  border: none;
-  background: transparent;
-  color: inherit;
-  padding: 2px;
-}
 
 /* ---- Learn Search ---- */
 .learn-search-container {
@@ -1324,6 +1312,60 @@ body.paywall-open {
   text-align: left;
   cursor: pointer;
 }
+.stats-insights-locked {
+  width: 100%;
+  min-height: 164px;
+  border-radius: .8rem;
+  position: relative;
+  overflow: hidden;
+  border: 1px solid rgba(37,99,235,.18);
+  background:
+    linear-gradient(120deg, rgba(37,99,235,.12), rgba(59,130,246,.04)),
+    #f8fafc;
+  box-shadow: inset 0 0 0 1px rgba(255,255,255,.35);
+}
+#statsInsights .stats-insights-locked {
+  grid-column: 1 / -1;
+}
+.stats-insights-locked::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(circle at 20% 35%, rgba(37,99,235,.12), transparent 58%),
+    radial-gradient(circle at 80% 70%, rgba(59,130,246,.14), transparent 56%);
+  filter: blur(8px);
+}
+.stats-insights-locked::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+}
+.stats-insights-locked-content {
+  position: relative;
+  z-index: 1;
+  min-height: 164px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  gap: .5rem;
+  text-align: center;
+  padding: 1.25rem;
+}
+.stats-insights-locked-title {
+  margin: 0;
+  font-size: 1rem;
+  font-weight: 700;
+  color: #1e3a8a;
+}
+.stats-insights-locked-cta {
+  margin: 0;
+  font-size: .85rem;
+  color: #1d4ed8;
+}
 
 .category-locked-card span {
   display: block;
@@ -1346,6 +1388,24 @@ body.dark-mode .category-locked-card {
   background: rgba(30, 41, 59, .8);
   border-color: #334155;
   color: #bfdbfe;
+}
+body.dark-mode .stats-insights-locked {
+  border-color: rgba(96,165,250,.25);
+  background:
+    linear-gradient(120deg, rgba(96,165,250,.16), rgba(30,64,175,.08)),
+    rgba(15,23,42,.9);
+  box-shadow: inset 0 0 0 1px rgba(148,163,184,.16);
+}
+body.dark-mode .stats-insights-locked::before {
+  background:
+    radial-gradient(circle at 20% 35%, rgba(59,130,246,.2), transparent 60%),
+    radial-gradient(circle at 80% 70%, rgba(147,197,253,.16), transparent 58%);
+}
+body.dark-mode .stats-insights-locked-title {
+  color: #dbeafe;
+}
+body.dark-mode .stats-insights-locked-cta {
+  color: #93c5fd;
 }
 
 @keyframes paywallFadeIn {
@@ -4297,6 +4357,84 @@ body.theme-playful.dark-mode .skip-btn:active {
 /* Task 13: Settings section card tap feedback */
 .settings-section-card {
   transition: transform .15s ease;
+}
+.settings-action-btn {
+  width: 100%;
+  border: 1px solid rgba(15,23,42,.14);
+  background: transparent;
+  color: inherit;
+  box-shadow: 0 1px 3px rgba(15,23,42,.08);
+  transition: border-color .15s ease, box-shadow .15s ease, transform .12s ease, background .15s ease;
+}
+.settings-action-btn:hover {
+  border-color: rgba(15,23,42,.2);
+  box-shadow: 0 4px 14px rgba(15,23,42,.08);
+}
+.settings-action-btn:active {
+  transform: translateY(1px);
+  background: rgba(15,23,42,.03);
+}
+.settings-action-danger {
+  color: #b91c1c;
+  border-color: rgba(185,28,28,.26);
+}
+body.dark-mode .settings-action-btn {
+  border-color: rgba(255,255,255,.12);
+  box-shadow: 0 1px 4px rgba(2,6,23,.35);
+}
+body.dark-mode .settings-action-btn:hover {
+  border-color: rgba(255,255,255,.22);
+  box-shadow: 0 6px 16px rgba(2,6,23,.35);
+}
+body.dark-mode .settings-action-btn:active {
+  background: rgba(255,255,255,.05);
+}
+body.dark-mode .settings-action-danger {
+  color: #fda4af;
+  border-color: rgba(244,63,94,.34);
+}
+.trial-upgrade-card {
+  padding: 1rem;
+  border-radius: 1rem;
+  box-shadow: 0 8px 20px rgba(15,23,42,.08);
+}
+.trial-upgrade-title {
+  margin: 0 0 .7rem;
+  font-size: 1.05rem;
+  color: #0f172a;
+}
+.trial-upgrade-list {
+  margin: 0 0 .95rem;
+  padding-left: 1.1rem;
+  color: #334155;
+}
+.trial-upgrade-list li {
+  margin-bottom: .35rem;
+  font-size: .88rem;
+}
+.trial-upgrade-list li:last-child {
+  margin-bottom: 0;
+}
+.trial-upgrade-btn {
+  width: 100%;
+}
+body.dark-mode .trial-upgrade-card {
+  box-shadow: 0 10px 26px rgba(2,6,23,.45);
+}
+body.dark-mode .trial-upgrade-title {
+  color: #e2e8f0;
+}
+body.dark-mode .trial-upgrade-list {
+  color: #94a3b8;
+}
+.about-user-status-text {
+  margin: 0;
+  font-size: .95rem;
+  font-weight: 600;
+  color: #0f172a;
+}
+body.dark-mode .about-user-status-text {
+  color: #e2e8f0;
 }
 
 /* Task 14: Reduced motion for view transitions */
