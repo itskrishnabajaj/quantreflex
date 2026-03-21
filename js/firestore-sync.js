@@ -306,7 +306,7 @@ var FirestoreSync = (function () {
       fallbackDefaults.isTrial = false;
       fallbackDefaults.trialEnd = null;
       _memoryCache = fallbackDefaults;
-      _dataLoaded = false;
+      _dataLoaded = true;
       if (callback) callback(false);
     });
   }
