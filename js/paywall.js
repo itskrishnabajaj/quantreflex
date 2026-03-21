@@ -259,7 +259,6 @@ function openPayment(userId) {
 }
 
 function showPaywall(featureType) {
-  if (canAccess(featureType, _getAccessUserState())) return;
   var now = Date.now();
   if (now - _paywallLastOpenAt < PAYWALL_DEBOUNCE_MS) return;
   if (_paywallModalOpen || _paywallClosing) return;
