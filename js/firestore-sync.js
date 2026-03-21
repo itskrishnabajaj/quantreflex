@@ -87,7 +87,9 @@ var FirestoreSync = (function () {
 
   function _enqueueMergeWrite(docRef, data) {
     if (!docRef || !data) return Promise.resolve();
-    _writeChain = _writeChain.catch(function () {}).then(function () {
+    _writeChain = _writeChain.catch(function (error) {
+      _logFirestoreError(error);
+    }).then(function () {
       console.log('Writing to Firestore:', data);
       return docRef.set(data, { merge: true });
     });
@@ -197,10 +199,10 @@ var FirestoreSync = (function () {
         var data = doc.data();
         console.log('User data loaded:', data);
         _normalizeMonetization(data, docRef);
-        var safeSettings = (data && data.settings && typeof data.settings === 'object')
+        var safeSettings = (data && data.settings && typeof data.settings === 'object' && !Array.isArray(data.settings))
           ? data.settings
           : _cloneDefault(_defaultSettings());
-        var safeStats = (data && data.stats && typeof data.stats === 'object')
+        var safeStats = (data && data.stats && typeof data.stats === 'object' && !Array.isArray(data.stats))
           ? data.stats
           : _cloneDefault(_defaultStats());
         data.settings = safeSettings;
