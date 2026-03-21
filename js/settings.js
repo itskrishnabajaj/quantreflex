@@ -84,8 +84,8 @@ function initSettingsView() {
   var accessState = (typeof FirestoreSync !== 'undefined' && typeof FirestoreSync.getAccessState === 'function')
     ? FirestoreSync.getAccessState()
     : {};
-  var isPremiumUser = !!(accessState && accessState.isPremium === true);
-  var isTrialUser = !!(accessState && accessState.isTrial === true);
+  var isPremiumUser = accessState && accessState.isPremium === true;
+  var isTrialUser = accessState && accessState.isTrial === true;
 
   var darkToggle = document.getElementById('darkModeToggle');
   var soundToggle = document.getElementById('soundToggle');
