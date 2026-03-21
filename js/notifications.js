@@ -121,10 +121,13 @@ var NotificationManager = (function () {
     var userId = FirebaseApp.getUserId();
     if (!userId) return;
     var db = FirebaseApp.getDb();
-    db.collection('users').doc(userId).set({
+    var payload = {
       fcmToken: token,
       fcmTokenUpdatedAt: new Date().toISOString()
-    }, { merge: true }).catch(function (err) {
+    };
+    console.log('Writing to Firestore:', payload);
+    db.collection('users').doc(userId).set(payload, { merge: true }).catch(function (err) {
+      console.error('Firestore error:', err);
       console.warn('Failed to save FCM token:', err);
     });
   }
