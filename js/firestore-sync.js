@@ -24,6 +24,7 @@ var FirestoreSync = (function () {
   var _dataLoaded = false; /* Whether initial load has completed */
   var _drillActive = false; /* Whether a drill is in progress (defers syncing) */
   var _loadedUserId = null; /* UID whose data is currently loaded — detects user switches */
+  var _trialExpiryPersistInFlight = false;
   var SYNC_DEBOUNCE_MS = 2000; /* batch updates every 2 seconds */
   var EARLY_USER_LIMIT = 121;
   var TRIAL_DAYS = 7;
@@ -686,6 +687,24 @@ var FirestoreSync = (function () {
     },
     getAccessState: function () {
       if (!_memoryCache) return null;
+      if (_memoryCache.isTrial === true) {
+        var trialEndMs = _toMillis(_memoryCache.trialEnd);
+        if (trialEndMs > 0 && Date.now() > trialEndMs) {
+          _memoryCache.isPremium = false;
+          _memoryCache.isTrial = false;
+          if (!_trialExpiryPersistInFlight) {
+            var docRef = _getUserDocRef();
+            if (docRef) {
+              _trialExpiryPersistInFlight = true;
+              docRef.set({ isPremium: false, isTrial: false }, { merge: true }).catch(function (err) {
+                console.warn('Failed to persist trial expiry from access state:', err);
+              }).finally(function () {
+                _trialExpiryPersistInFlight = false;
+              });
+            }
+          }
+        }
+      }
       return {
         isPremium: _memoryCache.isPremium === true,
         isTrial: _memoryCache.isTrial === true,
