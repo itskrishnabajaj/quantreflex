@@ -429,7 +429,23 @@
         <button id="installBtn" class="btn accent">Install App</button>
       </div>
 
-      <!-- SECTION 1 — Appearance & Personalization -->
+      <!-- SECTION 1 — Premium Upgrade -->
+      <div class="settings-section" id="trialUpgradeSection" style="display:none;">
+        <h3 class="settings-section-title">Premium</h3>
+        <div class="settings-section-card trial-upgrade-card">
+          <h3 class="trial-upgrade-title">Upgrade to Premium 🚀</h3>
+          <ul class="trial-upgrade-list">
+            <li>Custom Training</li>
+            <li>Review Mistakes</li>
+            <li>Performance Insights</li>
+            <li>Hard Mode</li>
+            <li>Advanced Themes</li>
+          </ul>
+          <button id="trialUpgradeBtn" class="btn accent trial-upgrade-btn" type="button">Unlock for ₹69</button>
+        </div>
+      </div>
+
+      <!-- SECTION 2 — Appearance & Personalization -->
       <div class="settings-section">
         <h3 class="settings-section-title">Appearance &amp; Personalization</h3>
         <div class="settings-section-card">
@@ -457,7 +473,7 @@
         </div>
       </div>
 
-      <!-- SECTION 2 — Practice Preferences -->
+      <!-- SECTION 3 — Practice Preferences -->
       <div class="settings-section">
         <h3 class="settings-section-title">Practice Preferences</h3>
         <div class="settings-section-card">
@@ -494,7 +510,7 @@
         </div>
       </div>
 
-      <!-- SECTION 3 — Feedback & Interactions -->
+      <!-- SECTION 4 — Feedback & Interactions -->
       <div class="settings-section">
         <h3 class="settings-section-title">Feedback &amp; Interactions</h3>
         <div class="settings-section-card">
@@ -533,7 +549,7 @@
         </div>
       </div>
 
-      <!-- SECTION 4 — Notifications -->
+      <!-- SECTION 5 — Notifications -->
       <div class="settings-section">
         <h3 class="settings-section-title">Notifications</h3>
         <div class="settings-section-card">
@@ -550,7 +566,7 @@
         </div>
       </div>
 
-      <!-- SECTION 5 — Help & Information -->
+      <!-- SECTION 6 — Help & Information -->
       <div class="settings-section">
         <h3 class="settings-section-title">Help &amp; Information</h3>
         <div class="settings-section-card">
@@ -572,7 +588,7 @@
         </div>
       </div>
 
-      <!-- SECTION 6 — Data Management -->
+      <!-- SECTION 7 — Data Management -->
       <div class="settings-section">
         <h3 class="settings-section-title">Data Management</h3>
         <div class="settings-section-card">
@@ -584,26 +600,14 @@
         </div>
       </div>
 
-      <!-- SECTION 7 — Premium Upgrade (Trial users only) -->
-      <div class="settings-section" id="trialUpgradeSection" style="display:none;">
-        <h3 class="settings-section-title">Premium</h3>
-        <div class="settings-section-card trial-upgrade-card">
-          <h3 class="trial-upgrade-title">Upgrade to Premium 🚀</h3>
-          <ul class="trial-upgrade-list">
-            <li>Custom Training Mode</li>
-            <li>Review Mistakes</li>
-            <li>Performance Insights</li>
-            <li>Hard Difficulty</li>
-            <li>Advanced Themes</li>
-          </ul>
-          <button id="trialUpgradeBtn" class="btn accent trial-upgrade-btn" type="button">Unlock for ₹69</button>
-        </div>
-      </div>
-
       <!-- SECTION 8 — Account Management -->
       <div class="settings-section">
         <h3 class="settings-section-title">Account</h3>
         <div class="settings-section-card">
+          <div class="settings-row-block settings-user-status-block">
+            <p id="settingsUserStatusMessage" class="about-user-status-text">Free user</p>
+          </div>
+          <div class="settings-row-divider"></div>
           <div class="settings-row settings-link" id="openProfileModal">
             <div class="settings-label">
               <h3>👤 Profile</h3>

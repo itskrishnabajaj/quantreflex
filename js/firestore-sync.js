@@ -180,7 +180,7 @@ var FirestoreSync = (function () {
       username = Auth.getCurrentUser().email.split('@')[0];
     }
     var now = new Date();
-    var trialEndDate = new Date(now.getTime() + (TRIAL_DAYS * 24 * 60 * 60 * 1000));
+    var trialEndMs = now.getTime() + (TRIAL_DAYS * 24 * 60 * 60 * 1000);
     var fallbackDefaults = {
       profile: {
         name: '',
@@ -236,6 +236,21 @@ var FirestoreSync = (function () {
         var totalUsers = parseInt(meta.totalUsers, 10);
         if (isNaN(totalUsers) || totalUsers < 0) totalUsers = 0;
         var isEarlyUser = totalUsers < EARLY_USER_LIMIT;
+        var monetizationState = isEarlyUser
+          ? {
+              isPremium: true,
+              isEarlyUser: true,
+              isTrial: false,
+              hasPaid: false,
+              trialEnd: null
+            }
+          : {
+              isPremium: true,
+              isEarlyUser: false,
+              isTrial: true,
+              hasPaid: false,
+              trialEnd: trialEndMs
+            };
         var docDefaults = {
           profile: {
             name: '',
@@ -248,11 +263,11 @@ var FirestoreSync = (function () {
           customTopics: fallbackDefaults.customTopics,
           customFormulas: fallbackDefaults.customFormulas,
           bookmarks: fallbackDefaults.bookmarks,
-          isPremium: true,
-          isTrial: !isEarlyUser,
-          trialEnd: isEarlyUser ? null : trialEndDate,
-          hasPaid: false,
-          isEarlyUser: isEarlyUser,
+          isPremium: monetizationState.isPremium,
+          isTrial: monetizationState.isTrial,
+          trialEnd: monetizationState.trialEnd,
+          hasPaid: monetizationState.hasPaid,
+          isEarlyUser: monetizationState.isEarlyUser,
           createdAt: (typeof firebase !== 'undefined' && firebase.firestore && firebase.firestore.FieldValue)
             ? firebase.firestore.FieldValue.serverTimestamp()
             : now.toISOString()

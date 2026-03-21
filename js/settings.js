@@ -84,8 +84,8 @@ function initSettingsView() {
   var accessState = (typeof FirestoreSync !== 'undefined' && typeof FirestoreSync.getAccessState === 'function')
     ? FirestoreSync.getAccessState()
     : {};
-  var trialEndMs = _toMillis(accessState.trialEnd);
-  var isTrialUser = !!(accessState && accessState.isTrial && trialEndMs > 0 && Date.now() <= trialEndMs);
+  var isPremiumUser = !!(accessState && accessState.isPremium === true);
+  var isTrialUser = !!(accessState && accessState.isTrial === true);
 
   var darkToggle = document.getElementById('darkModeToggle');
   var soundToggle = document.getElementById('soundToggle');
@@ -326,7 +326,7 @@ function initSettingsView() {
 
   var trialUpgradeSection = document.getElementById('trialUpgradeSection');
   if (trialUpgradeSection) {
-    trialUpgradeSection.style.display = isTrialUser ? 'block' : 'none';
+    trialUpgradeSection.style.display = (!isPremiumUser || isTrialUser) ? 'block' : 'none';
   }
   var trialUpgradeBtn = document.getElementById('trialUpgradeBtn');
   if (trialUpgradeBtn) {
@@ -351,25 +351,29 @@ function initSettingsView() {
 
   /* Apply reduced motion on load */
   document.body.classList.toggle('reduced-motion', !!settings.reducedMotion);
+  updateAboutUserStatus();
 }
 
 function updateAboutUserStatus() {
   var statusEl = document.getElementById('aboutUserStatusMessage');
-  if (!statusEl) return;
+  var settingsStatusEl = document.getElementById('settingsUserStatusMessage');
   var accessState = (typeof FirestoreSync !== 'undefined' && typeof FirestoreSync.getAccessState === 'function')
     ? (FirestoreSync.getAccessState() || {})
     : {};
-  var trialEndMs = _toMillis(accessState.trialEnd);
-  var trialActive = accessState.isTrial === true && trialEndMs > 0 && Date.now() <= trialEndMs;
   var message = 'Free user';
   if (accessState.isEarlyUser === true) {
-    message = '🎉 Thank you for being one of our first users! You’ve unlocked lifetime premium.';
+    message = '🎉 You are one of our first users! Lifetime premium unlocked.';
   } else if (accessState.hasPaid === true) {
-    message = '💙 Thank you for trusting us and upgrading to premium.';
-  } else if (trialActive) {
-    message = '⏳ You are currently on a premium trial.';
+    message = '💙 Thank you for upgrading to premium.';
+  } else if (accessState.isTrial === true) {
+    message = '⏳ You are on a 7-day premium trial.';
   }
-  statusEl.textContent = message;
+  if (statusEl) {
+    statusEl.textContent = message;
+  }
+  if (settingsStatusEl) {
+    settingsStatusEl.textContent = message;
+  }
 }
 
 function _toMillis(value) {
