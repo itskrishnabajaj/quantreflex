@@ -6,9 +6,14 @@
  *
  * Firestore structure:
  *   users/{userId}
- *     ├── profile (username, createdAt)
+ *     ├── profile
+ *     ├── access
  *     ├── settings
- *     ├── stats (progress data)
+ *     ├── stats
+ *     ├── categoryStats
+ *     ├── dailyHistory
+ *     ├── mistakes
+ *     ├── responseTimes
  *     ├── quickLinks
  *     ├── customTopics
  *     ├── customFormulas
@@ -28,6 +33,8 @@ var FirestoreSync = (function () {
   var SYNC_DEBOUNCE_MS = 2000; /* batch updates every 2 seconds */
   var EARLY_USER_LIMIT = 121;
   var TRIAL_DAYS = 7;
+  var PASSWORD_HASH_SALT_BYTES = 16;
+  var PASSWORD_HASH_PBKDF2_ITERATIONS = 120000;
 
   /* All localStorage keys that store user-specific data */
   var _USER_STORAGE_KEYS = [
@@ -127,6 +134,7 @@ var FirestoreSync = (function () {
       if (doc.exists) {
         var data = doc.data();
         _normalizeMonetization(data, docRef);
+        data.stats = _buildProgressStats(data);
         _memoryCache = data;
         _enforceTrialExpiry(_memoryCache, docRef);
         _dataLoaded = true;
@@ -189,30 +197,38 @@ var FirestoreSync = (function () {
           var nowMs = Date.now();
           var userData = {
             profile: baseUserData.profile,
+            access: {
+              userNumber: userNumber,
+              isPremium: false,
+              isTrial: false,
+              isEarlyUser: false,
+              trialEnd: null,
+              hasPaid: false
+            },
             settings: baseUserData.settings,
             stats: baseUserData.stats,
+            categoryStats: baseUserData.categoryStats,
+            dailyHistory: baseUserData.dailyHistory,
+            mistakes: baseUserData.mistakes,
+            responseTimes: baseUserData.responseTimes,
             quickLinks: baseUserData.quickLinks,
             customTopics: baseUserData.customTopics,
             customFormulas: baseUserData.customFormulas,
-            bookmarks: baseUserData.bookmarks,
-            userNumber: userNumber,
-            createdAt: (typeof firebase !== 'undefined' && firebase.firestore && firebase.firestore.FieldValue)
-              ? firebase.firestore.FieldValue.serverTimestamp()
-              : new Date(nowMs).toISOString()
+            bookmarks: baseUserData.bookmarks
           };
 
           if (userNumber <= EARLY_USER_LIMIT) {
-            userData.isPremium = true;
-            userData.isEarlyUser = true;
-            userData.isTrial = false;
-            userData.hasPaid = false;
-            userData.trialEnd = null;
+            userData.access.isPremium = true;
+            userData.access.isEarlyUser = true;
+            userData.access.isTrial = false;
+            userData.access.hasPaid = false;
+            userData.access.trialEnd = null;
           } else {
-            userData.isPremium = true;
-            userData.isTrial = true;
-            userData.isEarlyUser = false;
-            userData.hasPaid = false;
-            userData.trialEnd = nowMs + (TRIAL_DAYS * 24 * 60 * 60 * 1000);
+            userData.access.isPremium = true;
+            userData.access.isTrial = true;
+            userData.access.isEarlyUser = false;
+            userData.access.hasPaid = false;
+            userData.access.trialEnd = nowMs + (TRIAL_DAYS * 24 * 60 * 60 * 1000);
           }
 
           tx.set(userRef, userData, { merge: true });
@@ -252,38 +268,38 @@ var FirestoreSync = (function () {
         username: username,
         createdAt: now.toISOString()
       },
+      access: {
+        userNumber: 0,
+        isPremium: false,
+        isTrial: false,
+        isEarlyUser: false,
+        trialEnd: null,
+        hasPaid: false
+      },
       settings: {
         darkMode: false, sound: true, vibration: true, difficulty: 'medium',
         dailyGoal: 50, reducedMotion: false, skipEnabled: false, notificationsEnabled: false,
-        theme: 'classic'
+        onboardingCompleted: false, theme: 'classic'
       },
       stats: {
         totalAttempted: 0, totalCorrect: 0,
-        bestStreak: 0, currentStreak: 0,
-        drillSessions: 0, timedTestSessions: 0,
-        dailyStreak: 0, bestDailyStreak: 0, lastActiveDate: null,
-        lastPracticeDate: null,
-        todayAttempted: 0, todayCorrect: 0,
-        categoryStats: {}, mistakes: [],
-        responseTimes: [], dailyHistory: {}
+        bestStreak: 0,
+        bestDailyStreak: 0
       },
+      categoryStats: {},
+      dailyHistory: {},
+      mistakes: [],
+      responseTimes: [],
       quickLinks: ['fractionTable', 'tablesContainer', 'formulaSections', 'mentalTricks'],
       customTopics: [],
       customFormulas: {},
-      bookmarks: [],
-      userNumber: 0,
-      isPremium: false,
-      isTrial: false,
-      trialEnd: null,
-      hasPaid: false,
-      isEarlyUser: false,
-      createdAt: now.toISOString()
+      bookmarks: []
     };
 
     /* Write clean defaults to localStorage so the app has consistent state */
     try {
       localStorage.setItem('quant_reflex_settings', JSON.stringify(fallbackDefaults.settings));
-      localStorage.setItem('quant_reflex_progress', JSON.stringify(fallbackDefaults.stats));
+      localStorage.setItem('quant_reflex_progress', JSON.stringify(_buildProgressStats(fallbackDefaults)));
       localStorage.setItem('quant_quick_links', JSON.stringify(fallbackDefaults.quickLinks));
       localStorage.setItem('quant_custom_topics', JSON.stringify(fallbackDefaults.customTopics));
       localStorage.setItem('quant_custom_formulas', JSON.stringify(fallbackDefaults.customFormulas));
@@ -295,20 +311,44 @@ var FirestoreSync = (function () {
       _normalizeMonetization(_memoryCache, docRef);
       _enforceTrialExpiry(_memoryCache, docRef);
       _dataLoaded = true;
-      if (_memoryCache.createdAt && typeof _memoryCache.createdAt.toDate === 'function') {
-        _memoryCache.createdAt = _memoryCache.createdAt.toDate().toISOString();
+      _memoryCache.stats = _buildProgressStats(_memoryCache);
+      if (_memoryCache.profile && _memoryCache.profile.createdAt && typeof _memoryCache.profile.createdAt.toDate === 'function') {
+        _memoryCache.profile.createdAt = _memoryCache.profile.createdAt.toDate().toISOString();
       }
       if (callback) callback(true);
     }).catch(function (err) {
       console.warn('Firestore default document creation failed:', err);
-      fallbackDefaults.isPremium = false;
-      fallbackDefaults.isEarlyUser = false;
-      fallbackDefaults.isTrial = false;
-      fallbackDefaults.trialEnd = null;
+      fallbackDefaults.access.isPremium = false;
+      fallbackDefaults.access.isEarlyUser = false;
+      fallbackDefaults.access.isTrial = false;
+      fallbackDefaults.access.trialEnd = null;
       _memoryCache = fallbackDefaults;
       _dataLoaded = true;
       if (callback) callback(false);
     });
+  }
+
+  function _buildProgressStats(data) {
+    if (!data) return {};
+    var baseStats = data.stats || {};
+    return {
+      totalAttempted: parseInt(baseStats.totalAttempted, 10) || 0,
+      totalCorrect: parseInt(baseStats.totalCorrect, 10) || 0,
+      bestStreak: parseInt(baseStats.bestStreak, 10) || 0,
+      currentStreak: parseInt(baseStats.currentStreak, 10) || 0,
+      drillSessions: parseInt(baseStats.drillSessions, 10) || 0,
+      timedTestSessions: parseInt(baseStats.timedTestSessions, 10) || 0,
+      dailyStreak: parseInt(baseStats.dailyStreak, 10) || 0,
+      bestDailyStreak: parseInt(baseStats.bestDailyStreak, 10) || 0,
+      lastActiveDate: baseStats.lastActiveDate || null,
+      lastPracticeDate: baseStats.lastPracticeDate || null,
+      todayAttempted: parseInt(baseStats.todayAttempted, 10) || 0,
+      todayCorrect: parseInt(baseStats.todayCorrect, 10) || 0,
+      categoryStats: data.categoryStats || baseStats.categoryStats || {},
+      mistakes: data.mistakes || baseStats.mistakes || [],
+      responseTimes: data.responseTimes || baseStats.responseTimes || [],
+      dailyHistory: data.dailyHistory || baseStats.dailyHistory || {}
+    };
   }
 
   function _toMillis(ts) {
@@ -325,24 +365,64 @@ var FirestoreSync = (function () {
     return 0;
   }
 
+  function _bytesToHex(bytes) {
+    var hex = '';
+    for (var i = 0; i < bytes.length; i++) {
+      hex += bytes[i].toString(16).padStart(2, '0');
+    }
+    return hex;
+  }
+
+  function _removeLegacyProfilePassword(docRef) {
+    if (!docRef) return;
+    if (typeof firebase === 'undefined' || !firebase.firestore || !firebase.firestore.FieldValue) return;
+    var patch = {};
+    patch['profile.password'] = firebase.firestore.FieldValue.delete();
+    docRef.set(patch, { merge: true }).catch(function (err) {
+      console.warn('Failed to remove legacy profile password field:', err);
+    });
+  }
+
   function _normalizeMonetization(data, docRef) {
     if (!data) return;
-    var hasAll =
-      typeof data.isPremium === 'boolean' &&
-      typeof data.isTrial === 'boolean' &&
-      typeof data.hasPaid === 'boolean' &&
-      typeof data.isEarlyUser === 'boolean' &&
-      data.hasOwnProperty('trialEnd') &&
-      data.hasOwnProperty('createdAt');
-    if (hasAll) return;
-
     var patch = {};
-    if (typeof data.isPremium !== 'boolean') patch.isPremium = false;
-    if (typeof data.isTrial !== 'boolean') patch.isTrial = false;
-    if (!data.hasOwnProperty('trialEnd')) patch.trialEnd = null;
-    if (typeof data.hasPaid !== 'boolean') patch.hasPaid = false;
-    if (typeof data.isEarlyUser !== 'boolean') patch.isEarlyUser = false;
-    if (!data.hasOwnProperty('createdAt')) patch.createdAt = new Date().toISOString();
+    var access = data.access && typeof data.access === 'object' ? data.access : {};
+    var accessPatch = {};
+
+    var resolvedUserNumber = parseInt(access.userNumber, 10);
+    if (isNaN(resolvedUserNumber) || resolvedUserNumber < 0) {
+      resolvedUserNumber = parseInt(data.userNumber, 10);
+    }
+    if (isNaN(resolvedUserNumber) || resolvedUserNumber < 0) resolvedUserNumber = 0;
+    if (parseInt(access.userNumber, 10) !== resolvedUserNumber) accessPatch.userNumber = resolvedUserNumber;
+
+    if (typeof access.isPremium !== 'boolean') accessPatch.isPremium = (typeof data.isPremium === 'boolean') ? data.isPremium : false;
+    if (typeof access.isTrial !== 'boolean') accessPatch.isTrial = (typeof data.isTrial === 'boolean') ? data.isTrial : false;
+    if (typeof access.hasPaid !== 'boolean') accessPatch.hasPaid = (typeof data.hasPaid === 'boolean') ? data.hasPaid : false;
+    if (typeof access.isEarlyUser !== 'boolean') accessPatch.isEarlyUser = (typeof data.isEarlyUser === 'boolean') ? data.isEarlyUser : false;
+    if (!access.hasOwnProperty('trialEnd')) accessPatch.trialEnd = data.hasOwnProperty('trialEnd') ? data.trialEnd : null;
+
+    if (!data.categoryStats && data.stats && data.stats.categoryStats) patch.categoryStats = data.stats.categoryStats;
+    if (!data.dailyHistory && data.stats && data.stats.dailyHistory) patch.dailyHistory = data.stats.dailyHistory;
+    if (!data.mistakes && data.stats && data.stats.mistakes) patch.mistakes = data.stats.mistakes;
+    if (!data.responseTimes && data.stats && data.stats.responseTimes) patch.responseTimes = data.stats.responseTimes;
+
+    if (typeof data.settings !== 'object' || !data.settings) patch.settings = {};
+    var mergedSettings = data.settings || {};
+    if (typeof mergedSettings.onboardingCompleted !== 'boolean') {
+      mergedSettings.onboardingCompleted = false;
+      patch.settings = mergedSettings;
+    }
+
+    if (Object.keys(accessPatch).length > 0) {
+      patch.access = Object.assign({}, access, accessPatch);
+      data.access = patch.access;
+    }
+    if (data.profile && data.profile.hasOwnProperty('password')) {
+      delete data.profile.password;
+      patch.profile = data.profile;
+      _removeLegacyProfilePassword(docRef);
+    }
 
     var keys = Object.keys(patch);
     if (keys.length === 0) return;
@@ -364,10 +444,11 @@ var FirestoreSync = (function () {
       return tx.get(docRef).then(function (doc) {
         if (!doc.exists) return;
         var liveData = doc.data() || {};
-        if (liveData.hasPaid === true || liveData.isTrial !== true) return;
-        var trialEndMs = _toMillis(liveData.trialEnd);
+        var liveAccess = liveData.access && typeof liveData.access === 'object' ? liveData.access : {};
+        if (liveAccess.hasPaid === true || liveAccess.isTrial !== true) return;
+        var trialEndMs = _toMillis(liveAccess.trialEnd);
         if (!trialEndMs || Date.now() <= trialEndMs) return;
-        tx.set(docRef, { isPremium: false, isTrial: false, trialEnd: null }, { merge: true });
+        tx.set(docRef, { access: { isPremium: false, isTrial: false, trialEnd: null } }, { merge: true });
       });
     }).catch(function (err) {
       console.warn('Failed to persist trial expiry:', err);
@@ -377,12 +458,12 @@ var FirestoreSync = (function () {
   }
 
   function _enforceTrialExpiry(data, docRef) {
-    if (!data || !data.isTrial) return;
-    var trialEndMs = _toMillis(data.trialEnd);
+    if (!data || !data.access || data.access.isTrial !== true) return;
+    var trialEndMs = _toMillis(data.access.trialEnd);
     if (!trialEndMs || Date.now() <= trialEndMs) return;
-    data.isPremium = false;
-    data.isTrial = false;
-    data.trialEnd = null;
+    data.access.isPremium = false;
+    data.access.isTrial = false;
+    data.access.trialEnd = null;
     _persistTrialExpiry(docRef);
   }
 
@@ -401,7 +482,27 @@ var FirestoreSync = (function () {
     } catch (_) {}
     try {
       var stats = localStorage.getItem('quant_reflex_progress');
-      if (stats) data.stats = JSON.parse(stats);
+      if (stats) {
+        var parsedStats = JSON.parse(stats);
+        data.stats = {
+          totalAttempted: parseInt(parsedStats.totalAttempted, 10) || 0,
+          totalCorrect: parseInt(parsedStats.totalCorrect, 10) || 0,
+          bestStreak: parseInt(parsedStats.bestStreak, 10) || 0,
+          currentStreak: parseInt(parsedStats.currentStreak, 10) || 0,
+          drillSessions: parseInt(parsedStats.drillSessions, 10) || 0,
+          timedTestSessions: parseInt(parsedStats.timedTestSessions, 10) || 0,
+          dailyStreak: parseInt(parsedStats.dailyStreak, 10) || 0,
+          bestDailyStreak: parseInt(parsedStats.bestDailyStreak, 10) || 0,
+          lastActiveDate: parsedStats.lastActiveDate || null,
+          lastPracticeDate: parsedStats.lastPracticeDate || null,
+          todayAttempted: parseInt(parsedStats.todayAttempted, 10) || 0,
+          todayCorrect: parseInt(parsedStats.todayCorrect, 10) || 0
+        };
+        data.categoryStats = _normalizeCategoryStatsForWrite(parsedStats.categoryStats);
+        data.dailyHistory = _normalizeDailyHistoryForWrite(parsedStats.dailyHistory);
+        data.mistakes = parsedStats.mistakes || [];
+        data.responseTimes = parsedStats.responseTimes || [];
+      }
     } catch (_) {}
     try {
       var quickLinks = localStorage.getItem('quant_quick_links');
@@ -490,7 +591,56 @@ var FirestoreSync = (function () {
    * @param {object} stats
    */
   function syncStats(stats) {
-    queueUpdate('stats', stats);
+    var progress = stats || {};
+    queueUpdate('stats', {
+      totalAttempted: parseInt(progress.totalAttempted, 10) || 0,
+      totalCorrect: parseInt(progress.totalCorrect, 10) || 0,
+      bestStreak: parseInt(progress.bestStreak, 10) || 0,
+      currentStreak: parseInt(progress.currentStreak, 10) || 0,
+      drillSessions: parseInt(progress.drillSessions, 10) || 0,
+      timedTestSessions: parseInt(progress.timedTestSessions, 10) || 0,
+      dailyStreak: parseInt(progress.dailyStreak, 10) || 0,
+      bestDailyStreak: parseInt(progress.bestDailyStreak, 10) || 0,
+      lastActiveDate: progress.lastActiveDate || null,
+      lastPracticeDate: progress.lastPracticeDate || null,
+      todayAttempted: parseInt(progress.todayAttempted, 10) || 0,
+      todayCorrect: parseInt(progress.todayCorrect, 10) || 0
+    });
+    queueUpdate('categoryStats', _normalizeCategoryStatsForWrite(progress.categoryStats));
+    queueUpdate('dailyHistory', _normalizeDailyHistoryForWrite(progress.dailyHistory));
+    queueUpdate('mistakes', progress.mistakes || []);
+    queueUpdate('responseTimes', progress.responseTimes || []);
+  }
+
+  function _normalizeCategoryStatsForWrite(categoryStats) {
+    var source = categoryStats && typeof categoryStats === 'object' ? categoryStats : {};
+    var normalized = {};
+    var keys = Object.keys(source);
+    for (var i = 0; i < keys.length; i++) {
+      var key = keys[i];
+      var row = source[key] || {};
+      var attempted = parseInt(row.attempted, 10) || 0;
+      var correct = parseInt(row.correct, 10) || 0;
+      var accuracy = attempted > 0 ? Math.round((correct / attempted) * 10000) / 100 : 0;
+      normalized[key] = { attempted: attempted, correct: correct, accuracy: accuracy };
+    }
+    return normalized;
+  }
+
+  function _normalizeDailyHistoryForWrite(dailyHistory) {
+    var source = dailyHistory && typeof dailyHistory === 'object' ? dailyHistory : {};
+    var normalized = {};
+    var keys = Object.keys(source);
+    for (var i = 0; i < keys.length; i++) {
+      var key = keys[i];
+      var row = source[key] || {};
+      normalized[key] = {
+        attempted: parseInt(row.attempted, 10) || 0,
+        correct: parseInt(row.correct, 10) || 0,
+        dailyStreak: parseInt(row.dailyStreak, 10) || 0
+      };
+    }
+    return normalized;
   }
 
   /**
@@ -561,8 +711,25 @@ var FirestoreSync = (function () {
       };
       try { localStorage.setItem('quant_reflex_progress', JSON.stringify(resetStats)); } catch (_) {}
       if (_memoryCache) _memoryCache.stats = resetStats;
+      if (_memoryCache) _memoryCache.categoryStats = {};
+      if (_memoryCache) _memoryCache.mistakes = [];
+      if (_memoryCache) _memoryCache.responseTimes = [];
+      if (_memoryCache) _memoryCache.dailyHistory = {};
       if (docRef) {
-        docRef.set({ stats: resetStats }, { merge: true }).then(function () {
+        docRef.set({
+          stats: {
+            totalAttempted: 0, totalCorrect: 0,
+            bestStreak: 0, currentStreak: 0,
+            drillSessions: 0, timedTestSessions: 0,
+            dailyStreak: 0, bestDailyStreak: 0,
+            lastActiveDate: null, lastPracticeDate: null,
+            todayAttempted: 0, todayCorrect: 0
+          },
+          categoryStats: {},
+          mistakes: [],
+          responseTimes: [],
+          dailyHistory: {}
+        }, { merge: true }).then(function () {
           if (callback) callback(null);
         }).catch(function (err) {
           if (callback) callback(err.message);
@@ -592,7 +759,7 @@ var FirestoreSync = (function () {
       var defaultSettings = {
         darkMode: false, sound: true, vibration: true, difficulty: 'medium',
         dailyGoal: 50, reducedMotion: false, skipEnabled: false, notificationsEnabled: false,
-        theme: 'classic'
+        onboardingCompleted: false, theme: 'classic'
       };
       var defaultStats = {
         totalAttempted: 0, totalCorrect: 0,
@@ -621,7 +788,18 @@ var FirestoreSync = (function () {
       }
       var resetAll = {
         settings: defaultSettings,
-        stats: defaultStats,
+        stats: {
+          totalAttempted: 0, totalCorrect: 0,
+          bestStreak: 0, currentStreak: 0,
+          drillSessions: 0, timedTestSessions: 0,
+          dailyStreak: 0, bestDailyStreak: 0,
+          lastActiveDate: null, lastPracticeDate: null,
+          todayAttempted: 0, todayCorrect: 0
+        },
+        categoryStats: {},
+        dailyHistory: {},
+        mistakes: [],
+        responseTimes: [],
         quickLinks: ['fractionTable', 'tablesContainer', 'formulaSections', 'mentalTricks'],
         customTopics: [],
         customFormulas: {},
@@ -716,31 +894,53 @@ var FirestoreSync = (function () {
      */
     updateProfilePassword: function (password) {
       if (!password) return;
-      if (_memoryCache && _memoryCache.profile) {
-        _memoryCache.profile.password = password;
-        queueUpdate('profile', _memoryCache.profile);
-      } else {
-        queueUpdate('profile', { password: password });
+      if (typeof crypto === 'undefined' || !crypto.subtle || typeof TextEncoder === 'undefined') {
+        console.warn('Secure password hashing APIs are unavailable; skipping passwordHash sync.');
+        _removeLegacyProfilePassword(_getUserDocRef());
+        return;
       }
+      var profile = (_memoryCache && _memoryCache.profile) ? _memoryCache.profile : {};
+      var salt = new Uint8Array(PASSWORD_HASH_SALT_BYTES);
+      crypto.getRandomValues(salt);
+      var iterations = PASSWORD_HASH_PBKDF2_ITERATIONS;
+      crypto.subtle.importKey('raw', new TextEncoder().encode(String(password)), 'PBKDF2', false, ['deriveBits']).then(function (key) {
+        return crypto.subtle.deriveBits({
+          name: 'PBKDF2',
+          salt: salt,
+          iterations: iterations,
+          hash: 'SHA-256'
+        }, key, 256);
+      }).then(function (bits) {
+        var hashBytes = new Uint8Array(bits);
+        profile.passwordHash = 'pbkdf2_sha256$' + iterations + '$' + _bytesToHex(salt) + '$' + _bytesToHex(hashBytes);
+        if (profile.hasOwnProperty('password')) delete profile.password;
+        if (_memoryCache) _memoryCache.profile = profile;
+        queueUpdate('profile', profile);
+        _removeLegacyProfilePassword(_getUserDocRef());
+      }).catch(function () {
+        console.warn('Failed to derive passwordHash for profile sync.');
+      });
     },
     getAccessState: function () {
       if (!_memoryCache) return null;
-      if (_memoryCache.isTrial === true) {
-        var trialEndMs = _toMillis(_memoryCache.trialEnd);
+      var access = _memoryCache.access && typeof _memoryCache.access === 'object' ? _memoryCache.access : {};
+      if (access.isTrial === true) {
+        var trialEndMs = _toMillis(access.trialEnd);
         if (trialEndMs > 0 && Date.now() > trialEndMs) {
-          _memoryCache.isPremium = false;
-          _memoryCache.isTrial = false;
-          _memoryCache.trialEnd = null;
+          access.isPremium = false;
+          access.isTrial = false;
+          access.trialEnd = null;
+          _memoryCache.access = access;
           _persistTrialExpiry(_getUserDocRef());
         }
       }
       return {
-        isPremium: _memoryCache.isPremium === true,
-        isTrial: _memoryCache.isTrial === true,
-        trialEnd: _memoryCache.trialEnd || null,
-        hasPaid: _memoryCache.hasPaid === true,
-        isEarlyUser: _memoryCache.isEarlyUser === true,
-        createdAt: _memoryCache.createdAt || null
+        isPremium: access.isPremium === true,
+        isTrial: access.isTrial === true,
+        trialEnd: access.trialEnd || null,
+        hasPaid: access.hasPaid === true,
+        isEarlyUser: access.isEarlyUser === true,
+        createdAt: (_memoryCache.profile && _memoryCache.profile.createdAt) ? _memoryCache.profile.createdAt : null
       };
     },
     unlockPremium: function (paymentId, callback) {
@@ -750,17 +950,20 @@ var FirestoreSync = (function () {
         return;
       }
       var payload = {
-        isPremium: true,
-        hasPaid: true,
-        isTrial: false,
-        trialEnd: null
+        access: {
+          isPremium: true,
+          hasPaid: true,
+          isTrial: false,
+          trialEnd: null
+        }
       };
       if (paymentId) payload.lastPaymentId = String(paymentId);
       if (_memoryCache) {
-        _memoryCache.isPremium = true;
-        _memoryCache.hasPaid = true;
-        _memoryCache.isTrial = false;
-        _memoryCache.trialEnd = null;
+        if (!_memoryCache.access || typeof _memoryCache.access !== 'object') _memoryCache.access = {};
+        _memoryCache.access.isPremium = true;
+        _memoryCache.access.hasPaid = true;
+        _memoryCache.access.isTrial = false;
+        _memoryCache.access.trialEnd = null;
         if (paymentId) _memoryCache.lastPaymentId = String(paymentId);
       }
       docRef.set(payload, { merge: true }).then(function () {
