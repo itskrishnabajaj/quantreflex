@@ -35,16 +35,17 @@ var NotificationManager = (function () {
 
   /**
    * Check if notifications are enabled in local storage.
-   * Falls back to checking settings.notifications for Firestore sync compatibility.
+   * Falls back to checking settings.notificationsEnabled for Firestore sync compatibility.
    * @returns {boolean}
    */
   function isEnabled() {
     try {
       var val = localStorage.getItem(NOTIF_KEY);
       if (val !== null) return val === 'true';
-      /* Fallback: check settings object for Firestore-synced state */
+      /* Fallback: check settings object for Firestore-synced state.
+         Field name is notificationsEnabled — matches settings.js default. */
       var s = JSON.parse(localStorage.getItem('quant_reflex_settings') || '{}');
-      return s.notifications === true;
+      return s.notificationsEnabled === true;
     } catch (_) { return false; }
   }
 
@@ -57,9 +58,10 @@ var NotificationManager = (function () {
       localStorage.setItem(NOTIF_KEY, enabled ? 'true' : 'false');
     } catch (_) { /* ignore */ }
 
-    /* Sync to settings in Firestore */
+    /* Sync to settings in Firestore using the canonical field name.
+       Must match the key used in settings.js (notificationsEnabled). */
     var settings = loadSettings();
-    settings.notifications = enabled;
+    settings.notificationsEnabled = enabled;
     saveSettings(settings);
   }
 

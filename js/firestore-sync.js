@@ -662,14 +662,25 @@ var FirestoreSync = (function () {
      */
     updateProfileName: function (name) {
       if (!name) return;
-      var profile;
       if (_memoryCache && _memoryCache.profile) {
+        /* Full profile is cached — update in-place and queue the whole object.
+           set({ profile: fullObj }, { merge:true }) safely replaces only the
+           profile top-level key while keeping all other document fields. */
         _memoryCache.profile.name = name;
-        profile = _memoryCache.profile;
+        queueUpdate('profile', _memoryCache.profile);
       } else {
-        profile = { name: name };
+        /* No full profile in cache — use dot-notation update to avoid
+           overwriting username and createdAt inside the profile sub-document.
+           set({ profile: {name} }, { merge:true }) would replace the ENTIRE
+           profile map; update() with dot notation patches only the one field. */
+        if (_memoryCache) _memoryCache.profile = { name: name };
+        var docRef = _getUserDocRef();
+        if (docRef) {
+          docRef.update({ 'profile.name': name }).catch(function (err) {
+            console.warn('Failed to update profile name (dot-notation fallback):', err);
+          });
+        }
       }
-      queueUpdate('profile', profile);
     },
     /**
      * Deprecated: plaintext passwords must not be stored in Firestore.
