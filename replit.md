@@ -38,3 +38,11 @@ Configured as a **static** deployment with `publicDir: "."` (root directory).
 ## Firebase Setup
 
 Firebase configuration is embedded in the JS files. See `FIREBASE_SETUP.md` for instructions on setting up your own Firebase project if needed.
+
+## Security Fixes Applied (March 2026)
+
+### Critical: Plaintext Password Removed from Firestore
+- **Root cause:** After login/signup, the user's plaintext password was captured in `_pendingPassword` and pushed to Firestore via `FirestoreSync.updateProfilePassword()`. The Profile modal in settings then read it back from cache and pre-filled the password field.
+- **Files changed:** `js/app.js`, `js/settings.js`, `js/firestore-sync.js`
+- **Fix:** Removed the `_pendingPassword` capture-and-sync mechanism entirely. Password changes now go through Firebase Auth only (`Auth.getCurrentUser().updatePassword()`). The `updateProfilePassword` function in `firestore-sync.js` is now a documented no-op. The profile modal password field now starts empty instead of pre-filled from Firestore.
+- **No features broken:** Password changes still work via Firebase Auth. The profile modal still allows changing name and password — it just no longer leaks the password into Firestore.

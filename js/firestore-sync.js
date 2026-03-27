@@ -672,19 +672,11 @@ var FirestoreSync = (function () {
       queueUpdate('profile', profile);
     },
     /**
-     * Update the user's password in Firestore profile.
-     * Stored alongside the profile for retrieval in the profile modal.
-     * @param {string} password
+     * Deprecated: plaintext passwords must not be stored in Firestore.
+     * This function is intentionally a no-op. Password changes go through
+     * Firebase Auth only (Auth.getCurrentUser().updatePassword()).
      */
-    updateProfilePassword: function (password) {
-      if (!password) return;
-      if (_memoryCache && _memoryCache.profile) {
-        _memoryCache.profile.password = password;
-        queueUpdate('profile', _memoryCache.profile);
-      } else {
-        queueUpdate('profile', { password: password });
-      }
-    },
+    updateProfilePassword: function () { /* no-op */ },
     getAccessState: function () {
       if (!_memoryCache) return null;
       if (_memoryCache.isTrial === true) {
