@@ -162,9 +162,11 @@ function _attachTripleTap(card, n) {
  * @param {number} n - Table number
  */
 function _openTableModal(n) {
-  /* Prevent duplicate modals */
   if (document.querySelector('.table-modal-overlay')) return;
-
+  if (typeof canAccessFeature === 'function' && !canAccessFeature('table_modal')) {
+    if (typeof showPaywall === 'function') showPaywall('table_modal');
+    return;
+  }
   SoundEngine.play('tableModal');
 
   var overlay = document.createElement('div');

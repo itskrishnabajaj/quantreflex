@@ -414,15 +414,20 @@ var Onboarding = (function () {
     if (skipBtn) {
       skipBtn.addEventListener('click', function () {
         if (typeof triggerHaptic === 'function') triggerHaptic(10);
-        /* Capture name from Screen 1 before skipping */
         if (index === 0) {
           var nameInput = document.getElementById('obNameInput');
           if (nameInput && nameInput.value.trim()) {
             _userName = nameInput.value.trim();
+          } else {
+            if (nameInput) {
+              nameInput.style.borderColor = '#dc2626';
+              nameInput.setAttribute('placeholder', 'Please enter your name');
+              nameInput.focus();
+            }
+            return;
           }
         }
         _skipped = true;
-        /* Jump to screen 4 (Daily Goal Selection) */
         _goToScreen(3);
       });
     }

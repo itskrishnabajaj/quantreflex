@@ -1294,7 +1294,7 @@ document.addEventListener('DOMContentLoaded', function () {
           _customPracticeActive = true;
           _focusModeActive = false;
           modeSelect.style.display = 'none';
-          categorySelect.style.display = 'block';
+          categorySelect.style.display = 'flex';
           if (customPracticeConfig) customPracticeConfig.style.display = 'block';
           var focusStartSec2 = document.getElementById('focusStartSection');
           if (focusStartSec2) focusStartSec2.style.display = 'none';
@@ -1311,7 +1311,7 @@ document.addEventListener('DOMContentLoaded', function () {
           _focusSelectedCategory = null;
           _focusSelectedCategoryLabel = null;
           modeSelect.style.display = 'none';
-          categorySelect.style.display = 'block';
+          categorySelect.style.display = 'flex';
           var focusStartSec = document.getElementById('focusStartSection');
           if (focusStartSec) focusStartSec.style.display = 'none';
           var catTitle = document.getElementById('categorySelectTitle');
@@ -1372,8 +1372,8 @@ document.addEventListener('DOMContentLoaded', function () {
       });
     }
 
-    /* Initialize timer option grid */
-    _initTimerOptionGrid();
+    /* Initialize timer controls */
+    _initTimerControls();
 
     if (customSlider) {
       customSlider.addEventListener('input', function () {
@@ -1548,26 +1548,75 @@ function _getTimerConfig() {
   return { timeLimitSec: null, perQuestionSec: null };
 }
 
+var _timerPillMode = 'per';
+
 function _resetTimerSelection() {
   _selectedTimerOption = 'none';
-  var btns = document.querySelectorAll('#timerOptionGrid .timer-option-btn');
-  for (var i = 0; i < btns.length; i++) {
-    btns[i].classList.toggle('selected', btns[i].getAttribute('data-timer') === 'none');
+  _timerPillMode = 'per';
+  var toggle = document.getElementById('timerToggle');
+  if (toggle) toggle.checked = false;
+  var configArea = document.getElementById('timerConfigArea');
+  if (configArea) configArea.style.display = 'none';
+  var secondsInput = document.getElementById('timerSecondsInput');
+  if (secondsInput) secondsInput.value = '15';
+  var pills = document.querySelectorAll('.timer-pill');
+  for (var i = 0; i < pills.length; i++) {
+    pills[i].classList.toggle('active', pills[i].getAttribute('data-pill') === 'per');
   }
 }
 
-function _initTimerOptionGrid() {
-  var grid = document.getElementById('timerOptionGrid');
-  if (!grid) return;
-  grid.addEventListener('click', function (e) {
-    var btn = e.target.closest('.timer-option-btn');
-    if (!btn) return;
-    var btns = grid.querySelectorAll('.timer-option-btn');
-    for (var i = 0; i < btns.length; i++) btns[i].classList.remove('selected');
-    btn.classList.add('selected');
-    _selectedTimerOption = btn.getAttribute('data-timer');
+function _updateTimerOptionFromUI() {
+  var toggle = document.getElementById('timerToggle');
+  if (!toggle || !toggle.checked) {
+    _selectedTimerOption = 'none';
+    return;
+  }
+  var secondsInput = document.getElementById('timerSecondsInput');
+  var val = parseInt(secondsInput ? secondsInput.value : '15', 10);
+  if (isNaN(val) || val < 5) val = 5;
+  if (val > 600) val = 600;
+  _selectedTimerOption = _timerPillMode + ':' + val;
+}
+
+function _initTimerControls() {
+  var toggle = document.getElementById('timerToggle');
+  var configArea = document.getElementById('timerConfigArea');
+  var pillContainer = document.querySelector('.timer-pill-selector');
+  var secondsInput = document.getElementById('timerSecondsInput');
+  if (!toggle) return;
+
+  toggle.addEventListener('change', function () {
+    if (this.checked && _focusModeActive && typeof canAccessFeature === 'function' && !canAccessFeature('focus_timer')) {
+      this.checked = false;
+      if (typeof showPaywall === 'function') showPaywall('focus_timer');
+      return;
+    }
+    if (configArea) configArea.style.display = this.checked ? 'block' : 'none';
+    _updateTimerOptionFromUI();
     if (typeof SoundEngine !== 'undefined') SoundEngine.play('settingsToggle');
   });
+
+  if (pillContainer) {
+    pillContainer.addEventListener('click', function (e) {
+      var pill = e.target.closest('.timer-pill');
+      if (!pill) return;
+      var pills = pillContainer.querySelectorAll('.timer-pill');
+      for (var i = 0; i < pills.length; i++) pills[i].classList.remove('active');
+      pill.classList.add('active');
+      _timerPillMode = pill.getAttribute('data-pill');
+      _updateTimerOptionFromUI();
+      if (typeof SoundEngine !== 'undefined') SoundEngine.play('settingsToggle');
+    });
+  }
+
+  if (secondsInput) {
+    secondsInput.addEventListener('change', function () {
+      _updateTimerOptionFromUI();
+    });
+    secondsInput.addEventListener('input', function () {
+      _updateTimerOptionFromUI();
+    });
+  }
 }
 
 function _toggleCustomPracticeTopic(topicKey) {

@@ -14,7 +14,9 @@ var _LOCKED_FEATURES = {
   hard_mode: true,
   skip_question: true,
   advanced_theme: true,
-  daily_goal_limit: true
+  daily_goal_limit: true,
+  focus_timer: true,
+  table_modal: true
 };
 var PAYWALL_DEBOUNCE_MS = 280;
 var PAYMENT_TIMEOUT_MS = 120000;
@@ -114,6 +116,16 @@ function _getPaywallCopy(featureType) {
       title: 'Power Settings Pro',
       subtitle: 'Unlock advanced training controls for faster, tougher prep.',
       bullets: ['Hard mode challenge', 'Skip controls', 'Premium themes and goals']
+    },
+    focus_timer: {
+      title: 'Focus Timer Pro',
+      subtitle: 'Add timed pressure to your Focus Training sessions.',
+      bullets: ['Per-question or total session timer', 'Custom seconds control', 'Build exam-speed reflexes']
+    },
+    table_modal: {
+      title: 'Full-Screen Tables Pro',
+      subtitle: 'Open any multiplication table in a full-screen modal for easy reading.',
+      bullets: ['Distraction-free view', 'Larger text for studying', 'Quick triple-tap access']
     }
   };
   return map[featureType] || {

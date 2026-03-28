@@ -206,50 +206,62 @@
 
       <!-- Category selection (shown when Focus Training is picked) -->
       <div id="categorySelect" style="display:none;">
-        <button class="session-exit drill-exit-btn" id="backToModes" type="button" aria-label="Close and return to practice modes">✕</button>
-        <h3 class="category-select-title" id="categorySelectTitle">Choose Category</h3>
-        <div class="category-grid">
-          <button class="category-btn category-card" type="button" data-cat="squares">Squares</button>
-          <button class="category-btn category-card" type="button" data-cat="cubes">Cubes</button>
-          <button class="category-btn category-card" type="button" data-cat="area">Area</button>
-          <button class="category-btn category-card" type="button" data-cat="volume">Volume</button>
-          <button class="category-btn category-card" type="button" data-cat="percentages">Percentages</button>
-          <button class="category-btn category-card" type="button" data-cat="multiplication">Multiplication</button>
-          <button class="category-btn category-card" type="button" data-cat="fractions">Fractions</button>
-          <button class="category-btn category-card" type="button" data-cat="averages">Averages</button>
-          <button class="category-btn category-card" type="button" data-cat="ratios">Ratios</button>
-          <button class="category-btn category-card" type="button" data-cat="profit-loss">Profit &amp; Loss</button>
-          <button class="category-btn category-card" type="button" data-cat="time-speed-distance">Time Speed Dist</button>
-          <button class="category-btn category-card" type="button" data-cat="time-and-work">Time &amp; Work</button>
-        </div>
+        <div class="training-card">
+          <h3 class="category-select-title" id="categorySelectTitle">Choose Category</h3>
+          <div class="training-card-body">
+            <div class="category-grid">
+              <button class="category-btn category-card" type="button" data-cat="squares">Squares</button>
+              <button class="category-btn category-card" type="button" data-cat="cubes">Cubes</button>
+              <button class="category-btn category-card" type="button" data-cat="area">Area</button>
+              <button class="category-btn category-card" type="button" data-cat="volume">Volume</button>
+              <button class="category-btn category-card" type="button" data-cat="percentages">Percentages</button>
+              <button class="category-btn category-card" type="button" data-cat="multiplication">Multiplication</button>
+              <button class="category-btn category-card" type="button" data-cat="fractions">Fractions</button>
+              <button class="category-btn category-card" type="button" data-cat="averages">Averages</button>
+              <button class="category-btn category-card" type="button" data-cat="ratios">Ratios</button>
+              <button class="category-btn category-card" type="button" data-cat="profit-loss">Profit &amp; Loss</button>
+              <button class="category-btn category-card" type="button" data-cat="time-speed-distance">Time Speed Dist</button>
+              <button class="category-btn category-card" type="button" data-cat="time-and-work">Time &amp; Work</button>
+            </div>
 
-        <!-- Timer Selection (shared by Focus & Custom modes) -->
-        <div class="timer-select-section" id="timerSelectSection">
-          <p class="timer-select-label">Timer (optional)</p>
-          <div class="timer-option-grid" id="timerOptionGrid">
-            <button class="timer-option-btn selected" type="button" data-timer="none">No Timer</button>
-            <button class="timer-option-btn" type="button" data-timer="per:15">15s/Q</button>
-            <button class="timer-option-btn" type="button" data-timer="per:30">30s/Q</button>
-            <button class="timer-option-btn" type="button" data-timer="total:60">1 min</button>
-            <button class="timer-option-btn" type="button" data-timer="total:180">3 min</button>
-            <button class="timer-option-btn" type="button" data-timer="total:300">5 min</button>
+            <!-- Timer Selection (shared by Focus & Custom modes) -->
+            <div class="timer-select-section" id="timerSelectSection">
+              <div class="timer-toggle-row">
+                <span class="timer-toggle-label">Timer</span>
+                <label class="toggle">
+                  <input type="checkbox" id="timerToggle" />
+                  <span class="toggle-slider"></span>
+                </label>
+              </div>
+              <div class="timer-config-area" id="timerConfigArea" style="display:none;">
+                <div class="timer-pill-selector">
+                  <button class="timer-pill active" data-pill="per" type="button">Per Ques.</button>
+                  <button class="timer-pill" data-pill="total" type="button">Total</button>
+                </div>
+                <div class="timer-input-row">
+                  <input type="number" id="timerSecondsInput" class="timer-seconds-input" min="5" max="600" value="15" />
+                  <span class="timer-unit-label">seconds</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- Focus mode start button -->
+            <div id="focusStartSection" style="display:none;">
+              <button class="btn accent custom-practice-start-btn" id="startFocusSessionBtn">Start Focus Session</button>
+            </div>
+
+            <div id="customPracticeConfig" class="custom-practice-config">
+              <label class="secondary-text" for="customQuestionCount">Number of Questions</label>
+              <input id="customQuestionCount" class="custom-question-range" type="range" min="1" max="100" value="20" />
+              <div class="custom-practice-meta-row">
+                <strong id="customQuestionCountValue">20</strong>
+                <span class="secondary-text" id="customQuestionCountText">You will solve 20 questions</span>
+              </div>
+              <p id="customModeError" class="custom-mode-error secondary-text"></p>
+              <button class="btn accent custom-practice-start-btn" id="startCustomSessionBtn">Start Custom Session</button>
+            </div>
           </div>
-        </div>
-
-        <!-- Focus mode start button -->
-        <div id="focusStartSection" style="display:none;padding:0 12px;">
-          <button class="btn accent custom-practice-start-btn" id="startFocusSessionBtn">Start Focus Session</button>
-        </div>
-
-        <div id="customPracticeConfig" class="custom-practice-config">
-          <label class="secondary-text" for="customQuestionCount">Number of Questions</label>
-          <input id="customQuestionCount" class="custom-question-range" type="range" min="1" max="100" value="20" />
-          <div class="custom-practice-meta-row">
-            <strong id="customQuestionCountValue">20</strong>
-            <span class="secondary-text" id="customQuestionCountText">You will solve 20 questions</span>
-          </div>
-          <p id="customModeError" class="custom-mode-error secondary-text"></p>
-          <button class="btn accent custom-practice-start-btn" id="startCustomSessionBtn">Start Custom Session</button>
+          <button class="training-card-back" id="backToModes" type="button" aria-label="Back to practice modes">← Back</button>
         </div>
       </div>
 
@@ -698,6 +710,11 @@
           <p>10 questions from a single category you choose. Perfect for drilling a weak topic like Percentages, Time-Speed-Distance, or Profit &amp; Loss until it clicks. Use this when analytics show a dip in a specific area.</p>
         </div>
         <div class="info-block">
+          <h4>📑 Custom Training (Premium)</h4>
+          <p>Select one or more categories, set the number of questions (1–100), and optionally add a timer. Use this to create targeted practice sessions that match your exact syllabus or weak areas.</p>
+          <p class="info-tip">💡 Combine 2–3 weak categories in a single Custom session for efficient revision.</p>
+        </div>
+        <div class="info-block">
           <h4>🔄 Review Mistakes</h4>
           <p>Retry questions you've previously answered incorrectly. Questions stay in the review pool until you get them right. Use this regularly: correcting mistakes is the fastest path to improvement.</p>
           <p class="info-tip">💡 Make it a habit: finish every session with a short Review Mistakes round.</p>
@@ -741,15 +758,6 @@
             <li><strong>Daily Goal Progress</strong>: Shows how close you are to hitting your practice target for today.</li>
           </ul>
           <p class="info-tip">💡 Check your weakest category weekly and run at least one Focus Training session on it.</p>
-        </div>
-      </div>
-
-      <div class="info-section guide-animate-section">
-        <h3 class="info-section-title">📑 Custom Training (Premium)</h3>
-        <div class="info-block">
-          <h4>Build Your Own Session</h4>
-          <p>Select one or more categories, set the number of questions (1–100), and optionally add a timer. Use this to create targeted practice sessions that match your exact syllabus or weak areas.</p>
-          <p class="info-tip">💡 Combine 2–3 weak categories in a single Custom session for efficient revision.</p>
         </div>
       </div>
 

@@ -45,7 +45,9 @@ Firebase configuration is embedded in the JS files. See `FIREBASE_SETUP.md` for 
 ### Practice Tab
 - **Scroll fix**: Drill container scrolls properly when custom numpad overlaps content
 - **Focus Training flow**: Category selection → timer selection → Start button (no longer auto-starts on category click)
-- **Timer selection**: 6 options (No Timer, 15s/Q, 30s/Q, 1 min, 3 min, 5 min) shared by Focus & Custom modes; parsed as `perQuestionSec` or `timeLimitSec` in `startDrillFromPractice()`
+- **Glassmorphic training card**: Focus & Custom modes open in a fixed centered card overlay with scrollable body and Back button at bottom
+- **Timer redesign**: Toggle switch (on/off) + pill selector (Per Ques. / Total) + numeric seconds input — replaces old 6-button grid
+- **Timer premium lock**: Timer toggle in Focus Mode is premium-only; free users see paywall popup
 - **Swipe disabled** during Focus/Custom category selection screens
 
 ### Paywall & Limits
@@ -54,15 +56,19 @@ Firebase configuration is embedded in the JS files. See `FIREBASE_SETUP.md` for 
 - **First-login paywall**: `showFirstLoginPaywall()` called once from `_revealMainApp()` for new users
 - **Paywall badge**: Gradient pill style (blue→purple) instead of plain text
 - **Paywall headline**: "Train your brain like a top performer"
+- **Daily goal cap**: Free users capped at <30 (max 20 with step 10); >= 30 triggers paywall
+- **Table modal lock**: Triple-tap full-screen table modal is premium-only
+- **Locked features**: `focus_timer`, `table_modal` added to `_LOCKED_FEATURES`
 
 ### Onboarding
-- Name field is REQUIRED (validation shown if empty)
+- Name field is REQUIRED on both Next AND Skip (validation shown if empty)
 - Daily goal options changed to 10/20/25 (default 20)
 - Wrong answer on screen 6 redirects to Learn tab (not Practice)
 
 ### Settings & Profile
 - App Guide rewritten for broader audience (school/NTSE/Olympiad/CAT/GMAT)
-- Custom Training section added to App Guide
+- App Guide Practice Modes order: Focus Training → Custom Training → Review Mistakes
+- Custom Training section merged into Practice Modes (removed standalone section)
 - Profile password stored in Firestore with intentional UX comment
 
 ### Question Quality
@@ -75,6 +81,7 @@ Firebase configuration is embedded in the JS files. See `FIREBASE_SETUP.md` for 
 - `_focusModeActive`: true when Focus Training category selection is open
 - `_focusSelectedCategory` / `_focusSelectedCategoryLabel`: currently selected category in Focus mode
 - `_selectedTimerOption`: current timer selection (e.g., 'none', 'per:15', 'total:180')
+- `_timerPillMode`: 'per' or 'total' — tracks active timer pill
 
 ## Replit Migration Notes (March 2026)
 

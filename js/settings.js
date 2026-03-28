@@ -216,8 +216,8 @@ function initSettingsView() {
     dailyGoalInput = rebind(dailyGoalInput, 'change', function () {
       var val = parseInt(this.value);
       if (val >= 10 && val <= 500) {
-        if (val > 50 && !canAccessFeature('daily_goal_limit')) {
-          this.value = String(settings.dailyGoal || 50);
+        if (val >= 30 && !canAccessFeature('daily_goal_limit')) {
+          this.value = String(settings.dailyGoal || 20);
           showPaywall('settings');
           return;
         }
@@ -225,11 +225,11 @@ function initSettingsView() {
         saveSettings(settings);
       }
     });
-    if ((settings.dailyGoal || 50) > 50 && !canAccessFeature('daily_goal_limit')) {
-      settings.dailyGoal = 50;
+    if ((settings.dailyGoal || 20) >= 30 && !canAccessFeature('daily_goal_limit')) {
+      settings.dailyGoal = 20;
       saveSettings(settings);
     }
-    dailyGoalInput.value = settings.dailyGoal || 50;
+    dailyGoalInput.value = settings.dailyGoal || 20;
   }
 
   /* Notifications toggle */
