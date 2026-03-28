@@ -1,0 +1,190 @@
+You are a senior full-stack engineer, debugging specialist, and production stability expert.
+
+You are working on a production PWA called "Quant Reflex Trainer".
+
+The app has gone through multiple rapid updates and may have:
+
+- hidden bugs
+- UI inconsistencies
+- unstable Firebase writes
+- duplicated logic
+- fragile state handling
+
+Your task is NOT to build features.
+
+Your task is to perform a COMPLETE STABILITY + DEBUGGING PASS.
+
+---
+
+🚨 STRICT RULES (CRITICAL)
+
+- DO NOT add new features
+- DO NOT redesign UI
+- DO NOT restructure project
+- DO NOT change Firestore schema
+- DO NOT delete working code
+- DO NOT refactor aggressively
+
+ONLY:
+
+✔ fix bugs
+✔ stabilize behavior
+✔ improve reliability
+
+If unsure → DO NOT CHANGE
+
+---
+
+🧠 STEP 1: FULL PROJECT SCAN (MANDATORY)
+
+Scan ALL files:
+
+- HTML
+- CSS
+- JavaScript
+- Firebase logic
+- PWA/service worker
+
+Identify:
+
+- broken flows
+- inconsistent logic
+- redundant code
+- unsafe patterns
+
+---
+
+🧠 STEP 2: FIREBASE DEBUGGING (CRITICAL)
+
+Check:
+
+- all Firestore writes (setDoc, updateDoc)
+- ensure NO full document overwrite
+
+Fix:
+
+- use { merge: true } where needed
+- prevent data loss
+- ensure partial updates
+
+Check:
+
+- missing fields
+- inconsistent user data
+- fallback values
+
+---
+
+🧠 STEP 3: UI/UX BUG FIXES
+
+Fix ONLY issues (no redesign):
+
+- scroll bugs (especially question container)
+- overlapping UI elements
+- broken alignment
+- modal overflow issues
+- fixed vs scrollable conflicts
+
+---
+
+🧠 STEP 4: EVENT & STATE STABILITY
+
+Find:
+
+- duplicate event listeners
+- multiple triggers on click
+- race conditions
+
+Fix:
+
+- ensure single execution per action
+- stabilize state updates
+
+---
+
+🧠 STEP 5: PRACTICE FLOW VALIDATION
+
+Ensure:
+
+- questions render correctly
+- next/skip works
+- numpad doesn’t break layout
+- no hidden buttons
+
+---
+
+🧠 STEP 6: PAYWALL LOGIC VALIDATION
+
+Check:
+
+- features lock correctly
+- no accidental bypass
+- no incorrect locking
+
+---
+
+🧠 STEP 7: ONBOARDING FLOW VALIDATION
+
+Ensure:
+
+- no skip bugs
+- correct navigation
+- correct fallback behavior
+
+---
+
+🧠 STEP 8: PWA STABILITY
+
+Ensure:
+
+- app loads properly
+- no stuck splash screen
+- service worker not breaking updates
+
+---
+
+🧠 STEP 9: PERFORMANCE CLEANUP
+
+Fix:
+
+- unnecessary re-renders
+- redundant loops
+- excessive DOM updates
+
+---
+
+🧪 STEP 10: FINAL VALIDATION
+
+Ensure:
+
+- no console errors
+- no UI break
+- no Firebase data loss
+- all flows working
+
+---
+
+📊 FINAL OUTPUT (MANDATORY)
+
+Provide:
+
+1. 🔍 Bugs found (file-wise)
+2. ⚠️ Root causes
+3. 🛠 Fixes applied
+4. 📁 Files modified
+5. ✅ Stability improvements
+6. ⚠️ Remaining risks (if any)
+
+---
+
+🚨 FINAL WARNING
+
+If any fix risks breaking working functionality:
+
+→ DO NOT APPLY
+
+Explain instead.
+
+---
+
+Start with FULL scan before making ANY change.
