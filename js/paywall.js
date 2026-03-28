@@ -271,6 +271,12 @@ function openPayment(userId) {
 }
 
 function showPaywall(featureType) {
+  var user = _getAccessUserState();
+  if (user && (user.hasPaid === true || user.isEarlyUser === true || (user.isPremium === true && user.isTrial !== true))) return;
+  if (user && user.isTrial === true) {
+    var te = _toMillis(user.trialEnd);
+    if (te > 0 && Date.now() <= te) return;
+  }
   var now = Date.now();
   if (now - _paywallLastOpenAt < PAYWALL_DEBOUNCE_MS) return;
   if (_paywallModalOpen || _paywallClosing) return;
@@ -344,6 +350,8 @@ function showFirstLoginPaywall() {
   try {
     var shown = localStorage.getItem('quant_first_login_paywall_shown');
     if (shown) return;
+    var user = _getAccessUserState();
+    if (user && (user.hasPaid === true || user.isEarlyUser === true || (user.isPremium === true && user.isTrial !== true))) return;
     localStorage.setItem('quant_first_login_paywall_shown', '1');
     setTimeout(function () {
       showPaywall('settings');
