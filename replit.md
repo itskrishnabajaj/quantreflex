@@ -39,6 +39,10 @@ Configured as a **static** deployment with `publicDir: "."` (root directory).
 
 Firebase configuration is embedded in the JS files. See `FIREBASE_SETUP.md` for instructions on setting up your own Firebase project if needed.
 
+## Replit Migration Notes (March 2026)
+
+- Added a 5-second timeout fallback in `js/app.js` for Firebase Auth initialization. If `onAuthStateChanged` doesn't fire within 5 seconds (e.g., in sandboxed preview environments), the app falls back to showing the login screen rather than hanging indefinitely on the splash screen.
+
 ## Security Fixes Applied (March 2026)
 
 ### Critical: Plaintext Password Removed from Firestore

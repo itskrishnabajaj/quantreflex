@@ -953,7 +953,20 @@ document.addEventListener('DOMContentLoaded', function () {
     if (container) container.style.display = 'none';
     if (bottomNav) bottomNav.style.display = 'none';
 
+    var _authResolved = false;
+    /* Fallback: if Firebase auth doesn't respond within 5 seconds, show login */
+    var _authTimeoutId = setTimeout(function () {
+      if (!_authResolved) {
+        _authResolved = true;
+        console.warn('Firebase auth timeout — falling back to login screen.');
+        showLogin();
+      }
+    }, 5000);
+
     Auth.onAuthReady(function (user) {
+      if (_authResolved) return;
+      _authResolved = true;
+      clearTimeout(_authTimeoutId);
       if (user) {
         showApp();
       } else {
