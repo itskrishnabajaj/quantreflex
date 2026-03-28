@@ -385,18 +385,29 @@ function _tryPracticeAction() {
 
 function _resetPracticeUiToModes() {
   _customPracticeActive = false;
+  _focusModeActive = false;
+  _focusSelectedCategory = null;
+  _focusSelectedCategoryLabel = null;
   var modeSelect = document.getElementById('modeSelect');
   var categorySelect = document.getElementById('categorySelect');
   var customPracticeConfig = document.getElementById('customPracticeConfig');
   var drillContainer = document.getElementById('drillContainer');
+  var focusStartSec = document.getElementById('focusStartSection');
+  var catTitle = document.getElementById('categorySelectTitle');
   if (modeSelect) modeSelect.style.display = 'block';
   if (categorySelect) categorySelect.style.display = 'none';
   if (customPracticeConfig) customPracticeConfig.style.display = 'none';
+  if (focusStartSec) focusStartSec.style.display = 'none';
+  if (catTitle) catTitle.textContent = 'Choose Category';
   if (drillContainer) {
     drillContainer.style.display = 'none';
     drillContainer.innerHTML = '';
   }
+  _resetTimerSelection();
   _resetCustomPracticeState();
+  /* Remove daily limit banner if present */
+  var limitBanner = document.querySelector('.daily-limit-banner');
+  if (limitBanner && limitBanner.parentNode) limitBanner.parentNode.removeChild(limitBanner);
 }
 
 /**
@@ -772,8 +783,10 @@ function initSwipeNavigation() {
     var currentIndex = viewOrder.indexOf(currentView);
     if (currentIndex === -1) return;
 
-    /* Block swipe during active drill/test session or on drill start screen */
+    /* Block swipe during active drill/test session, drill start screen,
+       or when focus/custom category selection is open */
     if (_drillSessionActive || _activeDrillEngine) return;
+    if (_focusModeActive || _customPracticeActive) return;
 
     var nextIndex;
     if (deltaX > 0) {
@@ -931,6 +944,10 @@ document.addEventListener('DOMContentLoaded', function () {
        Router.showView safely handles unknown views by defaulting to home. */
     var currentView = Router.getCurrentView() || 'home';
     Router.showView(currentView);
+    /* Show first-login paywall for new users (runs once) */
+    if (typeof showFirstLoginPaywall === 'function') {
+      showFirstLoginPaywall();
+    }
   }
 
   /**
@@ -1275,17 +1292,31 @@ document.addEventListener('DOMContentLoaded', function () {
             return;
           }
           _customPracticeActive = true;
+          _focusModeActive = false;
           modeSelect.style.display = 'none';
           categorySelect.style.display = 'block';
           if (customPracticeConfig) customPracticeConfig.style.display = 'block';
+          var focusStartSec2 = document.getElementById('focusStartSection');
+          if (focusStartSec2) focusStartSec2.style.display = 'none';
+          var catTitle2 = document.getElementById('categorySelectTitle');
+          if (catTitle2) catTitle2.textContent = 'Custom Training';
+          _resetTimerSelection();
           _resetCustomPracticeState();
           _syncCustomPracticeSelectionUi();
           return;
         }
         _customPracticeActive = false;
         if (modeKey === 'focus') {
+          _focusModeActive = true;
+          _focusSelectedCategory = null;
+          _focusSelectedCategoryLabel = null;
           modeSelect.style.display = 'none';
           categorySelect.style.display = 'block';
+          var focusStartSec = document.getElementById('focusStartSection');
+          if (focusStartSec) focusStartSec.style.display = 'none';
+          var catTitle = document.getElementById('categorySelectTitle');
+          if (catTitle) catTitle.textContent = 'Focus Training';
+          _resetTimerSelection();
           _syncCustomPracticeSelectionUi();
         } else if (modeKey === 'review') {
           if (!canAccessFeature('review_mistakes')) {
@@ -1315,8 +1346,34 @@ document.addEventListener('DOMContentLoaded', function () {
         if (_customPracticeDom.error) _customPracticeDom.error.textContent = '';
         return;
       }
+      if (_focusModeActive) {
+        var allCatBtns = categorySelect.querySelectorAll('.category-btn');
+        for (var cb = 0; cb < allCatBtns.length; cb++) allCatBtns[cb].classList.remove('selected');
+        target.classList.add('selected');
+        _focusSelectedCategory = cat;
+        _focusSelectedCategoryLabel = target.textContent;
+        var focusStartSec = document.getElementById('focusStartSection');
+        if (focusStartSec) focusStartSec.style.display = 'block';
+        return;
+      }
       startDrillFromPractice('focus', cat, target.textContent);
     });
+
+    /* Focus session start button */
+    var focusStartBtn = document.getElementById('startFocusSessionBtn');
+    if (focusStartBtn) {
+      focusStartBtn.addEventListener('click', function () {
+        if (!_tryPracticeAction()) return;
+        if (!_focusSelectedCategory) {
+          showToast('Please select a category first.');
+          return;
+        }
+        startDrillFromPractice('focus', _focusSelectedCategory, _focusSelectedCategoryLabel);
+      });
+    }
+
+    /* Initialize timer option grid */
+    _initTimerOptionGrid();
 
     if (customSlider) {
       customSlider.addEventListener('input', function () {
@@ -1386,18 +1443,36 @@ function startDrillFromPractice(modeKey, category, categoryLabel) {
     showPaywall('review_mistakes');
     return;
   }
+  /* Enforce free user daily question limit (25/day) */
+  if (typeof hasReachedDailyLimit === 'function' && hasReachedDailyLimit()) {
+    var modeSelectEl = document.getElementById('modeSelect');
+    if (modeSelectEl) {
+      var existingBanner = document.querySelector('.daily-limit-banner');
+      if (!existingBanner) {
+        var banner = document.createElement('div');
+        banner.className = 'daily-limit-banner';
+        banner.innerHTML = '🔒 You\'ve reached your daily limit of 25 free questions.<br>Upgrade to Premium for unlimited practice.' +
+          '<br><button class="btn accent" onclick="showPaywall(\'settings\')">Upgrade Now</button>';
+        modeSelectEl.parentNode.insertBefore(banner, modeSelectEl);
+      }
+    }
+    showPaywall('settings');
+    return;
+  }
   var modeSelect = document.getElementById('modeSelect');
   var categorySelect = document.getElementById('categorySelect');
   var customPracticeConfig = document.getElementById('customPracticeConfig');
   var drillContainer = document.getElementById('drillContainer');
   if (!modeSelect || !categorySelect || !drillContainer) return;
 
+  var timerCfg = _getTimerConfig();
+
   var modes = {
     quick:  { count: 5,  timeLimitSec: null, perQuestionSec: null, category: null, mode: '⚡ Quick Drill' },
     reflex: { count: 10, timeLimitSec: null, perQuestionSec: 15,   category: null, mode: '🧠 Reflex Drill' },
     timed:  { count: 10, timeLimitSec: 180,  perQuestionSec: null, category: null, mode: '⏱ Timed Test' },
-    focus:  { count: 10, timeLimitSec: null, perQuestionSec: null, category: null, mode: '🎯 Focus Training' },
-    custom: { count: _customPracticeState.totalQuestions, timeLimitSec: null, perQuestionSec: null, category: null, topics: selectedTopics.slice(), mode: '📑 Custom Training' },
+    focus:  { count: 10, timeLimitSec: timerCfg.timeLimitSec, perQuestionSec: timerCfg.perQuestionSec, category: null, mode: '🎯 Focus Training' },
+    custom: { count: _customPracticeState.totalQuestions, timeLimitSec: timerCfg.timeLimitSec, perQuestionSec: timerCfg.perQuestionSec, category: null, topics: selectedTopics.slice(), mode: '📑 Custom Training' },
     review: { count: 10, timeLimitSec: null, perQuestionSec: null, category: null, mode: '🔄 Review Mistakes', reviewMode: true }
   };
 
@@ -1451,9 +1526,49 @@ var _customPracticeDom = {
   catBtns: null
 };
 var _customPracticeActive = false;
+var _focusModeActive = false;
+var _focusSelectedCategory = null;
+var _focusSelectedCategoryLabel = null;
+var _selectedTimerOption = 'none';
 var _CUSTOM_DEFAULT_QUESTIONS = 20;
 var _CUSTOM_MIN_QUESTIONS = 1;
 var _CUSTOM_MAX_QUESTIONS = 100;
+
+function _getTimerConfig() {
+  if (!_selectedTimerOption || _selectedTimerOption === 'none') {
+    return { timeLimitSec: null, perQuestionSec: null };
+  }
+  var parts = _selectedTimerOption.split(':');
+  if (parts[0] === 'per') {
+    return { timeLimitSec: null, perQuestionSec: parseInt(parts[1], 10) };
+  }
+  if (parts[0] === 'total') {
+    return { timeLimitSec: parseInt(parts[1], 10), perQuestionSec: null };
+  }
+  return { timeLimitSec: null, perQuestionSec: null };
+}
+
+function _resetTimerSelection() {
+  _selectedTimerOption = 'none';
+  var btns = document.querySelectorAll('#timerOptionGrid .timer-option-btn');
+  for (var i = 0; i < btns.length; i++) {
+    btns[i].classList.toggle('selected', btns[i].getAttribute('data-timer') === 'none');
+  }
+}
+
+function _initTimerOptionGrid() {
+  var grid = document.getElementById('timerOptionGrid');
+  if (!grid) return;
+  grid.addEventListener('click', function (e) {
+    var btn = e.target.closest('.timer-option-btn');
+    if (!btn) return;
+    var btns = grid.querySelectorAll('.timer-option-btn');
+    for (var i = 0; i < btns.length; i++) btns[i].classList.remove('selected');
+    btn.classList.add('selected');
+    _selectedTimerOption = btn.getAttribute('data-timer');
+    if (typeof SoundEngine !== 'undefined') SoundEngine.play('settingsToggle');
+  });
+}
 
 function _toggleCustomPracticeTopic(topicKey) {
   if (!topicKey) return;

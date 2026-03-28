@@ -287,16 +287,18 @@ function showPaywall(featureType) {
   overlay.innerHTML =
     '<div class="paywall-card">' +
       '<button class="paywall-close" type="button" aria-label="Close">×</button>' +
+      '<div class="paywall-hero-icon">🧠</div>' +
       '<p class="paywall-badge">Premium</p>' +
-      '<h2>' + copy.title + '</h2>' +
+      '<h2>Train your brain like a top performer</h2>' +
       '<p class="paywall-subtitle">' + copy.subtitle + '</p>' +
       '<ul class="paywall-benefits">' +
         '<li>' + copy.bullets[0] + '</li>' +
         '<li>' + copy.bullets[1] + '</li>' +
         '<li>' + copy.bullets[2] + '</li>' +
+        '<li>All future premium features included</li>' +
       '</ul>' +
       '<button class="btn accent paywall-upgrade" type="button">Unlock Lifetime Premium · ₹69</button>' +
-      '<p class="paywall-footnote">One-time payment. Future premium features included.</p>' +
+      '<p class="paywall-footnote">One-time payment · No subscription · Instant access</p>' +
     '</div>';
   overlay.addEventListener('click', function (e) {
     if (e.target === overlay) _closePaywallModal();
@@ -326,6 +328,30 @@ function showPaywall(featureType) {
   }
 }
 
+function showFirstLoginPaywall() {
+  try {
+    var shown = localStorage.getItem('quant_first_login_paywall_shown');
+    if (shown) return;
+    localStorage.setItem('quant_first_login_paywall_shown', '1');
+    setTimeout(function () {
+      showPaywall('settings');
+    }, 2000);
+  } catch (_) {}
+}
+
+function getDailyQuestionLimit() {
+  var user = _getAccessUserState();
+  if (user && (user.hasPaid || user.isEarlyUser || user.isPremium)) return Infinity;
+  return 25;
+}
+
+function hasReachedDailyLimit() {
+  var limit = getDailyQuestionLimit();
+  if (limit === Infinity) return false;
+  var p = (typeof loadProgress === 'function') ? loadProgress() : {};
+  return (p.todayAttempted || 0) >= limit;
+}
+
 global.canAccess = canAccess;
 global.canAccessFeature = canAccessFeature;
 global.canAccessCustomMode = canAccessCustomMode;
@@ -333,9 +359,15 @@ global.showPaywall = showPaywall;
 global.openPayment = openPayment;
 global.verifyPaymentResponse = verifyPaymentResponse;
 global.unlockPremium = unlockPremium;
+global.showFirstLoginPaywall = showFirstLoginPaywall;
+global.getDailyQuestionLimit = getDailyQuestionLimit;
+global.hasReachedDailyLimit = hasReachedDailyLimit;
 global.Paywall = {
   canAccess: canAccess,
   canAccessFeature: canAccessFeature,
-  showPaywall: showPaywall
+  showPaywall: showPaywall,
+  showFirstLoginPaywall: showFirstLoginPaywall,
+  getDailyQuestionLimit: getDailyQuestionLimit,
+  hasReachedDailyLimit: hasReachedDailyLimit
 };
 })(window);

@@ -134,7 +134,7 @@ var Onboarding = (function () {
     _onComplete = onComplete;
     _currentScreen = 0;
     _skipped = false;
-    _selectedGoal = 50;
+    _selectedGoal = 20;
     _questionAttempt = 0;
     _currentQuestion = null;
 
@@ -327,9 +327,9 @@ var Onboarding = (function () {
       '</div>' +
       '<h2 class="onboarding-title">How many questions per day?</h2>' +
       '<div class="onboarding-goal-options">' +
+      '<button class="onboarding-goal-btn' + (_selectedGoal === 10 ? ' onboarding-goal-active' : '') + '" data-goal="10">10 questions</button>' +
       '<button class="onboarding-goal-btn' + (_selectedGoal === 20 ? ' onboarding-goal-active' : '') + '" data-goal="20">20 questions</button>' +
-      '<button class="onboarding-goal-btn' + (_selectedGoal === 50 ? ' onboarding-goal-active' : '') + '" data-goal="50">50 questions</button>' +
-      '<button class="onboarding-goal-btn' + (_selectedGoal === 100 ? ' onboarding-goal-active' : '') + '" data-goal="100">100 questions</button>' +
+      '<button class="onboarding-goal-btn' + (_selectedGoal === 25 ? ' onboarding-goal-active' : '') + '" data-goal="25">25 questions</button>' +
       '</div>' +
       '<p class="onboarding-note">You can change this anytime from the Settings tab.</p>' +
       '<div class="onboarding-actions">' +
@@ -379,11 +379,18 @@ var Onboarding = (function () {
         if (typeof triggerHaptic === 'function') triggerHaptic(10);
         if (typeof SoundEngine !== 'undefined') SoundEngine.play('settingsToggle');
 
-        /* Capture name from Screen 1 */
+        /* Capture name from Screen 1 — name is required */
         if (index === 0) {
           var nameInput = document.getElementById('obNameInput');
           if (nameInput && nameInput.value.trim()) {
             _userName = nameInput.value.trim();
+          } else {
+            if (nameInput) {
+              nameInput.style.borderColor = '#dc2626';
+              nameInput.setAttribute('placeholder', 'Please enter your name');
+              nameInput.focus();
+            }
+            return;
           }
         }
 
@@ -584,7 +591,7 @@ var Onboarding = (function () {
           _renderQuestionRetry();
         }, 1200);
       } else {
-        /* 3rd wrong answer: reassuring message, redirect to Practice */
+        /* 3rd wrong answer: reassuring message, redirect to Learn tab */
         inputEl.disabled = true;
         if (typeof triggerHaptic === 'function') triggerHaptic([40, 30, 40]);
         feedback.innerHTML = '<span class="onboarding-retry-msg">No worries. Everyone starts somewhere. Let\'s practice together.</span>';
@@ -665,8 +672,8 @@ var Onboarding = (function () {
   }
 
   /**
-   * Complete onboarding and redirect to Practice tab.
-   * Used when user fails all 3 attempts.
+   * Complete onboarding and redirect to Learn tab.
+   * Used when user fails all 3 attempts — guides them to study material first.
    */
   function _finishToPractice() {
     _markCompleted();
@@ -683,10 +690,10 @@ var Onboarding = (function () {
     }
 
     /* Reveal the main app first (via the onComplete callback),
-       then navigate to Practice tab */
+       then navigate to Learn tab so user can study first */
     if (_onComplete) _onComplete();
     if (typeof Router !== 'undefined') {
-      Router.showView('practice');
+      Router.showView('learn');
     }
   }
 

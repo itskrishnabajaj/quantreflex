@@ -47,6 +47,10 @@ function genSquare() {
   } else {
     n = randInt(1, 30);
   }
+  if (diff !== 'easy' && randInt(0, 4) === 0) {
+    var sq = n * n;
+    return { question: '√' + sq + ' = ?', answer: n, category: 'squares' };
+  }
   return { question: n + '² = ?', answer: n * n, category: 'squares' };
 }
 
@@ -60,6 +64,10 @@ function genCube() {
     n = randInt(5, 15);
   } else {
     n = randInt(1, 12);
+  }
+  if (diff !== 'easy' && randInt(0, 4) === 0) {
+    var cube = n * n * n;
+    return { question: '∛' + cube + ' = ?', answer: n, category: 'cubes' };
   }
   return { question: n + '³ = ?', answer: n * n * n, category: 'cubes' };
 }
@@ -214,7 +222,7 @@ function genPercentage() {
   return { question: p + '% of ' + b + ' = ?', answer: result, category: 'percentages' };
 }
 
-/** Mental multiplication: x × y */
+/** Mental multiplication: x × y, with occasional division variant */
 function genMultiplication() {
   var diff = _getDifficulty();
   var x, y;
@@ -227,6 +235,10 @@ function genMultiplication() {
   } else {
     x = randInt(2, 30);
     y = randInt(2, 20);
+  }
+  if (diff !== 'easy' && randInt(0, 3) === 0) {
+    var product = x * y;
+    return { question: product + ' ÷ ' + x + ' = ?', answer: y, category: 'multiplication' };
   }
   return { question: x + ' × ' + y + ' = ?', answer: x * y, category: 'multiplication' };
 }
@@ -515,7 +527,7 @@ var categoryGenerators = {
 
 /* ---- recent-question tracker (anti-repetition across calls) ---- */
 var _recentQuestions = [];
-var _MAX_RECENT = 8;
+var _MAX_RECENT = 20;
 
 function _recordRecentQuestion(questionText) {
   _recentQuestions.push(questionText);

@@ -1,0 +1,302 @@
+You are a senior full-stack engineer, product designer, and UX strategist.
+
+You are working on a production PWA called "Quant Reflex Trainer".
+
+This is NOT a simple bug fix task.
+
+Your task is to perform a HIGH-IMPACT PRODUCT UPGRADE that:
+
+- improves UI/UX significantly
+- improves usability and flow
+- strengthens premium positioning
+- increases user engagement and conversion
+- fixes hidden UX issues
+
+---
+
+🚨 STRICT RULES (NON-NEGOTIABLE)
+
+- DO NOT break any existing working functionality
+- DO NOT restructure entire project
+- DO NOT modify Firestore schema dangerously
+- DO NOT remove existing features
+- DO NOT create unnecessary files
+- KEEP changes controlled and stable
+
+If something is risky → implement safely or explain instead
+
+---
+
+🎯 SECTION 1: PRACTICE TAB IMPROVEMENTS
+
+---
+
+A. QUESTION CARD SCROLL FIX
+
+Problem:
+
+- Long questions are hidden due to fixed numpad
+
+Fix:
+
+- Keep outer card container FIXED
+- Make INNER content scrollable
+
+Implement:
+
+- question container → overflow-y: auto
+- ensure:
+  - question fully visible
+  - next/skip always accessible
+  - numpad does NOT overlap content
+
+---
+
+B. FOCUS TRAINING MODE (MAJOR UPGRADE)
+
+Replace existing selection with CARD MODAL UI
+
+Inside card:
+
+1. Category Selection Grid
+
+2. Timer Selection (NEW FEATURE)
+
+Two modes:
+
+- Per Question Timer
+  → auto move to next question when time ends
+
+- Total Timer
+  → user manages time per question
+  → drill ends when total time ends
+
+UI:
+
+- toggle or segmented control
+- clear visual difference
+
+3. Back Button
+
+- place BELOW timer section
+- consistent with rest of app
+- REMOVE top-right cross
+
+---
+
+Fix issue:
+
+- swipe should NOT change tabs while modal is open
+- disable horizontal gesture temporarily
+
+---
+
+C. CUSTOM TRAINING MODE (REDESIGN)
+
+Inside fixed CARD:
+
+1. Category Selection
+
+- improve selection visibility:
+  → stronger border
+  → color change on select
+
+2. Question Slider
+
+3. Timer Selection (same as focus mode)
+
+4. Back Button (bottom aligned)
+
+---
+
+IMPORTANT:
+
+- card remains FIXED
+- content INSIDE scrollable if overflow
+
+---
+
+🎯 SECTION 2: SETTINGS TAB UPGRADE
+
+---
+
+A. APP GUIDE IMPROVEMENT
+
+Rewrite content to:
+
+- NOT only CAT/CET focused
+
+- include:
+  
+  - school students
+  - NTSE aspirants
+  - Olympiad learners
+  - general mental math training
+
+Add:
+
+- clear feature explanation
+- mark PREMIUM features clearly
+
+---
+
+B. PROFILE PASSWORD FEATURE
+
+Allow:
+
+- view password
+- edit password
+
+Store password in Firestore
+
+Add code comment:
+
+"Password intentionally stored for UX simplicity. Not a security bug."
+
+---
+
+🎯 SECTION 3: PAYWALL (CRITICAL – REVENUE)
+
+---
+
+A. LOGIC HARDENING
+
+Ensure:
+
+- no bypass possible
+- consistent locking across app
+
+---
+
+B. FIRST LOGIN POPUP
+
+Show premium popup for new users
+
+---
+
+C. UI REDESIGN (VERY IMPORTANT)
+
+Design paywall like:
+
+- premium card
+
+- strong headline
+
+- feature highlights
+
+- emotional trigger:
+  
+  "Train your brain like a top performer"
+
+- CTA:
+  "Unlock Lifetime Access – ₹69"
+
+---
+
+---
+
+D. NEW PREMIUM FEATURES
+
+1. Triple Tap Table Modal (premium)
+
+2. Free Users Limit:
+
+- max 25 questions/day
+
+3. Daily Goal Restriction:
+
+- max 25 for free users
+
+---
+
+🎯 SECTION 4: ONBOARDING
+
+1. First slide:
+
+- cannot skip without entering name
+
+2. Daily goal options:
+
+- 10 / 20 / 25
+
+3. If user gets all 3 questions wrong:
+
+- redirect to LEARN tab
+
+---
+
+🎯 SECTION 5: QUESTION QUALITY
+
+Improve:
+
+- question wording
+- realism
+- variety
+
+Ensure:
+
+- not repetitive
+- not generic
+- feels exam-relevant
+
+---
+
+Difficulty setting must:
+
+- actually affect question level
+- consistent across all modes
+
+---
+
+🎯 SECTION 6: GLOBAL UI/UX IMPROVEMENT
+
+Improve:
+
+- spacing
+- alignment
+- readability
+- touch responsiveness
+
+Add:
+
+- smoother interactions
+- consistent headers
+- better button hierarchy
+
+---
+
+🎯 FINAL VALIDATION
+
+Ensure:
+
+- no UI break
+- no scroll issues
+- no Firebase issues
+- no console errors
+- PWA works correctly
+
+---
+
+📊 FINAL OUTPUT
+
+Provide:
+
+1. Files modified
+2. UI improvements made
+3. Logic improvements made
+4. Premium improvements added
+5. Confirmation:
+
+"App is stable, improved, and production-ready"
+
+---
+
+🚨 FINAL WARNING
+
+If any change risks breaking:
+
+→ DO NOT APPLY
+
+---
+
+Proceed step-by-step carefully.

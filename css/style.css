@@ -924,8 +924,11 @@ body.dark-mode .drill-exit-btn:active {
   border-color: #2563eb;
 }
 .category-btn.selected {
-  background: rgba(37,99,235,.08);
+  background: rgba(37,99,235,.14);
   border: 2px solid #2563eb;
+  color: #1d4ed8;
+  font-weight: 700;
+  box-shadow: 0 2px 8px rgba(37,99,235,.18);
 }
 .custom-practice-config {
   display: none;
@@ -939,6 +942,88 @@ body.dark-mode .drill-exit-btn:active {
   min-height: 1rem;
   color: #dc2626;
   margin: .45rem 0 0;
+}
+
+/* Timer selection for Focus & Custom modes */
+.timer-select-section {
+  margin-top: 1rem;
+  padding: 0 12px;
+}
+.timer-select-label {
+  font-size: .85rem;
+  font-weight: 600;
+  color: #64748b;
+  margin-bottom: .5rem;
+  text-transform: uppercase;
+  letter-spacing: .04em;
+}
+.timer-option-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+}
+.timer-option-btn {
+  padding: 8px 4px;
+  border: 1px solid rgba(0,0,0,.08);
+  border-radius: 10px;
+  background: #ffffff;
+  color: #111827;
+  font-size: 12px;
+  font-weight: 500;
+  text-align: center;
+  cursor: pointer;
+  transition: background .2s, border .2s;
+}
+.timer-option-btn:active {
+  background: #f8fafc;
+  border-color: #2563eb;
+}
+.timer-option-btn.selected {
+  background: rgba(37,99,235,.14);
+  border: 2px solid #2563eb;
+  color: #1d4ed8;
+  font-weight: 700;
+}
+body.dark-mode .timer-option-btn {
+  background: #1e293b;
+  color: #e2e8f0;
+  border-color: #334155;
+}
+body.dark-mode .timer-option-btn.selected {
+  background: rgba(37,99,235,.2);
+  border-color: #3b82f6;
+  color: #93c5fd;
+}
+
+/* Paywall hero icon */
+.paywall-hero-icon {
+  font-size: 2.5rem;
+  margin-bottom: .25rem;
+}
+
+/* Daily limit banner */
+.daily-limit-banner {
+  background: linear-gradient(135deg, #fef3c7, #fde68a);
+  border: 1px solid #f59e0b;
+  border-radius: .75rem;
+  padding: .75rem 1rem;
+  margin-bottom: 1rem;
+  text-align: center;
+  font-size: .9rem;
+  color: #92400e;
+  font-weight: 500;
+}
+.daily-limit-banner .btn {
+  margin-top: .5rem;
+  max-width: 200px;
+  min-height: 36px;
+  padding: .5rem .75rem;
+  font-size: .85rem;
+}
+body.dark-mode .daily-limit-banner {
+  background: linear-gradient(135deg, #451a03, #78350f);
+  border-color: #d97706;
+  color: #fef3c7;
 }
 
 /* ---- Settings Page ---- */
@@ -1267,13 +1352,16 @@ body.paywall-open {
 }
 
 .paywall-badge {
-  margin: 0 auto .45rem;
+  margin: 0 auto .3rem;
   display: inline-block;
-  font-size: .78rem;
+  font-size: .72rem;
   font-weight: 800;
-  letter-spacing: .08em;
+  letter-spacing: .1em;
   text-transform: uppercase;
-  color: #1d4ed8;
+  color: #fff;
+  background: linear-gradient(135deg, #2563eb, #7c3aed);
+  padding: .2rem .7rem;
+  border-radius: 1rem;
 }
 
 .paywall-card h2 {
@@ -2808,6 +2896,17 @@ body.drill-session-active .custom-numpad {
 body.drill-session-active,
 html.drill-session-active {
   overflow: hidden;
+}
+
+/* Scroll fix: allow question card to scroll when numpad overlaps content */
+body.drill-session-active #drillContainer {
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  max-height: calc(100vh - 14rem - env(safe-area-inset-bottom, 0px));
+  padding-bottom: 1rem;
+}
+body.drill-session-active #drillContainer > .card {
+  overflow: visible;
 }
 
 /* ---- Native App Feel Enhancements ---- */

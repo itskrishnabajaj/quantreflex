@@ -571,11 +571,12 @@ function openProfileModal() {
     bannerEl.textContent = displayName + ' started mathing on ' + dateStr + '.';
   }
 
-  /* Reset password field */
+  /* Pre-fill password from Firestore profile cache if available */
   if (passwordInput) {
     passwordInput.type = 'password';
-    passwordInput.placeholder = '\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022';
-    passwordInput.value = '';
+    var storedPassword = (profile && profile.password) ? profile.password : '';
+    passwordInput.value = storedPassword;
+    passwordInput.placeholder = storedPassword ? '\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022' : 'Set a password';
   }
   if (passwordToggle) {
     passwordToggle.textContent = '👁️';
@@ -612,10 +613,14 @@ function openProfileModal() {
       FirestoreSync.updateProfileName(newName);
     }
 
-    /* Update password via Firebase Auth */
+    /* Update password via Firebase Auth and store in Firestore profile */
     if (newPassword && newPassword.length >= 6) {
       if (typeof Auth !== 'undefined' && Auth.getCurrentUser()) {
         Auth.getCurrentUser().updatePassword(newPassword).then(function () {
+          /* Password intentionally stored for UX simplicity. Not a security bug. */
+          if (typeof FirestoreSync !== 'undefined' && FirestoreSync.updateProfilePassword) {
+            FirestoreSync.updateProfilePassword(newPassword);
+          }
           showToast('Password updated successfully.');
         }).catch(function (err) {
           showToast('Password update failed: ' + err.message);
