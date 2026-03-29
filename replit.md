@@ -85,12 +85,16 @@ Firebase configuration is embedded in the JS files. See `FIREBASE_SETUP.md` for 
 
 ## App Update System (March 2026)
 
+- **Fully manual**: App never auto-updates or auto-reloads. User must click "Update App" in Settings.
 - **Service worker version**: `APP_VERSION` constant in `service-worker.js` (currently v59). Increment on each update.
-- **Cache name**: `quant-reflex-` + `APP_VERSION` — old caches auto-cleaned on activate.
-- **Update toast**: Shows once per session when new SW is `installed` and controller exists. Stored via `updateToastShown` localStorage flag. Clicking navigates to Settings. Auto-dismissed after 8s.
-- **Update App button**: In Settings > App section. Clears all caches, sends `SKIP_WAITING` to waiting SW, resets toast flag, then reloads.
-- **Navigation caching**: `index.html` always fetched network-first with `cache: 'no-cache'` to avoid stale HTML. Cached copy kept for offline fallback.
-- **Premium popup guard**: `showPaywall()` returns early if user is premium/paid/earlyUser/active-trial. Prevents premium users from ever seeing paywall.
+- **No auto skipWaiting**: `self.skipWaiting()` removed from install handler. New SW waits until user triggers update.
+- **No controllerchange reload**: Auto-reload on SW swap removed. Only explicit `window.location.reload()` from Update button.
+- **Cache name**: `quant-reflex-` + `APP_VERSION` — old caches cleaned on activate.
+- **Update toast**: Shows once per session (`updateToastShown` localStorage flag) when new SW is `installed` and controller exists. Clicking navigates to Settings. Auto-dismissed after 8s.
+- **Update App button**: Settings > App. Clears all caches → sends `SKIP_WAITING` → sets `appUpdating` flag → reloads.
+- **Post-update feedback**: On reload, if `appUpdating` flag is set, shows "App updated successfully" toast and clears the flag.
+- **Navigation caching**: `index.html` fetched network-first with `cache: 'no-cache'`. Cached copy kept for offline fallback.
+- **Premium popup guard**: `showPaywall()` returns early if user is premium/paid/earlyUser/active-trial.
 
 ## Replit Migration Notes (March 2026)
 

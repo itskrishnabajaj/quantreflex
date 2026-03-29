@@ -72,7 +72,6 @@ self.addEventListener('install', function (event) {
       );
     })
   );
-  self.skipWaiting();
 });
 
 /* Activate: clean up old caches */

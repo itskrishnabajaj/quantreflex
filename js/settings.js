@@ -329,8 +329,12 @@ function initSettingsView() {
     rebind(updateAppBtn, 'click', function () {
       updateAppBtn.disabled = true;
       updateAppBtn.textContent = '⏳ Updating app...';
+      if (typeof showToast === 'function') showToast('Updating app...');
       var done = function () {
-        try { localStorage.removeItem('updateToastShown'); } catch (_) {}
+        try {
+          localStorage.removeItem('updateToastShown');
+          localStorage.setItem('appUpdating', 'true');
+        } catch (_) {}
         window.location.reload();
       };
       if ('caches' in window) {

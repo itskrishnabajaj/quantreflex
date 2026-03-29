@@ -154,17 +154,23 @@ if ('serviceWorker' in navigator) {
           _showUpdateToast();
         }
         registration.addEventListener('updatefound', onUpdateFound);
-
-        /* Guard against infinite reload loops: only reload once per session */
-        navigator.serviceWorker.addEventListener('controllerchange', function () {
-          if (window._swReloading) return;
-          window._swReloading = true;
-          window.location.reload();
-        });
       })
       .catch(function (err) { console.warn('SW registration failed:', err); });
   });
 }
+
+try {
+  if (localStorage.getItem('appUpdating') === 'true') {
+    localStorage.removeItem('appUpdating');
+    window.addEventListener('load', function () {
+      setTimeout(function () {
+        if (typeof showToast === 'function') {
+          showToast('\u2705 App updated successfully');
+        }
+      }, 1500);
+    });
+  }
+} catch (_) {}
 
 function _showUpdateToast() {
   if (document.getElementById('_swUpdateToast')) return;
