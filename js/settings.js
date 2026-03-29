@@ -324,6 +324,36 @@ function initSettingsView() {
     });
   }
 
+  var updateAppBtn = document.getElementById('updateAppBtn');
+  if (updateAppBtn) {
+    rebind(updateAppBtn, 'click', function () {
+      updateAppBtn.disabled = true;
+      updateAppBtn.textContent = '⏳ Updating app...';
+      var done = function () {
+        try { localStorage.removeItem('updateToastShown'); } catch (_) {}
+        window.location.reload();
+      };
+      if ('caches' in window) {
+        caches.keys().then(function (keys) {
+          return Promise.all(keys.map(function (k) { return caches.delete(k); }));
+        }).then(function () {
+          if ('serviceWorker' in navigator) {
+            return navigator.serviceWorker.getRegistrations().then(function (regs) {
+              for (var i = 0; i < regs.length; i++) {
+                if (regs[i].waiting) {
+                  regs[i].waiting.postMessage({ type: 'SKIP_WAITING' });
+                }
+                regs[i].update();
+              }
+            });
+          }
+        }).then(done).catch(done);
+      } else {
+        done();
+      }
+    });
+  }
+
   var trialUpgradeSection = document.getElementById('trialUpgradeSection');
   if (trialUpgradeSection) {
     trialUpgradeSection.style.display = (!isPremiumUser || isTrialUser) ? 'block' : 'none';

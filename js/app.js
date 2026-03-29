@@ -166,9 +166,12 @@ if ('serviceWorker' in navigator) {
   });
 }
 
-/* Show a non-blocking "Update available" banner at the bottom of the screen */
 function _showUpdateToast() {
   if (document.getElementById('_swUpdateToast')) return;
+  try {
+    if (localStorage.getItem('updateToastShown') === '1') return;
+    localStorage.setItem('updateToastShown', '1');
+  } catch (_) {}
   var toast = document.createElement('div');
   toast.id = '_swUpdateToast';
   toast.setAttribute('role', 'status');
@@ -177,27 +180,20 @@ function _showUpdateToast() {
     'background:#1e293b', 'color:#f8fafc', 'padding:10px 18px',
     'border-radius:10px', 'font-size:14px', 'z-index:99999',
     'display:flex', 'align-items:center', 'gap:12px',
-    'box-shadow:0 4px 16px rgba(0,0,0,.35)', 'max-width:90vw'
+    'box-shadow:0 4px 16px rgba(0,0,0,.35)', 'max-width:90vw',
+    'cursor:pointer'
   ].join(';');
-  var label = document.createElement('span');
-  label.textContent = '🔄 Update available';
-  var btn = document.createElement('button');
-  btn.id = '_swUpdateBtn';
-  btn.textContent = 'Reload';
-  btn.style.cssText = 'background:#2563eb;color:#fff;border:none;border-radius:6px;padding:4px 10px;cursor:pointer;font-size:13px;';
-  toast.appendChild(label);
-  toast.appendChild(btn);
+  toast.textContent = '\uD83D\uDE80 New version available. Update from Settings';
   document.body.appendChild(toast);
-  btn.addEventListener('click', function () {
-    navigator.serviceWorker.getRegistration().then(function (reg) {
-      if (reg && reg.waiting) {
-        reg.waiting.postMessage({ type: 'SKIP_WAITING' });
-      } else {
-        window.location.reload();
-      }
-    });
+  toast.addEventListener('click', function () {
     toast.remove();
+    if (typeof Router !== 'undefined' && typeof Router.showView === 'function') {
+      Router.showView('settings');
+    }
   });
+  setTimeout(function () {
+    if (toast.parentNode) toast.remove();
+  }, 8000);
 }
 
 /* ---- PWA Install Prompt ---- */

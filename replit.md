@@ -83,6 +83,15 @@ Firebase configuration is embedded in the JS files. See `FIREBASE_SETUP.md` for 
 - `_selectedTimerOption`: current timer selection (e.g., 'none', 'per:15', 'total:180')
 - `_timerPillMode`: 'per' or 'total' — tracks active timer pill
 
+## App Update System (March 2026)
+
+- **Service worker version**: `APP_VERSION` constant in `service-worker.js` (currently v59). Increment on each update.
+- **Cache name**: `quant-reflex-` + `APP_VERSION` — old caches auto-cleaned on activate.
+- **Update toast**: Shows once per session when new SW is `installed` and controller exists. Stored via `updateToastShown` localStorage flag. Clicking navigates to Settings. Auto-dismissed after 8s.
+- **Update App button**: In Settings > App section. Clears all caches, sends `SKIP_WAITING` to waiting SW, resets toast flag, then reloads.
+- **Navigation caching**: `index.html` always fetched network-first with `cache: 'no-cache'` to avoid stale HTML. Cached copy kept for offline fallback.
+- **Premium popup guard**: `showPaywall()` returns early if user is premium/paid/earlyUser/active-trial. Prevents premium users from ever seeing paywall.
+
 ## Replit Migration Notes (March 2026)
 
 - Added a 5-second timeout fallback in `js/app.js` for Firebase Auth initialization. If `onAuthStateChanged` doesn't fire within 5 seconds (e.g., in sandboxed preview environments), the app falls back to showing the login screen rather than hanging indefinitely on the splash screen.

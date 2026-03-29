@@ -3,7 +3,8 @@
  * Caches all assets for offline use.
  */
 
-var CACHE_NAME = 'quant-reflex-v58';
+var APP_VERSION = 'v59';
+var CACHE_NAME = 'quant-reflex-' + APP_VERSION;
 
 var ASSETS = [
   './',
@@ -107,7 +108,15 @@ self.addEventListener('fetch', function (event) {
      so that deep links and browser refresh work offline */
   if (event.request.mode === 'navigate') {
     event.respondWith(
-      fetch(event.request).catch(function () {
+      fetch(event.request, { cache: 'no-cache' }).then(function (response) {
+        if (response.ok) {
+          var clone = response.clone();
+          caches.open(CACHE_NAME).then(function (cache) {
+            cache.put(event.request, clone);
+          });
+        }
+        return response;
+      }).catch(function () {
         return caches.match('./index.html');
       })
     );
