@@ -73,7 +73,7 @@ var wpQuotaCache = {};
 async function _loadWpQuota(uid) {
   if (wpQuotaCache[uid]) return wpQuotaCache[uid];
   try {
-    var doc = await db.collection('ai_wp_quota').doc(uid).get();
+    var doc = await db.collection('users').doc(uid).collection('usage').doc('wordProblems').get();
     if (doc.exists) {
       wpQuotaCache[uid] = doc.data();
       return wpQuotaCache[uid];
@@ -81,7 +81,7 @@ async function _loadWpQuota(uid) {
   } catch (err) {
     console.warn('WP quota read failed:', err.message);
   }
-  var fresh = { lifetime: 0, daily: 0, dailyDate: new Date().toDateString() };
+  var fresh = { wordProblemsUsedLifetime: 0, wordProblemsUsedToday: 0, lastUsedDate: null };
   wpQuotaCache[uid] = fresh;
   return fresh;
 }
@@ -90,24 +90,28 @@ async function checkWordProblemQuota(uid, isPremium) {
   var entry = await _loadWpQuota(uid);
   var today = new Date().toDateString();
   if (isPremium) {
-    if (entry.dailyDate !== today) { entry.daily = 0; entry.dailyDate = today; }
-    return WP_PREMIUM_DAILY - entry.daily;
+    var lastDate = entry.lastUsedDate ? new Date(entry.lastUsedDate).toDateString() : null;
+    if (lastDate !== today) { entry.wordProblemsUsedToday = 0; }
+    return WP_PREMIUM_DAILY - entry.wordProblemsUsedToday;
   }
-  return WP_FREE_LIMIT - entry.lifetime;
+  return WP_FREE_LIMIT - entry.wordProblemsUsedLifetime;
 }
 
 async function consumeWordProblemQuota(uid, isPremium, count) {
   var entry = await _loadWpQuota(uid);
-  var today = new Date().toDateString();
+  var now = new Date();
+  var today = now.toDateString();
+  var lastDate = entry.lastUsedDate ? new Date(entry.lastUsedDate).toDateString() : null;
   if (isPremium) {
-    if (entry.dailyDate !== today) { entry.daily = 0; entry.dailyDate = today; }
-    entry.daily += count;
+    if (lastDate !== today) { entry.wordProblemsUsedToday = 0; }
+    entry.wordProblemsUsedToday += count;
   } else {
-    entry.lifetime += count;
+    entry.wordProblemsUsedLifetime += count;
   }
+  entry.lastUsedDate = now.toISOString();
   wpQuotaCache[uid] = entry;
   try {
-    await db.collection('ai_wp_quota').doc(uid).set(entry);
+    await db.collection('users').doc(uid).collection('usage').doc('wordProblems').set(entry);
   } catch (err) {
     console.warn('WP quota write failed:', err.message);
   }
@@ -136,7 +140,7 @@ async function generateWordProblems(category, difficulty, count) {
       });
       batch.commit().catch(function () {});
       return selected.map(function (item) {
-        return { question: item.question, answer: item.answer, category: item.category };
+        return { question: item.question, answer: item.answer, steps: item.steps || '', category: item.category };
       });
     }
   } catch (cacheErr) {
@@ -151,7 +155,7 @@ async function generateWordProblems(category, difficulty, count) {
   };
 
   var genCount = count + 3;
-  var prompt = 'Generate exactly ' + genCount + ' unique word problems for the math category "' + catLabel + '" at ' + difficulty + ' difficulty level (' + (diffDesc[difficulty] || diffDesc.medium) + ').\n\nRequirements:\n- Each problem must be a real-world word problem (not just a bare equation)\n- The answer must be a single number (integer or decimal up to 2 decimal places)\n- Problems should be varied and not repetitive\n- Suitable for competitive exam prep (CAT/GMAT/placement tests)\n\nReturn ONLY a valid JSON array with exactly ' + genCount + ' objects. Each object must have:\n- "question": the word problem text (string, no line breaks)\n- "answer": the numeric answer (number, not string)\n- "category": "' + category + '"\n\nExample format:\n[{"question":"A shopkeeper buys an item for ₹200 and sells it for ₹250. What is the profit percentage?","answer":25,"category":"profit-loss"}]\n\nReturn ONLY the JSON array, no markdown, no explanation, no code fences.';
+  var prompt = 'Generate exactly ' + genCount + ' unique word problems for the math category "' + catLabel + '" at ' + difficulty + ' difficulty level (' + (diffDesc[difficulty] || diffDesc.medium) + ').\n\nRequirements:\n- Each problem must be a real-world word problem (not just a bare equation)\n- The answer must be a single number (integer or decimal up to 2 decimal places)\n- Problems should be varied and not repetitive\n- Suitable for competitive exam prep (CAT/GMAT/placement tests)\n\nReturn ONLY a valid JSON array with exactly ' + genCount + ' objects. Each object must have:\n- "question": the word problem text (string, no line breaks)\n- "answer": the numeric answer (number, not string)\n- "steps": optional short explanation of the solution approach (string)\n- "category": "' + category + '"\n\nExample format:\n[{"question":"A shopkeeper buys an item for ₹200 and sells it for ₹250. What is the profit percentage?","answer":25,"steps":"Profit = 250-200 = 50. Profit% = (50/200)*100 = 25%","category":"profit-loss"}]\n\nReturn ONLY the JSON array, no markdown, no explanation, no code fences.';
 
   var valid = await _callAndParse(m, prompt, function (parsed) {
     if (!Array.isArray(parsed)) return null;
@@ -172,6 +176,7 @@ async function generateWordProblems(category, difficulty, count) {
       writeBatch.set(docRef, {
         question: item.question,
         answer: item.answer,
+        steps: item.steps || '',
         category: item.category || category,
         difficulty: difficulty,
         usageCount: 0,
@@ -229,6 +234,7 @@ async function generateExplanation(question, answer, category) {
 
   try {
     await cacheRef.doc(questionHash).set({
+      questionId: questionHash,
       question: question,
       answer: answer,
       category: category || '',
@@ -300,7 +306,7 @@ async function generateInsights(stats, userId) {
   try {
     await cacheRef.doc(cacheDocId).set({
       userId: userId,
-      dateKey: dateKey,
+      date: dateKey,
       insight: result.insight,
       problem: result.problem,
       action: result.action,

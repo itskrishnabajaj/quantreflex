@@ -160,11 +160,30 @@ Firebase configuration is embedded in the JS files. See `FIREBASE_SETUP.md` for 
 - `ai_coach` — AI Coach card (premium lock)
 - Word Problems uses its own quota system (not paywall-gated)
 
+### Firestore Schema (AI Collections)
+- `wordProblems` — Cached AI-generated word problems: `{ question, answer, steps, category, difficulty, usageCount, createdAt }`
+- `explanations` — Cached mistake explanations: `{ questionId, question, answer, category, concept, steps, mistake, tip, usageCount, createdAt }`
+- `aiInsights` — Daily AI coaching insights: `{ userId, date, insight, problem, action, createdAt }`
+- `users/{userId}/usage/wordProblems` — Per-user quota tracking: `{ wordProblemsUsedLifetime, wordProblemsUsedToday, lastUsedDate }`
+
+### Premium Access Rules
+- **FREE users**: 5 lifetime word problems, NO explanation access, NO AI insights
+- **PREMIUM users**: Full access to all AI features, 30 word problems/day, NEVER shown paywall popup
+- Premium check: `isPremium || premiumUser || hasPaid || isEarlyUser || isTrial` (aligned client + server)
+
 ### Firebase Admin SDK
 - Initialized with `projectId: 'quant-reflex-trainer'` (no service account required for basic ID token verification)
 - Uses Firestore Admin for caching AI responses and verifying premium entitlement from the `users` collection
-- Premium status checked via `isPremium` or `premiumUser` fields on user documents
+- Server-side word problem quota enforcement (Firestore-persisted, survives restarts)
 - If Firestore Admin is unreachable, AI endpoints return a 503 retryable error (not silent denial)
+
+### Error Handling Strategy
+- All AI calls async with non-blocking loading states
+- Gemini response validated as strict JSON; retry once if invalid; discard if still invalid
+- `AIServiceError` with `code`, `message`, `retryable` fields for structured error responses
+- Client shows single friendly fallback: "Unable to generate right now. Try again later."
+- Rate limiting: 5 requests/min (free), 30 requests/min (premium) per IP
+- All AI content HTML-escaped (`_esc()`) to prevent XSS
 
 ## Replit Migration Notes (March 2026)
 
