@@ -82,6 +82,25 @@ async function _loadUsage(uid) {
   } catch (err) {
     console.warn('Usage read failed:', err.message);
   }
+  try {
+    var legacyDoc = await db.collection('users').doc(uid).collection('usage').doc('wordProblems').get();
+    if (legacyDoc.exists) {
+      var legacy = legacyDoc.data();
+      var migrated = {
+        wordProblemsUsedLifetime: legacy.wordProblemsUsedLifetime || 0,
+        wordProblemsUsedToday: legacy.wordProblemsUsedToday || 0,
+        wordProblemsLastDate: legacy.lastUsedDate || null,
+        lastUsageDate: legacy.lastUsedDate || null,
+        explanationsUsed: 0,
+        insightsGeneratedDate: null
+      };
+      usageCache[uid] = migrated;
+      db.collection('users').doc(uid).collection('usage').doc('ai').set(migrated).catch(function (e) { console.warn('Legacy migration write failed:', e.message); });
+      return migrated;
+    }
+  } catch (legacyErr) {
+    console.warn('Legacy usage read failed:', legacyErr.message);
+  }
   var fresh = {
     wordProblemsUsedLifetime: 0,
     wordProblemsUsedToday: 0,
