@@ -67,30 +67,47 @@ async function isUserPremium(uid) {
 }
 
 var WP_FREE_LIMIT = 5;
-var WP_PREMIUM_DAILY = 30;
-var wpQuotaCache = {};
+var WP_PREMIUM_DAILY = 25;
+var MAX_QUESTION_LENGTH = 300;
+var usageCache = {};
 
-async function _loadWpQuota(uid) {
-  if (wpQuotaCache[uid]) return wpQuotaCache[uid];
+async function _loadUsage(uid) {
+  if (usageCache[uid]) return usageCache[uid];
   try {
-    var doc = await db.collection('users').doc(uid).collection('usage').doc('wordProblems').get();
+    var doc = await db.collection('users').doc(uid).collection('usage').doc('ai').get();
     if (doc.exists) {
-      wpQuotaCache[uid] = doc.data();
-      return wpQuotaCache[uid];
+      usageCache[uid] = doc.data();
+      return usageCache[uid];
     }
   } catch (err) {
-    console.warn('WP quota read failed:', err.message);
+    console.warn('Usage read failed:', err.message);
   }
-  var fresh = { wordProblemsUsedLifetime: 0, wordProblemsUsedToday: 0, lastUsedDate: null };
-  wpQuotaCache[uid] = fresh;
+  var fresh = {
+    wordProblemsUsedLifetime: 0,
+    wordProblemsUsedToday: 0,
+    lastUsageDate: null,
+    explanationsUsed: 0,
+    insightsGeneratedDate: null
+  };
+  usageCache[uid] = fresh;
   return fresh;
 }
 
+async function _saveUsage(uid) {
+  var entry = usageCache[uid];
+  if (!entry) return;
+  try {
+    await db.collection('users').doc(uid).collection('usage').doc('ai').set(entry);
+  } catch (err) {
+    console.warn('Usage write failed:', err.message);
+  }
+}
+
 async function checkWordProblemQuota(uid, isPremium) {
-  var entry = await _loadWpQuota(uid);
+  var entry = await _loadUsage(uid);
   var today = new Date().toDateString();
   if (isPremium) {
-    var lastDate = entry.lastUsedDate ? new Date(entry.lastUsedDate).toDateString() : null;
+    var lastDate = entry.lastUsageDate ? new Date(entry.lastUsageDate).toDateString() : null;
     if (lastDate !== today) { entry.wordProblemsUsedToday = 0; }
     return WP_PREMIUM_DAILY - entry.wordProblemsUsedToday;
   }
@@ -98,23 +115,37 @@ async function checkWordProblemQuota(uid, isPremium) {
 }
 
 async function consumeWordProblemQuota(uid, isPremium, count) {
-  var entry = await _loadWpQuota(uid);
+  var entry = await _loadUsage(uid);
   var now = new Date();
   var today = now.toDateString();
-  var lastDate = entry.lastUsedDate ? new Date(entry.lastUsedDate).toDateString() : null;
+  var lastDate = entry.lastUsageDate ? new Date(entry.lastUsageDate).toDateString() : null;
   if (isPremium) {
     if (lastDate !== today) { entry.wordProblemsUsedToday = 0; }
     entry.wordProblemsUsedToday += count;
   } else {
     entry.wordProblemsUsedLifetime += count;
   }
-  entry.lastUsedDate = now.toISOString();
-  wpQuotaCache[uid] = entry;
-  try {
-    await db.collection('users').doc(uid).collection('usage').doc('wordProblems').set(entry);
-  } catch (err) {
-    console.warn('WP quota write failed:', err.message);
-  }
+  entry.lastUsageDate = now.toISOString();
+  usageCache[uid] = entry;
+  await _saveUsage(uid);
+}
+
+async function trackExplanationUsage(uid) {
+  var entry = await _loadUsage(uid);
+  entry.explanationsUsed = (entry.explanationsUsed || 0) + 1;
+  entry.lastUsageDate = new Date().toISOString();
+  usageCache[uid] = entry;
+  await _saveUsage(uid);
+}
+
+async function trackInsightsUsage(uid) {
+  var entry = await _loadUsage(uid);
+  var today = new Date();
+  var dateKey = today.getFullYear() + '-' + (today.getMonth() + 1) + '-' + today.getDate();
+  entry.insightsGeneratedDate = dateKey;
+  entry.lastUsageDate = today.toISOString();
+  usageCache[uid] = entry;
+  await _saveUsage(uid);
 }
 
 async function generateWordProblems(category, difficulty, count) {
@@ -161,6 +192,7 @@ async function generateWordProblems(category, difficulty, count) {
     if (!Array.isArray(parsed)) return null;
     var v = parsed.filter(function (q) {
       return q && typeof q.question === 'string' && q.question.length > 10 &&
+        q.question.length <= MAX_QUESTION_LENGTH &&
         typeof q.answer === 'number' && !isNaN(q.answer) &&
         typeof q.category === 'string';
     });
@@ -169,23 +201,47 @@ async function generateWordProblems(category, difficulty, count) {
 
   if (!valid) throw new AIServiceError('INVALID_RESPONSE', 'No valid questions generated after retries', true);
 
+  var deduplicated = valid;
   try {
-    var writeBatch = db.batch();
-    valid.forEach(function (item) {
-      var docRef = cacheRef.doc();
-      writeBatch.set(docRef, {
-        question: item.question,
-        answer: item.answer,
-        steps: item.steps || '',
-        category: item.category || category,
-        difficulty: difficulty,
-        usageCount: 0,
-        createdAt: admin.firestore.FieldValue.serverTimestamp()
+    var existingSnap = await cacheRef
+      .where('category', '==', category)
+      .where('difficulty', '==', difficulty)
+      .limit(50)
+      .get();
+    if (!existingSnap.empty) {
+      var existingPrefixes = {};
+      existingSnap.docs.forEach(function (d) {
+        var q = d.data().question || '';
+        existingPrefixes[q.substring(0, 50).toLowerCase()] = true;
       });
-    });
-    await writeBatch.commit();
-  } catch (writeErr) {
-    console.warn('Firestore cache write failed:', writeErr.message);
+      deduplicated = valid.filter(function (item) {
+        var prefix = item.question.substring(0, 50).toLowerCase();
+        return !existingPrefixes[prefix];
+      });
+    }
+  } catch (dedupErr) {
+    console.warn('Dedup check failed, storing all:', dedupErr.message);
+  }
+
+  if (deduplicated.length > 0) {
+    try {
+      var writeBatch = db.batch();
+      deduplicated.forEach(function (item) {
+        var docRef = cacheRef.doc();
+        writeBatch.set(docRef, {
+          question: item.question,
+          answer: item.answer,
+          steps: item.steps || '',
+          category: item.category || category,
+          difficulty: difficulty,
+          usageCount: 0,
+          createdAt: admin.firestore.FieldValue.serverTimestamp()
+        });
+      });
+      await writeBatch.commit();
+    } catch (writeErr) {
+      console.warn('Firestore cache write failed:', writeErr.message);
+    }
   }
 
   return valid.slice(0, count);
@@ -377,4 +433,4 @@ function _shuffleInPlace(arr) {
   }
 }
 
-module.exports = { generateWordProblems, generateExplanation, generateInsights, verifyIdToken, isUserPremium, checkWordProblemQuota, consumeWordProblemQuota, AIServiceError };
+module.exports = { generateWordProblems, generateExplanation, generateInsights, verifyIdToken, isUserPremium, checkWordProblemQuota, consumeWordProblemQuota, trackExplanationUsage, trackInsightsUsage, AIServiceError };

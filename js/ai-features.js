@@ -1,7 +1,11 @@
 var AIFeatures = (function () {
   var WP_FREE_LIMIT = 5;
-  var WP_PREMIUM_DAILY_LIMIT = 30;
+  var WP_PREMIUM_DAILY_LIMIT = 25;
   var COACH_CACHE_HOURS = 24;
+
+  var _wpInFlight = false;
+  var _explainInFlight = false;
+  var _insightsInFlight = false;
 
   function _esc(str) {
     if (typeof str !== 'string') return '';
@@ -135,8 +139,12 @@ var AIFeatures = (function () {
   }
 
   function fetchWordProblems(category, difficulty, count, callback) {
+    if (_wpInFlight) return;
+    _wpInFlight = true;
+
     var quota = getWordProblemQuota();
     if (quota.remaining <= 0) {
+      _wpInFlight = false;
       if (!_isPremium()) {
         callback('free_limit_reached');
       } else {
@@ -149,6 +157,7 @@ var AIFeatures = (function () {
     _sendAuthenticatedRequest('POST', '/api/ai/word-problems',
       { category: category, difficulty: difficulty, count: actualCount }, 30000,
       function (err, data) {
+        _wpInFlight = false;
         if (err) { callback(err); return; }
         if (data.questions && data.questions.length > 0) {
           consumeWordProblemQuota(data.questions.length);
@@ -160,24 +169,32 @@ var AIFeatures = (function () {
   }
 
   function fetchExplanation(question, answer, category, callback) {
+    if (_explainInFlight) return;
+    _explainInFlight = true;
+
     _sendAuthenticatedRequest('POST', '/api/ai/explain',
       { question: question, answer: answer, category: category }, 20000,
       function (err, data) {
+        _explainInFlight = false;
         if (err) { callback(err); return; }
         callback(null, data.explanation);
       });
   }
 
   function fetchInsights(stats, callback) {
+    if (_insightsInFlight) return;
+
     var cached = _getCachedCoach();
     if (cached) {
       callback(null, cached);
       return;
     }
 
+    _insightsInFlight = true;
     _sendAuthenticatedRequest('POST', '/api/ai/insights',
       { stats: stats }, 20000,
       function (err, data) {
+        _insightsInFlight = false;
         if (err) { callback(err); return; }
         _cacheCoach(data.insights);
         callback(null, data.insights);
@@ -202,6 +219,8 @@ var AIFeatures = (function () {
   }
 
   function showExplanationModal(question, answer, category) {
+    if (_explainInFlight) return;
+
     var existing = document.getElementById('aiExplainModal');
     if (existing) existing.parentNode.removeChild(existing);
 
@@ -365,7 +384,7 @@ var AIFeatures = (function () {
       startBtn.disabled = true;
       startBtn.textContent = quota.type === 'lifetime' ? '🔒 Free limit reached' : 'Daily limit reached';
       if (quota.type === 'lifetime') {
-        errorEl.textContent = 'Upgrade to Premium for 30 AI questions per day.';
+        errorEl.textContent = 'Upgrade to Premium for 25 AI questions per day.';
         errorEl.style.display = 'block';
       }
     }
@@ -387,7 +406,7 @@ var AIFeatures = (function () {
             errorEl.textContent = 'You\'ve used all 5 free AI questions. Upgrade to Premium for more.';
             if (typeof showPaywall === 'function') showPaywall('settings');
           } else if (err === 'daily_limit_reached') {
-            errorEl.textContent = 'You\'ve reached today\'s limit of 30 AI questions. Come back tomorrow!';
+            errorEl.textContent = 'You\'ve reached today\'s limit of 25 AI questions. Come back tomorrow!';
           } else {
             errorEl.textContent = FRIENDLY_ERROR;
           }

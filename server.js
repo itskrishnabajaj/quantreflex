@@ -127,6 +127,7 @@ app.post('/api/ai/explain', authMiddleware, rateLimitMiddleware, premiumGate('ai
       return res.status(400).json({ error: { code: 'BAD_REQUEST', message: 'Missing required fields: question, answer', retryable: false } });
     }
     var explanation = await aiService.generateExplanation(question, answer, category);
+    aiService.trackExplanationUsage(req.userId).catch(function (e) { console.warn('Explain usage track failed:', e.message); });
     res.json({ explanation: explanation });
   } catch (err) {
     console.error('Explanation error:', err.message);
@@ -141,6 +142,7 @@ app.post('/api/ai/insights', authMiddleware, rateLimitMiddleware, premiumGate('a
       return res.status(400).json({ error: { code: 'BAD_REQUEST', message: 'Missing required field: stats', retryable: false } });
     }
     var insights = await aiService.generateInsights(stats, req.userId);
+    aiService.trackInsightsUsage(req.userId).catch(function (e) { console.warn('Insights usage track failed:', e.message); });
     res.json({ insights: insights });
   } catch (err) {
     console.error('Insights error:', err.message);

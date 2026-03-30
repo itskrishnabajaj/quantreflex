@@ -150,7 +150,7 @@ Firebase configuration is embedded in the JS files. See `FIREBASE_SETUP.md` for 
 - `POST /api/ai/insights` — Generates personalized performance insights from stats
 
 ### AI Features
-- **Word Problems Mode** (Practice tab): AI-generated contextual word problems; 5 free lifetime uses, 30/day for premium
+- **Word Problems Mode** (Practice tab): AI-generated contextual word problems; 5 free lifetime uses, 25/day for premium
 - **Mistake Explainer** (Drill): "Explain" button appears after wrong answers; premium-only (`ai_explain` feature key)
 - **AI Coach** (Home tab): Personalized coaching card with tips; premium-only (`ai_coach` feature key)
 - **AI Insights** (Stats tab): Performance analysis with focus areas and action items; premium-only, cached 24hrs in localStorage
@@ -164,11 +164,11 @@ Firebase configuration is embedded in the JS files. See `FIREBASE_SETUP.md` for 
 - `wordProblems` — Cached AI-generated word problems: `{ question, answer, steps, category, difficulty, usageCount, createdAt }`
 - `explanations` — Cached mistake explanations: `{ questionId, question, answer, category, concept, steps, mistake, tip, usageCount, createdAt }`
 - `aiInsights` — Daily AI coaching insights: `{ userId, date, insight, problem, action, createdAt }`
-- `users/{userId}/usage/wordProblems` — Per-user quota tracking: `{ wordProblemsUsedLifetime, wordProblemsUsedToday, lastUsedDate }`
+- `users/{userId}/usage/ai` — Unified per-user AI usage tracking: `{ wordProblemsUsedLifetime, wordProblemsUsedToday, lastUsageDate, explanationsUsed, insightsGeneratedDate }`
 
 ### Premium Access Rules
 - **FREE users**: 5 lifetime word problems, NO explanation access, NO AI insights
-- **PREMIUM users**: Full access to all AI features, 30 word problems/day, NEVER shown paywall popup
+- **PREMIUM users**: Full access to all AI features, 25 word problems/day, NEVER shown paywall popup
 - Premium check: `isPremium || premiumUser || hasPaid || isEarlyUser || isTrial` (aligned client + server)
 
 ### Firebase Admin SDK
@@ -184,6 +184,9 @@ Firebase configuration is embedded in the JS files. See `FIREBASE_SETUP.md` for 
 - Client shows single friendly fallback: "Unable to generate right now. Try again later."
 - Rate limiting: 5 requests/min (free), 30 requests/min (premium) per IP
 - All AI content HTML-escaped (`_esc()`) to prevent XSS
+- Request locking: client-side in-flight flags prevent duplicate concurrent calls for word problems, explanations, and insights
+- Question length validation: AI-generated questions over 300 characters are rejected during Gemini response parsing
+- Question deduplication: before storing new word problems, existing questions with same category+difficulty are checked by first-50-char prefix match to avoid near-duplicates
 
 ## Replit Migration Notes (March 2026)
 
