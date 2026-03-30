@@ -111,14 +111,18 @@ function createDrillEngine(container, opts) {
     container.innerHTML =
       '<button class="session-exit drill-exit-btn" id="drillExitBtn" aria-label="Exit session" title="Exit session">✕</button>' +
       '<div class="card center-content fade-in">' +
-        '<p class="drill-progress">Question ' + (current + 1) + ' / ' + displayCount + '</p>' +
-        '<div class="drill-progress-bar"><div class="drill-progress-fill" style="width:' + progressPct + '%"></div></div>' +
-        (timeLimit ? '<p id="globalTimer" class="timer"></p>' : '') +
-        (perQLimit ? '<p id="perQTimer" class="timer"></p>' : '') +
-        '<h2 class="question-text">' + q.question + '</h2>' +
-        '<input id="answerInput" class="input" type="text" inputmode="none" autocomplete="off" placeholder="Your answer" readonly />' +
-        '<div id="feedback" class="feedback"></div>' +
-        '<button id="submitBtn" class="btn accent">Submit</button>' +
+        '<div class="drill-question-scroll">' +
+          '<p class="drill-progress">Question ' + (current + 1) + ' / ' + displayCount + '</p>' +
+          '<div class="drill-progress-bar"><div class="drill-progress-fill" style="width:' + progressPct + '%"></div></div>' +
+          (timeLimit ? '<p id="globalTimer" class="timer"></p>' : '') +
+          (perQLimit ? '<p id="perQTimer" class="timer"></p>' : '') +
+          '<h2 class="question-text">' + q.question + '</h2>' +
+          '<input id="answerInput" class="input" type="text" inputmode="none" autocomplete="off" placeholder="Your answer" readonly />' +
+          '<div id="feedback" class="feedback"></div>' +
+        '</div>' +
+        '<div class="drill-actions">' +
+          '<button id="submitBtn" class="btn accent">Submit</button>' +
+        '</div>' +
       '</div>';
     ui.globalTimerEl = container.querySelector('#globalTimer');
     ui.perQTimerEl = container.querySelector('#perQTimer');
@@ -183,8 +187,8 @@ function createDrillEngine(container, opts) {
         recordAnswer(false, q.category, q, 0);
         nextQuestion();
       });
-      var card = ui.cardEl;
-      if (card) card.appendChild(skipBtn);
+      var actionsDiv = container.querySelector('.drill-actions');
+      if (actionsDiv) actionsDiv.appendChild(skipBtn);
     }
 
     qStart = performance.now();

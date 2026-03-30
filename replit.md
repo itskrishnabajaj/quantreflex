@@ -103,10 +103,14 @@ Firebase configuration is embedded in the JS files. See `FIREBASE_SETUP.md` for 
 - Divider lines removed between Logout, Delete Account, Update App, and Clear Data buttons
 - Button uses flex column layout with `.settings-action-with-desc`, `.settings-btn-label`, `.settings-btn-desc` classes
 
-### Question Card Scroll Fix
-- Drill container (`#drillContainer`) and inner `.card` both support `overflow-y: auto` during drill sessions
-- Content scrollable when numpad overlaps; buttons always accessible
+### Drill Layout Redesign (Numpad Overlap Fix)
+- `#drillContainer` uses `position: fixed` during drill sessions, filling viewport above numpad
+- Question HTML restructured: scrollable `.drill-question-scroll` area + pinned `.drill-actions` area
+- Submit/Skip/Next buttons are ALWAYS visible — never scroll behind the numpad
+- Card uses flex column layout: scroll area gets `flex: 1; overflow-y: auto`, actions get `flex-shrink: 0`
+- Explicit background colors for all theme variants (classic, dark, playful, playful-dark)
 - Applied to all modes: Quick Drill, Reflex Drill, Timed Test, Focus Training, Custom Training, Review Mistakes
+- Start screen and results screen unaffected (they call `_exitDrillSession()` which removes drill layout)
 
 ### Premium Popup Hard Lock
 - `canAccess()` in `paywall.js` now checks `isPremium === true` FIRST, before any other checks
