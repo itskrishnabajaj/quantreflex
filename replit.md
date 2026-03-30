@@ -114,6 +114,18 @@ Firebase configuration is embedded in the JS files. See `FIREBASE_SETUP.md` for 
 - `showFirstLoginPaywall()` also guards on `isPremium` first
 - Applied globally: all feature locks, timer toggle, daily goal, learn tab, stats tab
 
+### Modal Bottom Blur Removal
+- Removed `::after` gradient overlay from `.info-modal-scroll` and `.modal-content` across all themes (classic, playful, dark mode variants)
+- Modals now show clean edge-to-edge content without bottom blur/gradient artifacts
+- Scrolling still works properly in all modals
+
+### App Guide Content Improvement
+- Expanded "Getting Started" with clear audience list: CAT/GMAT/MBA, placement prep, school students, NTSE/Olympiad, general aptitude
+- Each practice mode now includes "Improves:" line describing what it builds
+- Premium features marked with 🔒 throughout: practice modes, learn tab, analytics, settings
+- Added dedicated "Premium Features Summary" section listing all locked features
+- Improved readability with consistent em-dash formatting and cleaner spacing
+
 ### Workflow Change
 - Switched from `python3 -m http.server` to `serve . -l 5000 -s` (Node.js) due to python3 unavailability in environment
 
