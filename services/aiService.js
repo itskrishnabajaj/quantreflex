@@ -85,6 +85,7 @@ async function _loadUsage(uid) {
   var fresh = {
     wordProblemsUsedLifetime: 0,
     wordProblemsUsedToday: 0,
+    wordProblemsLastDate: null,
     lastUsageDate: null,
     explanationsUsed: 0,
     insightsGeneratedDate: null
@@ -96,8 +97,11 @@ async function _loadUsage(uid) {
 function _normalizeUsageDoc(data) {
   if (data.lastUsedDate && !data.lastUsageDate) {
     data.lastUsageDate = data.lastUsedDate;
-    delete data.lastUsedDate;
   }
+  if (data.lastUsedDate && !data.wordProblemsLastDate) {
+    data.wordProblemsLastDate = data.lastUsedDate;
+  }
+  delete data.lastUsedDate;
   if (data.wordProblemsUsedLifetime === undefined) data.wordProblemsUsedLifetime = 0;
   if (data.wordProblemsUsedToday === undefined) data.wordProblemsUsedToday = 0;
   if (data.explanationsUsed === undefined) data.explanationsUsed = 0;
@@ -118,7 +122,7 @@ async function checkWordProblemQuota(uid, isPremium) {
   var entry = await _loadUsage(uid);
   var today = new Date().toDateString();
   if (isPremium) {
-    var lastDate = entry.lastUsageDate ? new Date(entry.lastUsageDate).toDateString() : null;
+    var lastDate = entry.wordProblemsLastDate ? new Date(entry.wordProblemsLastDate).toDateString() : null;
     if (lastDate !== today) { entry.wordProblemsUsedToday = 0; }
     return WP_PREMIUM_DAILY - entry.wordProblemsUsedToday;
   }
@@ -129,13 +133,14 @@ async function consumeWordProblemQuota(uid, isPremium, count) {
   var entry = await _loadUsage(uid);
   var now = new Date();
   var today = now.toDateString();
-  var lastDate = entry.lastUsageDate ? new Date(entry.lastUsageDate).toDateString() : null;
+  var lastDate = entry.wordProblemsLastDate ? new Date(entry.wordProblemsLastDate).toDateString() : null;
   if (isPremium) {
     if (lastDate !== today) { entry.wordProblemsUsedToday = 0; }
     entry.wordProblemsUsedToday += count;
   } else {
     entry.wordProblemsUsedLifetime += count;
   }
+  entry.wordProblemsLastDate = now.toISOString();
   entry.lastUsageDate = now.toISOString();
   usageCache[uid] = entry;
   await _saveUsage(uid);

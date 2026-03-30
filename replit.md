@@ -164,7 +164,7 @@ Firebase configuration is embedded in the JS files. See `FIREBASE_SETUP.md` for 
 - `wordProblems` — Cached AI-generated word problems: `{ question, answer, steps, category, difficulty, usageCount, createdAt }`
 - `explanations` — Cached mistake explanations: `{ questionId, question, answer, category, concept, steps, mistake, tip, usageCount, createdAt }`
 - `aiInsights` — Daily AI coaching insights: `{ userId, date, insight, problem, action, createdAt }`
-- `users/{userId}/usage/ai` — Unified per-user AI usage tracking: `{ wordProblemsUsedLifetime, wordProblemsUsedToday, lastUsageDate, explanationsUsed, insightsGeneratedDate }`
+- `users/{userId}/usage/ai` — Unified per-user AI usage tracking: `{ wordProblemsUsedLifetime, wordProblemsUsedToday, wordProblemsLastDate, lastUsageDate, explanationsUsed, insightsGeneratedDate }`
 
 ### Premium Access Rules
 - **FREE users**: 5 lifetime word problems, NO explanation access, NO AI insights
