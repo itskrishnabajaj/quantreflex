@@ -40,6 +40,7 @@ function createDrillEngine(container, opts) {
   var mode = opts.mode || 'Drill';
   var reviewMode = opts.reviewMode || false;
   var onFinish = opts.onFinish || null;
+  var preloadedQuestions = opts._preloadedQuestions || null;
 
   var questions = [];
   var current = 0;
@@ -289,6 +290,21 @@ function createDrillEngine(container, opts) {
       var card = ui.cardEl;
       if (card) card.classList.add('feedback-shake');
       setTimeout(function () { if (card) card.classList.remove('feedback-shake'); }, 400);
+
+      if (typeof AIFeatures !== 'undefined') {
+        var explainBtn = document.createElement('button');
+        explainBtn.className = 'drill-explain-btn';
+        explainBtn.textContent = '🧠 Explain';
+        explainBtn.addEventListener('click', function () {
+          if (typeof canAccessFeature === 'function' && !canAccessFeature('ai_explain')) {
+            if (typeof showPaywall === 'function') showPaywall('settings');
+            return;
+          }
+          AIFeatures.showExplanationModal(q.question, expected, q.category);
+        });
+        feedback.appendChild(document.createElement('br'));
+        feedback.appendChild(explainBtn);
+      }
     }
 
     /* Replace submit with next */
@@ -482,11 +498,13 @@ function createDrillEngine(container, opts) {
       FirestoreSync.beginDrillBatch();
     }
 
-    if (reviewMode) {
+    if (preloadedQuestions && preloadedQuestions.length > 0) {
+      questions = preloadedQuestions;
+      count = questions.length;
+    } else if (reviewMode) {
       questions = generateMistakeReviewQuestions(count);
       if (questions.length === 0) {
         _exitDrillSession();
-        /* End drill batch since no drill will happen */
         if (typeof FirestoreSync !== 'undefined') {
           FirestoreSync.endDrillBatch();
         }
@@ -501,12 +519,12 @@ function createDrillEngine(container, opts) {
         });
         return;
       }
-      count = questions.length; /* May be less than requested */
+      count = questions.length;
       reviewOriginalCount = count;
     } else if (topics && topics.length) {
       questions = _generateCustomTopicQuestions(count, topics);
     } else {
-      questions = generateQuestions(count, category); /* questions.js */
+      questions = generateQuestions(count, category);
     }
     current = 0;
     score = 0;

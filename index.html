@@ -153,6 +153,9 @@
         </div>
       </div>
 
+      <!-- AI Coach Card -->
+      <div id="aiCoachContainer"></div>
+
       <!-- Quick Study Cards -->
       <div style="display:flex;justify-content:space-between;align-items:center;margin:1rem 0 .5rem;">
         <h3 style="color:#64748b;font-size:.9rem;margin:0;">QUICK STUDY</h3>
@@ -198,9 +201,9 @@
           <p>Practice your previously wrong answers</p>
         </div>
 
-        <div class="mode-card mode-card-teaser" data-mode="wordproblems">
-          <h3>🔒 Word Problems</h3>
-          <p>Coming in a future update.</p>
+        <div class="mode-card" data-mode="wordproblems">
+          <h3>🤖 Word Problems</h3>
+          <p>AI-generated word problems · Choose category &amp; difficulty</p>
         </div>
       </div>
 
@@ -264,6 +267,9 @@
           <button class="training-card-back" id="backToModes" type="button" aria-label="Back to practice modes">← Back</button>
         </div>
       </div>
+
+      <!-- Word Problems setup (shown when Word Problems mode is picked) -->
+      <div id="wordProblemsSetup" style="display:none;"></div>
 
       <!-- Drill engine renders here -->
       <div id="drillContainer" style="display:none;"></div>
@@ -435,6 +441,16 @@
         <h3 class="analytics-section-title">Performance Insights</h3>
         <div class="analytics-card">
           <div class="stat-grid stat-grid-3" id="statsInsights"></div>
+        </div>
+      </div>
+
+      <!-- AI Insights -->
+      <div class="analytics-section" id="aiInsightsSection">
+        <h3 class="analytics-section-title">🤖 AI Insights</h3>
+        <div class="analytics-card">
+          <div id="aiInsightsContainer">
+            <p class="secondary-text">AI-powered performance analysis.</p>
+          </div>
         </div>
       </div>
 
@@ -1062,6 +1078,7 @@
   <script src="js/onboarding.js"></script>
   <script src="js/router.js"></script>
   <script src="js/paywall.js"></script>
+  <script src="js/ai-features.js"></script>
   <script src="js/app.js"></script>
 </body>
 </html>

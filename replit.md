@@ -4,9 +4,10 @@ A Progressive Web App (PWA) for training mental math reflexes for competitive ex
 
 ## Project Overview
 
-- **Type:** Static PWA (HTML5 + CSS3 + Vanilla JavaScript)
-- **No build system** — pure static files served directly
+- **Type:** PWA (HTML5 + CSS3 + Vanilla JavaScript) with Express backend
+- **Express server** (`server.js`) serves static files and AI API endpoints
 - **Firebase** (v10 compat) for Auth, Firestore sync, and Cloud Messaging
+- **Google Gemini** AI for word problems, mistake explanations, and performance insights
 - **localStorage** for offline-first data persistence
 - **Service Worker** for offline caching
 - **Razorpay** for premium payment processing
@@ -14,8 +15,9 @@ A Progressive Web App (PWA) for training mental math reflexes for competitive ex
 ## Project Structure
 
 ```
-/               - Root with index.html (SPA entry point), manifest.json, service-worker.js
-/js/            - Application logic (app.js, router.js, drill-engine.js, questions.js, firebase.js, auth.js, etc.)
+/               - Root with index.html (SPA entry point), manifest.json, service-worker.js, server.js
+/js/            - Application logic (app.js, router.js, drill-engine.js, questions.js, ai-features.js, etc.)
+/services/      - Backend services (aiService.js — Gemini API wrapper)
 /css/           - Styles (style.css with CSS variables for themes and dark mode)
 /appicons/      - PWA app icons
 /icons/         - Navigation and UI icons
@@ -24,17 +26,17 @@ A Progressive Web App (PWA) for training mental math reflexes for competitive ex
 
 ## Running the App
 
-The app is served via Python's built-in HTTP server:
+The app is served via Express (Node.js):
 
 ```
-python3 -m http.server 5000 --bind 0.0.0.0
+node server.js
 ```
 
-Workflow: **Start application** → port 5000 (webview)
+Workflow: **Start application** → `node server.js` → port 5000 (webview)
 
 ## Deployment
 
-Configured as a **static** deployment with `publicDir: "."` (root directory).
+Configured as **autoscale** deployment with `run: ["sh", "-c", "node server.js"]`.
 
 ## Firebase Setup
 
@@ -132,6 +134,31 @@ Firebase configuration is embedded in the JS files. See `FIREBASE_SETUP.md` for 
 
 ### Workflow Change
 - Switched from `python3 -m http.server` to `serve . -l 5000 -s` (Node.js) due to python3 unavailability in environment
+- Switched from `serve` to `node server.js` (Express) for AI API endpoints
+
+## AI Features Integration (March 2026)
+
+### Architecture
+- **Backend**: Express server (`server.js`) serves static files + 3 AI API endpoints
+- **AI Service**: `services/aiService.js` wraps Google Gemini (`gemini-2.0-flash`) with JSON parsing and retry logic
+- **Client Module**: `js/ai-features.js` handles quota tracking, API calls, and UI rendering
+- **Environment Variable**: `GEMINI_API_KEY` — server-side only, never exposed to client
+
+### API Endpoints
+- `POST /api/ai/word-problems` — Generates contextual word problems for a given category/difficulty
+- `POST /api/ai/explain` — Explains a math mistake step-by-step
+- `POST /api/ai/insights` — Generates personalized performance insights from stats
+
+### AI Features
+- **Word Problems Mode** (Practice tab): AI-generated contextual word problems; 5 free lifetime uses, 30/day for premium
+- **Mistake Explainer** (Drill): "Explain" button appears after wrong answers; premium-only (`ai_explain` feature key)
+- **AI Coach** (Home tab): Personalized coaching card with tips; premium-only (`ai_coach` feature key)
+- **AI Insights** (Stats tab): Performance analysis with focus areas and action items; premium-only, cached 24hrs in localStorage
+
+### Paywall Feature Keys
+- `ai_explain` — Mistake Explainer (premium lock)
+- `ai_coach` — AI Coach card (premium lock)
+- Word Problems uses its own quota system (not paywall-gated)
 
 ## Replit Migration Notes (March 2026)
 

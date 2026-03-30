@@ -405,6 +405,8 @@ function _resetPracticeUiToModes() {
     drillContainer.style.display = 'none';
     drillContainer.innerHTML = '';
   }
+  var wpSetup = document.getElementById('wordProblemsSetup');
+  if (wpSetup) wpSetup.style.display = 'none';
   _resetTimerSelection();
   _resetCustomPracticeState();
   /* Remove daily limit banner if present */
@@ -1227,6 +1229,11 @@ document.addEventListener('DOMContentLoaded', function () {
 
     /* Render customizable quick study links */
     renderQuickStudyLinks();
+
+    /* Render AI Coach card */
+    if (typeof AIFeatures !== 'undefined') {
+      AIFeatures.renderAICoachCard('aiCoachContainer', p);
+    }
   });
 
   /* ---- HOME VIEW: warmup handler ---- */
@@ -1282,9 +1289,39 @@ document.addEventListener('DOMContentLoaded', function () {
         SoundEngine.play('settingsToggle');
         var modeKey = this.getAttribute('data-mode');
         if (modeKey === 'wordproblems') {
-          /* Future feature teaser */
-          if (typeof showToast === 'function') {
-            showToast('Word problem training is coming soon.');
+          _customPracticeActive = false;
+          _focusModeActive = false;
+          modeSelect.style.display = 'none';
+          var wpSetup = document.getElementById('wordProblemsSetup');
+          if (wpSetup && typeof AIFeatures !== 'undefined') {
+            wpSetup.style.display = 'block';
+            AIFeatures.renderWordProblemsSetup(wpSetup, function (questions, cat, diff) {
+              wpSetup.style.display = 'none';
+              var drillContainer = document.getElementById('drillContainer');
+              if (!drillContainer) return;
+              drillContainer.style.display = 'block';
+              var config = {
+                count: questions.length,
+                timeLimitSec: null,
+                perQuestionSec: null,
+                category: cat,
+                mode: '🤖 Word Problems (' + diff + ')',
+                onFinish: function (view) {
+                  if (_activeDrillEngine) {
+                    _activeDrillEngine.cleanup();
+                    _activeDrillEngine = null;
+                  }
+                  if (_drillSessionActive && typeof FirestoreSync !== 'undefined') {
+                    FirestoreSync.endDrillBatch();
+                  }
+                  _exitDrillSession();
+                  if (view === 'practice') _resetPracticeUiToModes();
+                  Router.showView(view);
+                }
+              };
+              config._preloadedQuestions = questions;
+              _startPracticeEngine(drillContainer, config);
+            });
           }
           return;
         }
@@ -1928,6 +1965,35 @@ function renderStatsView() {
       '<div class="stat-card' + (strongest ? ' stat-card-positive' : '') + '"><div class="value value-sm">' + strongestDisplay + '</div><div class="label">Strongest Category</div>' + (categoryInsightMsg && !strongest ? '<div class="stat-hint">' + categoryInsightMsg + '</div>' : '') + '</div>' +
       '<div class="stat-card' + (weakest ? ' stat-card-negative' : '') + '"><div class="value value-sm">' + weakestDisplay + '</div><div class="label">Weakest Category</div>' + (categoryInsightMsg && !weakest ? '<div class="stat-hint">' + categoryInsightMsg + '</div>' : '') + '</div>' +
       '<div class="stat-card' + trendClass + '"><div class="value value-sm">' + trend + '</div><div class="label">Recent Trend</div></div>';
+    }
+  }
+
+  /* AI Insights section */
+  var aiInsightsContainer = document.getElementById('aiInsightsContainer');
+  if (aiInsightsContainer && typeof AIFeatures !== 'undefined') {
+    if (!AIFeatures.isPremium()) {
+      aiInsightsContainer.innerHTML =
+        '<p class="secondary-text">🔒 AI-powered insights are a Premium feature.</p>' +
+        '<button class="btn accent ai-coach-unlock-btn" type="button" style="margin-top:.5rem;max-width:240px;">Unlock with Premium</button>';
+      var aiUnlockBtn = aiInsightsContainer.querySelector('.ai-coach-unlock-btn');
+      if (aiUnlockBtn) aiUnlockBtn.addEventListener('click', function () { showPaywall('settings'); });
+    } else if (p.totalAttempted >= 5) {
+      aiInsightsContainer.innerHTML =
+        '<div class="ai-stats-body"><div class="ai-loading"><div class="ai-spinner"></div><p>Analyzing performance...</p></div></div>';
+      AIFeatures.fetchInsights(p, function (err, insights) {
+        var body = aiInsightsContainer.querySelector('.ai-stats-body');
+        if (!body) body = aiInsightsContainer;
+        if (err) {
+          body.innerHTML = '<p class="ai-error">Unable to load insights right now.</p>';
+          return;
+        }
+        body.innerHTML =
+          '<div class="ai-insight-block"><p class="ai-insight-text">' + (insights.insight || '') + '</p></div>' +
+          (insights.problem ? '<div class="ai-insight-block ai-insight-problem"><strong>Focus area:</strong> ' + insights.problem + '</div>' : '') +
+          (insights.action ? '<div class="ai-insight-block ai-insight-action"><strong>Today\'s action:</strong> ' + insights.action + '</div>' : '');
+      });
+    } else {
+      aiInsightsContainer.innerHTML = '<p class="secondary-text">Complete at least 5 questions to get AI insights.</p>';
     }
   }
 

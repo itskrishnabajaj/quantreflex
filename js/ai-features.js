@@ -1,0 +1,384 @@
+var AIFeatures = (function () {
+  var WP_FREE_LIMIT = 5;
+  var WP_PREMIUM_DAILY_LIMIT = 30;
+  var WP_STORAGE_KEY = 'quant_ai_wp_usage';
+  var COACH_CACHE_KEY = 'quant_ai_coach_cache';
+  var COACH_CACHE_HOURS = 24;
+
+  function _getWpUsage() {
+    try {
+      var raw = localStorage.getItem(WP_STORAGE_KEY);
+      if (raw) return JSON.parse(raw);
+    } catch (_) {}
+    return { lifetimeUsed: 0, dailyUsed: 0, dailyDate: null };
+  }
+
+  function _saveWpUsage(usage) {
+    try { localStorage.setItem(WP_STORAGE_KEY, JSON.stringify(usage)); } catch (_) {}
+  }
+
+  function _isPremium() {
+    if (typeof FirestoreSync !== 'undefined' && typeof FirestoreSync.getAccessState === 'function') {
+      var state = FirestoreSync.getAccessState();
+      if (state && state.isPremium === true) return true;
+    }
+    return false;
+  }
+
+  function getWordProblemQuota() {
+    var usage = _getWpUsage();
+    var today = new Date().toDateString();
+    if (_isPremium()) {
+      if (usage.dailyDate !== today) {
+        usage.dailyUsed = 0;
+        usage.dailyDate = today;
+        _saveWpUsage(usage);
+      }
+      return { remaining: WP_PREMIUM_DAILY_LIMIT - usage.dailyUsed, limit: WP_PREMIUM_DAILY_LIMIT, type: 'daily' };
+    }
+    return { remaining: WP_FREE_LIMIT - usage.lifetimeUsed, limit: WP_FREE_LIMIT, type: 'lifetime' };
+  }
+
+  function consumeWordProblemQuota(count) {
+    var usage = _getWpUsage();
+    var today = new Date().toDateString();
+    if (_isPremium()) {
+      if (usage.dailyDate !== today) {
+        usage.dailyUsed = 0;
+        usage.dailyDate = today;
+      }
+      usage.dailyUsed += count;
+    } else {
+      usage.lifetimeUsed += count;
+    }
+    _saveWpUsage(usage);
+  }
+
+  function fetchWordProblems(category, difficulty, count, callback) {
+    var quota = getWordProblemQuota();
+    if (quota.remaining <= 0) {
+      if (!_isPremium()) {
+        callback('free_limit_reached');
+      } else {
+        callback('daily_limit_reached');
+      }
+      return;
+    }
+    var actualCount = Math.min(count, quota.remaining);
+
+    var xhr = new XMLHttpRequest();
+    xhr.open('POST', '/api/ai/word-problems', true);
+    xhr.setRequestHeader('Content-Type', 'application/json');
+    xhr.timeout = 30000;
+    xhr.onload = function () {
+      if (xhr.status === 200) {
+        try {
+          var data = JSON.parse(xhr.responseText);
+          if (data.questions && data.questions.length > 0) {
+            consumeWordProblemQuota(data.questions.length);
+            callback(null, data.questions);
+          } else {
+            callback('No questions generated');
+          }
+        } catch (e) {
+          callback('Failed to parse response');
+        }
+      } else {
+        try {
+          var errData = JSON.parse(xhr.responseText);
+          callback(errData.error || 'Server error');
+        } catch (_) {
+          callback('Server error');
+        }
+      }
+    };
+    xhr.onerror = function () { callback('Network error. Check your connection.'); };
+    xhr.ontimeout = function () { callback('Request timed out. Try again.'); };
+    xhr.send(JSON.stringify({ category: category, difficulty: difficulty, count: actualCount }));
+  }
+
+  function fetchExplanation(question, answer, category, callback) {
+    var xhr = new XMLHttpRequest();
+    xhr.open('POST', '/api/ai/explain', true);
+    xhr.setRequestHeader('Content-Type', 'application/json');
+    xhr.timeout = 20000;
+    xhr.onload = function () {
+      if (xhr.status === 200) {
+        try {
+          var data = JSON.parse(xhr.responseText);
+          callback(null, data.explanation);
+        } catch (e) {
+          callback('Failed to parse response');
+        }
+      } else {
+        callback('Unable to generate explanation right now.');
+      }
+    };
+    xhr.onerror = function () { callback('Network error.'); };
+    xhr.ontimeout = function () { callback('Request timed out.'); };
+    xhr.send(JSON.stringify({ question: question, answer: answer, category: category }));
+  }
+
+  function fetchInsights(stats, callback) {
+    var cached = _getCachedCoach();
+    if (cached) {
+      callback(null, cached);
+      return;
+    }
+
+    var xhr = new XMLHttpRequest();
+    xhr.open('POST', '/api/ai/insights', true);
+    xhr.setRequestHeader('Content-Type', 'application/json');
+    xhr.timeout = 20000;
+    xhr.onload = function () {
+      if (xhr.status === 200) {
+        try {
+          var data = JSON.parse(xhr.responseText);
+          _cacheCoach(data.insights);
+          callback(null, data.insights);
+        } catch (e) {
+          callback('Failed to parse response');
+        }
+      } else {
+        callback('Unable to generate insights right now.');
+      }
+    };
+    xhr.onerror = function () { callback('Network error.'); };
+    xhr.ontimeout = function () { callback('Request timed out.'); };
+    xhr.send(JSON.stringify({ stats: stats }));
+  }
+
+  function _getCachedCoach() {
+    try {
+      var raw = localStorage.getItem(COACH_CACHE_KEY);
+      if (!raw) return null;
+      var cached = JSON.parse(raw);
+      var age = Date.now() - (cached.timestamp || 0);
+      if (age < COACH_CACHE_HOURS * 60 * 60 * 1000) return cached.data;
+    } catch (_) {}
+    return null;
+  }
+
+  function _cacheCoach(data) {
+    try {
+      localStorage.setItem(COACH_CACHE_KEY, JSON.stringify({ data: data, timestamp: Date.now() }));
+    } catch (_) {}
+  }
+
+  function showExplanationModal(question, answer, category) {
+    var existing = document.getElementById('aiExplainModal');
+    if (existing) existing.parentNode.removeChild(existing);
+
+    var overlay = document.createElement('div');
+    overlay.id = 'aiExplainModal';
+    overlay.className = 'modal-overlay ai-explain-overlay';
+    overlay.style.display = 'flex';
+    overlay.innerHTML =
+      '<div class="modal-content ai-explain-modal">' +
+        '<h3 class="modal-title">🧠 AI Explanation</h3>' +
+        '<div class="ai-explain-body">' +
+          '<div class="ai-loading"><div class="ai-spinner"></div><p>Generating explanation...</p></div>' +
+        '</div>' +
+        '<div class="modal-actions">' +
+          '<button class="btn modal-cancel ai-explain-close">Close</button>' +
+        '</div>' +
+      '</div>';
+
+    document.body.appendChild(overlay);
+
+    function closeModal() {
+      overlay.style.display = 'none';
+      if (overlay.parentNode) overlay.parentNode.removeChild(overlay);
+    }
+
+    overlay.querySelector('.ai-explain-close').addEventListener('click', closeModal);
+    overlay.addEventListener('click', function (e) {
+      if (e.target === overlay) closeModal();
+    });
+
+    fetchExplanation(question, answer, category, function (err, explanation) {
+      var body = overlay.querySelector('.ai-explain-body');
+      if (!body) return;
+
+      if (err) {
+        body.innerHTML = '<p class="ai-error">' + (typeof err === 'string' ? err : 'Unable to generate explanation right now. Try again later.') + '</p>';
+        return;
+      }
+
+      var stepsHtml = '';
+      if (explanation.steps && explanation.steps.length > 0) {
+        for (var i = 0; i < explanation.steps.length; i++) {
+          stepsHtml += '<li>' + explanation.steps[i] + '</li>';
+        }
+      }
+
+      body.innerHTML =
+        '<div class="ai-explain-section">' +
+          '<h4>📌 Concept</h4>' +
+          '<p>' + (explanation.concept || '') + '</p>' +
+        '</div>' +
+        '<div class="ai-explain-section">' +
+          '<h4>📝 Step-by-Step Solution</h4>' +
+          '<ol class="ai-steps-list">' + stepsHtml + '</ol>' +
+        '</div>' +
+        (explanation.mistake ? '<div class="ai-explain-section"><h4>⚠️ Common Mistake</h4><p>' + explanation.mistake + '</p></div>' : '') +
+        (explanation.tip ? '<div class="ai-explain-section ai-tip-section"><h4>💡 Quick Tip</h4><p>' + explanation.tip + '</p></div>' : '');
+    });
+  }
+
+  function renderAICoachCard(containerId, stats) {
+    var container = document.getElementById(containerId);
+    if (!container) return;
+
+    if (!_isPremium()) {
+      container.innerHTML =
+        '<div class="card ai-coach-card ai-coach-locked">' +
+          '<h3>🤖 AI Coach</h3>' +
+          '<p class="secondary-text">Get personalized daily insights powered by AI.</p>' +
+          '<button class="btn accent ai-coach-unlock-btn" type="button">🔒 Unlock with Premium</button>' +
+        '</div>';
+      var unlockBtn = container.querySelector('.ai-coach-unlock-btn');
+      if (unlockBtn) {
+        unlockBtn.addEventListener('click', function () {
+          if (typeof showPaywall === 'function') showPaywall('settings');
+        });
+      }
+      return;
+    }
+
+    container.innerHTML =
+      '<div class="card ai-coach-card">' +
+        '<h3>🤖 AI Coach</h3>' +
+        '<div class="ai-coach-body">' +
+          '<div class="ai-loading"><div class="ai-spinner"></div><p>Analyzing your performance...</p></div>' +
+        '</div>' +
+      '</div>';
+
+    if (!stats || !stats.totalAttempted || stats.totalAttempted < 5) {
+      container.querySelector('.ai-coach-body').innerHTML =
+        '<p class="secondary-text">Complete at least 5 questions to get your first AI insight.</p>';
+      return;
+    }
+
+    fetchInsights(stats, function (err, insights) {
+      var body = container.querySelector('.ai-coach-body');
+      if (!body) return;
+
+      if (err) {
+        body.innerHTML = '<p class="ai-error">Unable to load insights right now.</p>';
+        return;
+      }
+
+      body.innerHTML =
+        '<div class="ai-insight-block">' +
+          '<p class="ai-insight-text">' + (insights.insight || '') + '</p>' +
+        '</div>' +
+        (insights.problem ? '<div class="ai-insight-block ai-insight-problem"><strong>Focus area:</strong> ' + insights.problem + '</div>' : '') +
+        (insights.action ? '<div class="ai-insight-block ai-insight-action"><strong>Today\'s action:</strong> ' + insights.action + '</div>' : '');
+    });
+  }
+
+  function renderWordProblemsSetup(container, onStart) {
+    var quota = getWordProblemQuota();
+    var quotaText = quota.type === 'lifetime'
+      ? quota.remaining + '/' + quota.limit + ' free AI questions remaining'
+      : quota.remaining + '/' + quota.limit + ' daily AI questions remaining';
+
+    container.innerHTML =
+      '<div class="training-card">' +
+        '<h3 class="category-select-title">🤖 Word Problems</h3>' +
+        '<div class="training-card-body">' +
+          '<p class="ai-quota-text">' + quotaText + '</p>' +
+          '<div class="ai-wp-config">' +
+            '<label class="secondary-text">Category</label>' +
+            '<select id="wpCategorySelect" class="theme-select ai-wp-select">' +
+              '<option value="percentages">Percentages</option>' +
+              '<option value="profit-loss">Profit & Loss</option>' +
+              '<option value="ratios">Ratios & Proportions</option>' +
+              '<option value="time-speed-distance">Time, Speed & Distance</option>' +
+              '<option value="time-and-work">Time & Work</option>' +
+              '<option value="averages">Averages</option>' +
+              '<option value="fractions">Fractions</option>' +
+              '<option value="area">Area</option>' +
+              '<option value="volume">Volume</option>' +
+            '</select>' +
+            '<label class="secondary-text" style="margin-top:.75rem;">Difficulty</label>' +
+            '<select id="wpDifficultySelect" class="theme-select ai-wp-select">' +
+              '<option value="easy">Easy</option>' +
+              '<option value="medium" selected>Medium</option>' +
+              '<option value="hard">Hard</option>' +
+            '</select>' +
+            '<label class="secondary-text" style="margin-top:.75rem;">Number of Questions</label>' +
+            '<select id="wpCountSelect" class="theme-select ai-wp-select">' +
+              '<option value="3">3 questions</option>' +
+              '<option value="5" selected>5 questions</option>' +
+              '<option value="10">10 questions</option>' +
+            '</select>' +
+          '</div>' +
+          '<button class="btn accent custom-practice-start-btn" id="startWordProblems" type="button">Generate Word Problems</button>' +
+          '<div id="wpError" class="custom-mode-error secondary-text"></div>' +
+        '</div>' +
+        '<button class="training-card-back" id="wpBackToModes" type="button" aria-label="Back to practice modes">← Back</button>' +
+      '</div>';
+
+    var startBtn = container.querySelector('#startWordProblems');
+    var backBtn = container.querySelector('#wpBackToModes');
+    var errorEl = container.querySelector('#wpError');
+
+    if (quota.remaining <= 0) {
+      startBtn.disabled = true;
+      startBtn.textContent = quota.type === 'lifetime' ? '🔒 Free limit reached' : 'Daily limit reached';
+      if (quota.type === 'lifetime') {
+        errorEl.textContent = 'Upgrade to Premium for 30 AI questions per day.';
+        errorEl.style.display = 'block';
+      }
+    }
+
+    startBtn.addEventListener('click', function () {
+      var cat = document.getElementById('wpCategorySelect').value;
+      var diff = document.getElementById('wpDifficultySelect').value;
+      var cnt = parseInt(document.getElementById('wpCountSelect').value);
+
+      startBtn.disabled = true;
+      startBtn.innerHTML = '<div class="ai-spinner-inline"></div> Generating...';
+      errorEl.textContent = '';
+
+      fetchWordProblems(cat, diff, cnt, function (err, questions) {
+        if (err) {
+          startBtn.disabled = false;
+          startBtn.textContent = 'Generate Word Problems';
+          if (err === 'free_limit_reached') {
+            errorEl.textContent = 'You\'ve used all 5 free AI questions. Upgrade to Premium for more.';
+            if (typeof showPaywall === 'function') showPaywall('settings');
+          } else if (err === 'daily_limit_reached') {
+            errorEl.textContent = 'You\'ve reached today\'s limit of 30 AI questions. Come back tomorrow!';
+          } else {
+            errorEl.textContent = typeof err === 'string' ? err : 'Unable to generate right now. Try again later.';
+          }
+          return;
+        }
+        if (onStart) onStart(questions, cat, diff);
+      });
+    });
+
+    if (backBtn) {
+      backBtn.addEventListener('click', function () {
+        if (typeof _resetPracticeUiToModes === 'function') {
+          _resetPracticeUiToModes();
+        }
+      });
+    }
+  }
+
+  return {
+    getWordProblemQuota: getWordProblemQuota,
+    consumeWordProblemQuota: consumeWordProblemQuota,
+    fetchWordProblems: fetchWordProblems,
+    fetchExplanation: fetchExplanation,
+    fetchInsights: fetchInsights,
+    showExplanationModal: showExplanationModal,
+    renderAICoachCard: renderAICoachCard,
+    renderWordProblemsSetup: renderWordProblemsSetup,
+    isPremium: _isPremium
+  };
+})();

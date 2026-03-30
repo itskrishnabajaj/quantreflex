@@ -16,7 +16,9 @@ var _LOCKED_FEATURES = {
   advanced_theme: true,
   daily_goal_limit: true,
   focus_timer: true,
-  table_modal: true
+  table_modal: true,
+  ai_explain: true,
+  ai_coach: true
 };
 var PAYWALL_DEBOUNCE_MS = 280;
 var PAYMENT_TIMEOUT_MS = 120000;
