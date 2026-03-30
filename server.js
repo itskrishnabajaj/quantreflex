@@ -90,7 +90,7 @@ function formatError(err) {
 
 app.post('/api/ai/word-problems', authMiddleware, rateLimitMiddleware, async function (req, res) {
   try {
-    if (!aiService.checkWordProblemQuota(req.userId, req.userPremium)) {
+    if (!(await aiService.checkWordProblemQuota(req.userId, req.userPremium))) {
       var msg = req.userPremium ? 'Daily word problem limit reached. Come back tomorrow.' : 'Free word problem limit reached. Upgrade to Premium for more.';
       return res.status(429).json({ error: { code: 'QUOTA_EXCEEDED', message: msg, retryable: false } });
     }
@@ -107,7 +107,7 @@ app.post('/api/ai/word-problems', authMiddleware, rateLimitMiddleware, async fun
     }
     var clampedCount = Math.min(Math.max(parseInt(count) || 5, 1), 20);
     var questions = await aiService.generateWordProblems(category, difficulty, clampedCount);
-    aiService.consumeWordProblemQuota(req.userId, req.userPremium, questions.length);
+    await aiService.consumeWordProblemQuota(req.userId, req.userPremium, questions.length);
     res.json({ questions: questions });
   } catch (err) {
     console.error('Word problems error:', err.message);

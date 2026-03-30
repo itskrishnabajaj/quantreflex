@@ -66,17 +66,29 @@ async function isUserPremium(uid) {
   }
 }
 
-var wpQuotaStore = {};
 var WP_FREE_LIMIT = 5;
 var WP_PREMIUM_DAILY = 30;
+var wpQuotaCache = {};
 
-function checkWordProblemQuota(uid, isPremium) {
-  var now = Date.now();
-  var today = new Date().toDateString();
-  if (!wpQuotaStore[uid]) {
-    wpQuotaStore[uid] = { lifetime: 0, daily: 0, dailyDate: today };
+async function _loadWpQuota(uid) {
+  if (wpQuotaCache[uid]) return wpQuotaCache[uid];
+  try {
+    var doc = await db.collection('ai_wp_quota').doc(uid).get();
+    if (doc.exists) {
+      wpQuotaCache[uid] = doc.data();
+      return wpQuotaCache[uid];
+    }
+  } catch (err) {
+    console.warn('WP quota read failed:', err.message);
   }
-  var entry = wpQuotaStore[uid];
+  var fresh = { lifetime: 0, daily: 0, dailyDate: new Date().toDateString() };
+  wpQuotaCache[uid] = fresh;
+  return fresh;
+}
+
+async function checkWordProblemQuota(uid, isPremium) {
+  var entry = await _loadWpQuota(uid);
+  var today = new Date().toDateString();
   if (isPremium) {
     if (entry.dailyDate !== today) { entry.daily = 0; entry.dailyDate = today; }
     if (entry.daily >= WP_PREMIUM_DAILY) return false;
@@ -86,12 +98,21 @@ function checkWordProblemQuota(uid, isPremium) {
   return true;
 }
 
-function consumeWordProblemQuota(uid, isPremium, count) {
-  if (!wpQuotaStore[uid]) {
-    wpQuotaStore[uid] = { lifetime: 0, daily: 0, dailyDate: new Date().toDateString() };
+async function consumeWordProblemQuota(uid, isPremium, count) {
+  var entry = await _loadWpQuota(uid);
+  var today = new Date().toDateString();
+  if (isPremium) {
+    if (entry.dailyDate !== today) { entry.daily = 0; entry.dailyDate = today; }
+    entry.daily += count;
+  } else {
+    entry.lifetime += count;
   }
-  var entry = wpQuotaStore[uid];
-  if (isPremium) { entry.daily += count; } else { entry.lifetime += count; }
+  wpQuotaCache[uid] = entry;
+  try {
+    await db.collection('ai_wp_quota').doc(uid).set(entry);
+  } catch (err) {
+    console.warn('WP quota write failed:', err.message);
+  }
 }
 
 async function generateWordProblems(category, difficulty, count) {
