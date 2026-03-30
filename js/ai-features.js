@@ -25,6 +25,19 @@ var AIFeatures = (function () {
     return false;
   }
 
+  function _getUserId() {
+    if (typeof Auth !== 'undefined' && typeof Auth.getCurrentUser === 'function') {
+      var u = Auth.getCurrentUser();
+      if (u && u.uid) return u.uid;
+    }
+    return '';
+  }
+
+  function _setAuthHeaders(xhr) {
+    xhr.setRequestHeader('X-User-Id', _getUserId());
+    xhr.setRequestHeader('X-Premium', _isPremium() ? 'true' : 'false');
+  }
+
   function getWordProblemQuota() {
     var usage = _getWpUsage();
     var today = new Date().toDateString();
@@ -69,6 +82,7 @@ var AIFeatures = (function () {
     var xhr = new XMLHttpRequest();
     xhr.open('POST', '/api/ai/word-problems', true);
     xhr.setRequestHeader('Content-Type', 'application/json');
+    _setAuthHeaders(xhr);
     xhr.timeout = 30000;
     xhr.onload = function () {
       if (xhr.status === 200) {
@@ -86,7 +100,8 @@ var AIFeatures = (function () {
       } else {
         try {
           var errData = JSON.parse(xhr.responseText);
-          callback(errData.error || 'Server error');
+          var errMsg = errData.error && errData.error.message ? errData.error.message : (typeof errData.error === 'string' ? errData.error : 'Server error');
+          callback(errMsg);
         } catch (_) {
           callback('Server error');
         }
@@ -101,6 +116,7 @@ var AIFeatures = (function () {
     var xhr = new XMLHttpRequest();
     xhr.open('POST', '/api/ai/explain', true);
     xhr.setRequestHeader('Content-Type', 'application/json');
+    _setAuthHeaders(xhr);
     xhr.timeout = 20000;
     xhr.onload = function () {
       if (xhr.status === 200) {
@@ -111,7 +127,12 @@ var AIFeatures = (function () {
           callback('Failed to parse response');
         }
       } else {
-        callback('Unable to generate explanation right now.');
+        try {
+          var errData = JSON.parse(xhr.responseText);
+          callback(errData.error && errData.error.message ? errData.error.message : 'Unable to generate explanation right now.');
+        } catch (_) {
+          callback('Unable to generate explanation right now.');
+        }
       }
     };
     xhr.onerror = function () { callback('Network error.'); };
@@ -129,6 +150,7 @@ var AIFeatures = (function () {
     var xhr = new XMLHttpRequest();
     xhr.open('POST', '/api/ai/insights', true);
     xhr.setRequestHeader('Content-Type', 'application/json');
+    _setAuthHeaders(xhr);
     xhr.timeout = 20000;
     xhr.onload = function () {
       if (xhr.status === 200) {
@@ -140,7 +162,12 @@ var AIFeatures = (function () {
           callback('Failed to parse response');
         }
       } else {
-        callback('Unable to generate insights right now.');
+        try {
+          var errData = JSON.parse(xhr.responseText);
+          callback(errData.error && errData.error.message ? errData.error.message : 'Unable to generate insights right now.');
+        } catch (_) {
+          callback('Unable to generate insights right now.');
+        }
       }
     };
     xhr.onerror = function () { callback('Network error.'); };
