@@ -187,6 +187,7 @@ Firebase configuration is embedded in the JS files. See `FIREBASE_SETUP.md` for 
 - Request locking: client-side in-flight flags prevent duplicate concurrent calls for word problems, explanations, and insights
 - Question length validation: AI-generated questions over 300 characters are rejected during Gemini response parsing
 - Question deduplication: before storing new word problems, existing questions with same category+difficulty are checked by first-50-char prefix match to avoid near-duplicates
+- Server input validation: JSON body capped at 16kb; question input truncated to 500 chars; answer truncated to 50 chars; category validated against whitelist; stats object sanitized (responseTimes capped at 100 entries, mistakes at 50, categoryStats keys at 20)
 
 ## Replit Migration Notes (March 2026)
 

@@ -5,11 +5,14 @@ const aiService = require('./services/aiService');
 const app = express();
 const PORT = process.env.PORT || 5000;
 
-app.use(express.json());
+app.use(express.json({ limit: '16kb' }));
 app.use(express.static(path.join(__dirname), {
   extensions: ['html'],
   index: 'index.html'
 }));
+
+var VALID_CATEGORIES = ['squares', 'cubes', 'area', 'volume', 'percentages', 'multiplication', 'fractions', 'averages', 'ratios', 'profit-loss', 'time-speed-distance', 'time-and-work'];
+var MAX_QUESTION_INPUT_LENGTH = 500;
 
 var rateLimitStore = {};
 var RATE_WINDOW_MS = 60 * 1000;
@@ -102,6 +105,9 @@ app.post('/api/ai/word-problems', authMiddleware, rateLimitMiddleware, async fun
     if (!category || !difficulty || !count) {
       return res.status(400).json({ error: { code: 'BAD_REQUEST', message: 'Missing required fields: category, difficulty, count', retryable: false } });
     }
+    if (VALID_CATEGORIES.indexOf(category) === -1) {
+      return res.status(400).json({ error: { code: 'BAD_REQUEST', message: 'Invalid category.', retryable: false } });
+    }
     var validDifficulties = ['easy', 'medium', 'hard'];
     if (validDifficulties.indexOf(difficulty) === -1) {
       return res.status(400).json({ error: { code: 'BAD_REQUEST', message: 'Invalid difficulty. Must be easy, medium, or hard.', retryable: false } });
@@ -120,13 +126,14 @@ app.post('/api/ai/word-problems', authMiddleware, rateLimitMiddleware, async fun
 app.post('/api/ai/explain', authMiddleware, rateLimitMiddleware, premiumGate('ai_explain'), async function (req, res) {
   try {
     var body = req.body;
-    var question = body.question;
+    var question = typeof body.question === 'string' ? body.question.substring(0, MAX_QUESTION_INPUT_LENGTH) : '';
     var answer = body.answer;
     var category = body.category;
     if (!question || answer === undefined) {
       return res.status(400).json({ error: { code: 'BAD_REQUEST', message: 'Missing required fields: question, answer', retryable: false } });
     }
-    var explanation = await aiService.generateExplanation(question, answer, category);
+    var answerStr = String(answer).substring(0, 50);
+    var explanation = await aiService.generateExplanation(question, answerStr, category);
     aiService.trackExplanationUsage(req.userId).catch(function (e) { console.warn('Explain usage track failed:', e.message); });
     res.json({ explanation: explanation });
   } catch (err) {
@@ -137,9 +144,29 @@ app.post('/api/ai/explain', authMiddleware, rateLimitMiddleware, premiumGate('ai
 
 app.post('/api/ai/insights', authMiddleware, rateLimitMiddleware, premiumGate('ai_coach'), async function (req, res) {
   try {
-    var stats = req.body.stats;
-    if (!stats) {
+    var rawStats = req.body.stats;
+    if (!rawStats) {
       return res.status(400).json({ error: { code: 'BAD_REQUEST', message: 'Missing required field: stats', retryable: false } });
+    }
+    var stats = {
+      totalAttempted: parseInt(rawStats.totalAttempted) || 0,
+      totalCorrect: parseInt(rawStats.totalCorrect) || 0,
+      dailyStreak: parseInt(rawStats.dailyStreak) || 0,
+      drillSessions: parseInt(rawStats.drillSessions) || 0,
+      timedTestSessions: parseInt(rawStats.timedTestSessions) || 0,
+      mistakes: Array.isArray(rawStats.mistakes) ? rawStats.mistakes.slice(0, 50) : [],
+      responseTimes: Array.isArray(rawStats.responseTimes) ? rawStats.responseTimes.slice(0, 100).map(Number).filter(function (n) { return !isNaN(n); }) : [],
+      categoryStats: {}
+    };
+    if (rawStats.categoryStats && typeof rawStats.categoryStats === 'object') {
+      var catKeys = Object.keys(rawStats.categoryStats).slice(0, 20);
+      catKeys.forEach(function (key) {
+        var safeKey = String(key).substring(0, 50);
+        var d = rawStats.categoryStats[key];
+        if (d && typeof d === 'object') {
+          stats.categoryStats[safeKey] = { attempted: parseInt(d.attempted) || 0, correct: parseInt(d.correct) || 0 };
+        }
+      });
     }
     var insights = await aiService.generateInsights(stats, req.userId);
     aiService.trackInsightsUsage(req.userId).catch(function (e) { console.warn('Insights usage track failed:', e.message); });
