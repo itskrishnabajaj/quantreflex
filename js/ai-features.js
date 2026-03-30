@@ -139,7 +139,7 @@ var AIFeatures = (function () {
   }
 
   function fetchWordProblems(category, difficulty, count, callback) {
-    if (_wpInFlight) return;
+    if (_wpInFlight) { callback('request_in_progress'); return; }
     _wpInFlight = true;
 
     var quota = getWordProblemQuota();
@@ -169,7 +169,7 @@ var AIFeatures = (function () {
   }
 
   function fetchExplanation(question, answer, category, callback) {
-    if (_explainInFlight) return;
+    if (_explainInFlight) { callback('request_in_progress'); return; }
     _explainInFlight = true;
 
     _sendAuthenticatedRequest('POST', '/api/ai/explain',
@@ -182,7 +182,7 @@ var AIFeatures = (function () {
   }
 
   function fetchInsights(stats, callback) {
-    if (_insightsInFlight) return;
+    if (_insightsInFlight) { callback('request_in_progress'); return; }
 
     var cached = _getCachedCoach();
     if (cached) {
@@ -407,6 +407,8 @@ var AIFeatures = (function () {
             if (typeof showPaywall === 'function') showPaywall('settings');
           } else if (err === 'daily_limit_reached') {
             errorEl.textContent = 'You\'ve reached today\'s limit of 25 AI questions. Come back tomorrow!';
+          } else if (err === 'request_in_progress') {
+            errorEl.textContent = 'A request is already in progress. Please wait.';
           } else {
             errorEl.textContent = FRIENDLY_ERROR;
           }
