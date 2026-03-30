@@ -62,7 +62,11 @@ async function authMiddleware(req, res, next) {
   }
 
   req.userId = decoded.uid;
-  req.userPremium = await aiService.isUserPremium(decoded.uid);
+  try {
+    req.userPremium = await aiService.isUserPremium(decoded.uid);
+  } catch (entitlementErr) {
+    return res.status(503).json({ error: formatError(entitlementErr) });
+  }
   next();
 }
 

@@ -61,7 +61,8 @@ async function isUserPremium(uid) {
     var data = doc.data();
     return data.isPremium === true || data.premiumUser === true;
   } catch (err) {
-    return false;
+    console.error('Premium lookup failed for uid ' + uid + ':', err.message);
+    throw new AIServiceError('ENTITLEMENT_ERROR', 'Unable to verify subscription status. Please try again.', true);
   }
 }
 

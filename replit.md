@@ -160,6 +160,12 @@ Firebase configuration is embedded in the JS files. See `FIREBASE_SETUP.md` for 
 - `ai_coach` — AI Coach card (premium lock)
 - Word Problems uses its own quota system (not paywall-gated)
 
+### Firebase Admin SDK
+- Initialized with `projectId: 'quant-reflex-trainer'` (no service account required for basic ID token verification)
+- Uses Firestore Admin for caching AI responses and verifying premium entitlement from the `users` collection
+- Premium status checked via `isPremium` or `premiumUser` fields on user documents
+- If Firestore Admin is unreachable, AI endpoints return a 503 retryable error (not silent denial)
+
 ## Replit Migration Notes (March 2026)
 
 - Added a 5-second timeout fallback in `js/app.js` for Firebase Auth initialization. If `onAuthStateChanged` doesn't fire within 5 seconds (e.g., in sandboxed preview environments), the app falls back to showing the login screen rather than hanging indefinitely on the splash screen.
