@@ -36,3 +36,8 @@ externalPort = 80
 [deployment]
 deploymentTarget = "static"
 publicDir = "."
+
+[userenv]
+
+[userenv.shared]
+GEMINI_API_KEY = "AIzaSyD6d34z9mAYKFwGzaI4qcI3DEaEat_HUNU"

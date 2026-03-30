@@ -1,0 +1,411 @@
+You are a senior full-stack engineer, AI systems architect, and production debugging specialist working on a live PWA:
+
+"Quant Reflex Trainer"
+
+This is the FIRST AI integration. The app is already functional and MUST NOT BREAK.
+
+Your job is to implement AI features in a SAFE, SCALABLE, COST-EFFICIENT, and BUG-FREE manner.
+
+---
+
+🚨 NON-NEGOTIABLE RULES
+
+1. DO NOT hardcode API keys anywhere
+2. USE environment variable:
+   process.env.GEMINI_API_KEY
+3. DO NOT refactor unrelated code
+4. DO NOT change UI structure unless required
+5. DO NOT block main thread (all AI calls async)
+6. FAIL GRACEFULLY on any error
+7. LOGIC > STYLE (stability is priority)
+8. STRICTLY VALIDATE AI RESPONSES
+
+---
+
+🔐 API LAYER SETUP
+
+Create a centralized AI service module:
+
+/services/aiService.js
+
+Functions:
+
+- generateWordProblems()
+- generateExplanation()
+- generateInsights()
+
+Each function must:
+
+- call Gemini API
+- validate response
+- retry once if malformed
+- fallback safely if failed
+
+---
+
+🔥 FEATURE 1: WORD PROBLEMS (CONTROLLED + CACHED)
+
+LOCATION:
+Practice Tab → Word Problems Mode
+
+---
+
+👤 USER FLOW
+
+User selects:
+
+- category
+- number of questions
+- difficulty OR adaptive
+
+---
+
+📊 LIMIT SYSTEM
+
+- FREE USERS:
+  → MAX 5 QUESTIONS LIFETIME
+
+- PREMIUM USERS:
+  → MAX 30 QUESTIONS PER DAY
+
+Store in Firestore:
+
+users/{userId}/usage:
+{
+wordProblemsUsedLifetime: number,
+wordProblemsUsedToday: number,
+lastUsedDate: timestamp
+}
+
+Reset daily counter automatically.
+
+---
+
+📦 FIRESTORE COLLECTION
+
+wordProblems:
+{
+id,
+category,
+difficulty,
+question,
+answer,
+steps,
+createdAt,
+usageCount
+}
+
+---
+
+⚙️ GENERATION LOGIC
+
+STEP 1:
+Query Firestore:
+
+- match category + difficulty
+- randomize results
+- prioritize low usageCount
+
+IF sufficient → RETURN
+
+---
+
+STEP 2:
+If insufficient → CALL GEMINI
+
+---
+
+🧠 GEMINI PROMPT (STRICT)
+
+Return ONLY JSON array:
+
+[
+{
+"question": "clear, short, solvable mentally",
+"answer": "numeric only",
+"steps": "optional short explanation"
+}
+]
+
+RULES:
+
+- No long paragraphs
+- No ambiguity
+- No units confusion
+- CAT-level quality
+- Avoid repeated patterns
+
+---
+
+STEP 3:
+Validate:
+
+- question exists
+- answer is numeric
+- no null fields
+
+Reject invalid items.
+
+---
+
+STEP 4:
+Store valid questions in Firestore
+
+---
+
+STEP 5:
+Return mix of:
+
+- cached + new
+
+---
+
+---
+
+🔥 FEATURE 2: MISTAKE EXPLAINER (HIGH PRIORITY)
+
+LOCATION:
+
+- after wrong answer
+- review mistakes tab
+
+---
+
+📦 FIRESTORE
+
+explanations:
+{
+questionId,
+concept,
+steps,
+mistake,
+tip,
+createdAt
+}
+
+---
+
+⚙️ FLOW
+
+STEP 1:
+Check Firestore using questionId
+
+IF exists → return
+
+---
+
+STEP 2:
+If not → call Gemini
+
+---
+
+🧠 GEMINI PROMPT (STRICT JSON)
+
+Input includes:
+
+- question
+- correct answer
+
+---
+
+Return:
+
+{
+"concept": "core idea",
+"steps": "step-by-step solution",
+"mistake": "likely mistake",
+"tip": "quick improvement tip"
+}
+
+---
+
+⚠️ CRITICAL SAFETY
+
+- explanation MUST align with correct answer
+- if mismatch → discard + retry once
+
+---
+
+STEP 3:
+Store in Firestore
+
+---
+
+STEP 4:
+Display in structured modal UI
+
+---
+
+---
+
+🔥 FEATURE 3: AI INSIGHTS (DAILY COACH)
+
+LOCATION:
+
+- Home tab card
+- Stats tab
+
+---
+
+📦 FIRESTORE
+
+aiInsights:
+{
+userId,
+date,
+insight,
+problem,
+action,
+createdAt
+}
+
+---
+
+⚙️ FLOW
+
+STEP 1:
+Collect user stats:
+
+{
+accuracy,
+avgResponseTime,
+weakCategories,
+strongCategories,
+mistakesCount,
+streak,
+recentPerformanceTrend
+}
+
+---
+
+STEP 2:
+Check Firestore:
+(userId + date)
+
+IF exists → return
+
+---
+
+STEP 3:
+Call Gemini
+
+---
+
+🧠 GEMINI PROMPT
+
+Return STRICT JSON:
+
+{
+"insight": "what is happening",
+"problem": "main issue",
+"action": "what to do next"
+}
+
+---
+
+RULES:
+
+- short sentences
+- no fluff
+- actionable only
+
+---
+
+STEP 4:
+Store for 24h
+
+---
+
+---
+
+⚡ PERFORMANCE OPTIMIZATION
+
+- All AI calls async
+- Show loading states
+- NEVER block UI
+
+---
+
+- Use caching aggressively
+- Avoid duplicate calls
+- Batch Firestore reads
+
+---
+
+---
+
+🧪 ERROR HANDLING
+
+If API fails:
+
+- fallback:
+  "Unable to generate right now. Try again."
+
+---
+
+If JSON invalid:
+
+- retry once
+- else discard
+
+---
+
+---
+
+🔒 PREMIUM CHECK (IMPORTANT)
+
+Create utility:
+
+isPremiumUser(user)
+
+---
+
+Rules:
+
+- FREE users:
+  
+  - 5 lifetime word problems
+  - no explanation access
+  - no AI insights
+
+- PREMIUM:
+  
+  - full access
+
+---
+
+⚠️ PREMIUM USERS MUST NEVER SEE PAYWALL POPUP
+
+---
+
+---
+
+🧪 FINAL VALIDATION CHECKLIST
+
+- No UI breakage
+- No blocking calls
+- API key secure
+- Firestore reads optimized
+- Limits enforced correctly
+- JSON parsing safe
+- Retry logic working
+- Caching working
+
+---
+
+---
+
+📊 OUTPUT REQUIRED
+
+1. Files created/modified
+2. Firestore structure implemented
+3. API usage logic
+4. Caching logic
+5. Limit enforcement logic
+6. Confirmation:
+
+"AI features integrated successfully with full stability and no regressions."
+
+---
+
+Proceed step-by-step. Do not rush. Stability > speed.
