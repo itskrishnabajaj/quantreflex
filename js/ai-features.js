@@ -34,11 +34,23 @@ var AIFeatures = (function () {
   }
 
   function _isPremium() {
+    if (typeof canAccessFeature === 'function') {
+      return canAccessFeature('ai_coach');
+    }
     if (typeof FirestoreSync !== 'undefined' && typeof FirestoreSync.getAccessState === 'function') {
       var state = FirestoreSync.getAccessState();
-      if (state && state.isPremium === true) return true;
+      if (state && (state.isPremium === true || state.hasPaid === true || state.isEarlyUser === true || state.isTrial === true)) return true;
     }
     return false;
+  }
+
+  var _insightsDebounceTimer = null;
+  function _debouncedFetchInsights(stats, callback) {
+    if (_insightsDebounceTimer) clearTimeout(_insightsDebounceTimer);
+    _insightsDebounceTimer = setTimeout(function () {
+      _insightsDebounceTimer = null;
+      fetchInsights(stats, callback);
+    }, 500);
   }
 
   function _getIdToken(callback) {
@@ -403,6 +415,7 @@ var AIFeatures = (function () {
     showExplanationModal: showExplanationModal,
     renderAICoachCard: renderAICoachCard,
     renderWordProblemsSetup: renderWordProblemsSetup,
-    isPremium: _isPremium
+    isPremium: _isPremium,
+    debouncedFetchInsights: _debouncedFetchInsights
   };
 })();
