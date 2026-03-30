@@ -911,14 +911,17 @@ document.addEventListener('DOMContentLoaded', function () {
    */
   function _launchOnboardingOrShowMain() {
     if (typeof Onboarding !== 'undefined' && Onboarding.shouldShow()) {
-      /* Show the onboarding overlay without revealing main app behind it */
       Onboarding.show(function () {
-        /* Onboarding finished — now reveal the main app */
         _revealMainApp();
-        Router.showView('home');
+        Router.showView('learn');
+        if (!window._premiumPopupShownThisSession) {
+          window._premiumPopupShownThisSession = true;
+          setTimeout(function () {
+            if (typeof showPaywall === 'function') showPaywall('settings');
+          }, 800);
+        }
       });
     } else {
-      /* No onboarding needed — reveal immediately */
       _revealMainApp();
     }
 
@@ -1294,16 +1297,17 @@ document.addEventListener('DOMContentLoaded', function () {
           modeSelect.style.display = 'none';
           var wpSetup = document.getElementById('wordProblemsSetup');
           if (wpSetup && typeof AIFeatures !== 'undefined') {
-            wpSetup.style.display = 'block';
-            AIFeatures.renderWordProblemsSetup(wpSetup, function (questions, cat, diff) {
+            wpSetup.style.display = 'flex';
+            AIFeatures.renderWordProblemsSetup(wpSetup, function (questions, cat, diff, wpTimerCfg) {
               wpSetup.style.display = 'none';
               var drillContainer = document.getElementById('drillContainer');
               if (!drillContainer) return;
               drillContainer.style.display = 'block';
+              var _tCfg = wpTimerCfg || { timeLimitSec: null, perQuestionSec: null };
               var config = {
                 count: questions.length,
-                timeLimitSec: null,
-                perQuestionSec: null,
+                timeLimitSec: _tCfg.timeLimitSec,
+                perQuestionSec: _tCfg.perQuestionSec,
                 category: cat,
                 mode: '🤖 Word Problems (' + diff + ')',
                 onFinish: function (view) {

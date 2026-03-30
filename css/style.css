@@ -2452,6 +2452,21 @@ body.web-mode #categorySelect {
   position: fixed;
 }
 
+#wordProblemsSetup {
+  position: fixed;
+  top: 0; left: 0; right: 0;
+  bottom: calc(4.5rem + env(safe-area-inset-bottom, 0px));
+  z-index: 100;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0,0,0,.35);
+  padding: 1rem;
+}
+body.web-mode #wordProblemsSetup {
+  position: fixed;
+}
+
 /* ---- Stats Grid Improvements ---- */
 .stat-grid {
   display: grid;
@@ -3030,8 +3045,10 @@ body.drill-session-active #drillContainer > .card {
   display: flex;
   flex-direction: column;
   align-items: center;
+  justify-content: center;
   text-align: center;
   min-height: 0;
+  padding-top: 1.5rem;
   padding-bottom: .5rem;
 }
 
@@ -4951,6 +4968,52 @@ body.dark-mode .drill-explain-btn:active {
 
 .ai-stats-body {
   min-height: 3rem;
+}
+
+.wp-config-section {
+  margin-top: 1rem;
+  padding: 0 4px;
+}
+.wp-timer-section {
+  margin-top: .75rem;
+}
+
+.wrong-answer-card {
+  border: 2px solid #ef4444 !important;
+  border-radius: .75rem;
+  padding: .75rem 1rem !important;
+  background: rgba(239,68,68,.06) !important;
+  text-align: center;
+}
+.wrong-answer-header {
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: #dc2626;
+  margin-bottom: .35rem;
+}
+.wrong-answer-correct {
+  font-size: 1rem;
+  font-weight: 600;
+  color: #0f172a;
+  margin-bottom: .5rem;
+}
+body.dark-mode .wrong-answer-card {
+  border-color: #f87171 !important;
+  background: rgba(239,68,68,.12) !important;
+}
+body.dark-mode .wrong-answer-header {
+  color: #f87171;
+}
+body.dark-mode .wrong-answer-correct {
+  color: #e2e8f0;
+}
+.wrong-answer-card .drill-explain-btn {
+  margin-top: .5rem;
+  padding: .5rem 1.25rem;
+  font-size: .88rem;
+  border-radius: .6rem;
+  border-width: 2px;
+  box-shadow: 0 2px 6px rgba(139,92,246,.15);
 }
 
 /* Task 14: Reduced motion for view transitions */

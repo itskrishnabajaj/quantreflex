@@ -333,42 +333,75 @@ var AIFeatures = (function () {
     });
   }
 
+  var WP_CATEGORIES = [
+    { key: 'percentages', label: 'Percentages' },
+    { key: 'profit-loss', label: 'Profit & Loss' },
+    { key: 'ratios', label: 'Ratios' },
+    { key: 'time-speed-distance', label: 'Time Speed Dist' },
+    { key: 'time-and-work', label: 'Time & Work' },
+    { key: 'averages', label: 'Averages' },
+    { key: 'fractions', label: 'Fractions' },
+    { key: 'area', label: 'Area' },
+    { key: 'volume', label: 'Volume' }
+  ];
+  var WP_MAX_QUESTIONS = 25;
+  var WP_DEFAULT_QUESTIONS = 5;
+
+  var _wpSelectedCategory = null;
+  var _wpQuestionCount = WP_DEFAULT_QUESTIONS;
+  var _wpTimerEnabled = false;
+  var _wpTimerPillMode = 'per';
+  var _wpTimerSeconds = 15;
+
   function renderWordProblemsSetup(container, onStart) {
     var quota = getWordProblemQuota();
     var quotaText = quota.type === 'lifetime'
       ? quota.remaining + '/' + quota.limit + ' free AI questions remaining'
       : quota.remaining + '/' + quota.limit + ' daily AI questions remaining';
 
+    _wpSelectedCategory = null;
+    _wpQuestionCount = WP_DEFAULT_QUESTIONS;
+    _wpTimerEnabled = false;
+    _wpTimerPillMode = 'per';
+    _wpTimerSeconds = 15;
+
+    var catHtml = '';
+    for (var c = 0; c < WP_CATEGORIES.length; c++) {
+      catHtml += '<button class="category-btn category-card wp-cat-btn" type="button" data-wpcat="' + WP_CATEGORIES[c].key + '">' + WP_CATEGORIES[c].label + '</button>';
+    }
+
     container.innerHTML =
       '<div class="training-card">' +
         '<h3 class="category-select-title">🤖 Word Problems</h3>' +
         '<div class="training-card-body">' +
           '<p class="ai-quota-text">' + quotaText + '</p>' +
-          '<div class="ai-wp-config">' +
-            '<label class="secondary-text">Category</label>' +
-            '<select id="wpCategorySelect" class="theme-select ai-wp-select">' +
-              '<option value="percentages">Percentages</option>' +
-              '<option value="profit-loss">Profit & Loss</option>' +
-              '<option value="ratios">Ratios & Proportions</option>' +
-              '<option value="time-speed-distance">Time, Speed & Distance</option>' +
-              '<option value="time-and-work">Time & Work</option>' +
-              '<option value="averages">Averages</option>' +
-              '<option value="fractions">Fractions</option>' +
-              '<option value="area">Area</option>' +
-              '<option value="volume">Volume</option>' +
-            '</select>' +
-            '<label class="secondary-text" style="margin-top:.75rem;">Difficulty</label>' +
-            '<select id="wpDifficultySelect" class="theme-select ai-wp-select">' +
-              '<option value="easy">Easy</option>' +
-              '<option value="medium" selected>Medium</option>' +
-              '<option value="hard">Hard</option>' +
-            '</select>' +
-            '<label class="secondary-text" style="margin-top:.75rem;">Number of Questions</label>' +
-            '<select id="wpCountSelect" class="theme-select ai-wp-select">' +
-              '<option value="3">3 questions</option>' +
-              '<option value="5" selected>5 questions</option>' +
-              '<option value="10">10 questions</option>' +
-            '</select>' +
+          '<div class="category-grid">' + catHtml + '</div>' +
+          '<div class="wp-config-section">' +
+            '<label class="secondary-text" for="wpQuestionSlider">Number of Questions</label>' +
+            '<input id="wpQuestionSlider" class="custom-question-range" type="range" min="1" max="' + WP_MAX_QUESTIONS + '" value="' + WP_DEFAULT_QUESTIONS + '" />' +
+            '<div class="custom-practice-meta-row">' +
+              '<strong id="wpQuestionCountValue">' + WP_DEFAULT_QUESTIONS + '</strong>' +
+              '<span class="secondary-text" id="wpQuestionCountText">You will solve ' + WP_DEFAULT_QUESTIONS + ' questions</span>' +
+            '</div>' +
+          '</div>' +
+          '<div class="timer-select-section wp-timer-section">' +
+            '<div class="timer-toggle-row">' +
+              '<span class="timer-toggle-label">Timer</span>' +
+              '<label class="toggle">' +
+                '<input type="checkbox" id="wpTimerToggle" />' +
+                '<span class="toggle-slider"></span>' +
+              '</label>' +
+            '</div>' +
+            '<div class="timer-config-area" id="wpTimerConfigArea" style="display:none;">' +
+              '<div class="timer-pill-selector">' +
+                '<button class="timer-pill active" data-wppill="per" type="button">Per Ques.</button>' +
+                '<button class="timer-pill" data-wppill="total" type="button">Total</button>' +
+              '</div>' +
+              '<div class="timer-input-row">' +
+                '<input type="number" id="wpTimerSecondsInput" class="timer-seconds-input" min="5" max="600" value="15" />' +
+                '<span class="timer-unit-label">seconds</span>' +
+              '</div>' +
+            '</div>' +
           '</div>' +
           '<button class="btn accent custom-practice-start-btn" id="startWordProblems" type="button">Generate Word Problems</button>' +
           '<div id="wpError" class="custom-mode-error secondary-text"></div>' +
@@ -379,6 +412,64 @@ var AIFeatures = (function () {
     var startBtn = container.querySelector('#startWordProblems');
     var backBtn = container.querySelector('#wpBackToModes');
     var errorEl = container.querySelector('#wpError');
+    var slider = container.querySelector('#wpQuestionSlider');
+    var countValue = container.querySelector('#wpQuestionCountValue');
+    var countText = container.querySelector('#wpQuestionCountText');
+    var wpTimerToggle = container.querySelector('#wpTimerToggle');
+    var wpTimerConfigArea = container.querySelector('#wpTimerConfigArea');
+    var wpTimerPillContainer = container.querySelector('.wp-timer-section .timer-pill-selector');
+    var wpTimerSecondsInput = container.querySelector('#wpTimerSecondsInput');
+
+    var catBtns = container.querySelectorAll('.wp-cat-btn');
+    for (var cb = 0; cb < catBtns.length; cb++) {
+      catBtns[cb].addEventListener('click', function () {
+        var key = this.getAttribute('data-wpcat');
+        if (_wpSelectedCategory === key) {
+          _wpSelectedCategory = null;
+          this.classList.remove('selected');
+        } else {
+          for (var j = 0; j < catBtns.length; j++) catBtns[j].classList.remove('selected');
+          _wpSelectedCategory = key;
+          this.classList.add('selected');
+        }
+        if (errorEl) errorEl.textContent = '';
+      });
+    }
+
+    if (slider) {
+      slider.addEventListener('input', function () {
+        var val = parseInt(slider.value, 10);
+        if (isNaN(val)) val = WP_DEFAULT_QUESTIONS;
+        _wpQuestionCount = Math.max(1, Math.min(WP_MAX_QUESTIONS, val));
+        if (countValue) countValue.textContent = String(_wpQuestionCount);
+        if (countText) countText.textContent = 'You will solve ' + _wpQuestionCount + ' questions';
+      });
+    }
+
+    if (wpTimerToggle) {
+      wpTimerToggle.addEventListener('change', function () {
+        _wpTimerEnabled = this.checked;
+        if (wpTimerConfigArea) wpTimerConfigArea.style.display = this.checked ? 'block' : 'none';
+      });
+    }
+
+    if (wpTimerPillContainer) {
+      wpTimerPillContainer.addEventListener('click', function (e) {
+        var pill = e.target.closest('.timer-pill');
+        if (!pill) return;
+        var pills = wpTimerPillContainer.querySelectorAll('.timer-pill');
+        for (var i = 0; i < pills.length; i++) pills[i].classList.remove('active');
+        pill.classList.add('active');
+        _wpTimerPillMode = pill.getAttribute('data-wppill');
+      });
+    }
+
+    if (wpTimerSecondsInput) {
+      wpTimerSecondsInput.addEventListener('input', function () {
+        var val = parseInt(this.value, 10);
+        if (!isNaN(val)) _wpTimerSeconds = Math.max(5, Math.min(600, val));
+      });
+    }
 
     if (quota.remaining <= 0) {
       startBtn.disabled = true;
@@ -390,15 +481,32 @@ var AIFeatures = (function () {
     }
 
     startBtn.addEventListener('click', function () {
-      var cat = document.getElementById('wpCategorySelect').value;
-      var diff = document.getElementById('wpDifficultySelect').value;
-      var cnt = parseInt(document.getElementById('wpCountSelect').value);
+      if (!_wpSelectedCategory) {
+        if (errorEl) errorEl.textContent = 'Please select a category';
+        return;
+      }
+      var settings = (typeof loadSettings === 'function') ? loadSettings() : {};
+      var diff = settings.difficulty || 'medium';
+      var cnt = Math.min(_wpQuestionCount, quota.remaining);
+      if (cnt <= 0) {
+        if (errorEl) errorEl.textContent = quota.type === 'lifetime' ? 'No free questions remaining.' : 'Daily limit reached.';
+        return;
+      }
 
       startBtn.disabled = true;
       startBtn.innerHTML = '<div class="ai-spinner-inline"></div> Generating...';
       errorEl.textContent = '';
 
-      fetchWordProblems(cat, diff, cnt, function (err, questions) {
+      var wpTimerCfg = { timeLimitSec: null, perQuestionSec: null };
+      if (_wpTimerEnabled && _wpTimerSeconds >= 5) {
+        if (_wpTimerPillMode === 'per') {
+          wpTimerCfg.perQuestionSec = _wpTimerSeconds;
+        } else {
+          wpTimerCfg.timeLimitSec = _wpTimerSeconds;
+        }
+      }
+
+      fetchWordProblems(_wpSelectedCategory, diff, cnt, function (err, questions) {
         if (err) {
           startBtn.disabled = false;
           startBtn.textContent = 'Generate Word Problems';
@@ -414,7 +522,7 @@ var AIFeatures = (function () {
           }
           return;
         }
-        if (onStart) onStart(questions, cat, diff);
+        if (onStart) onStart(questions, _wpSelectedCategory, diff, wpTimerCfg);
       });
     });
 

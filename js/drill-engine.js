@@ -283,12 +283,22 @@ function createDrillEngine(container, opts) {
     }
 
     var feedback = ui.feedbackEl;
-    feedback.textContent = correct ? '✓ Correct!' : '✗ Answer: ' + expected;
-    feedback.className = 'feedback ' + (correct ? 'correct' : 'wrong');
 
-    /* Add animation class — shake on wrong, pop on correct */
-    feedback.classList.add('feedback-anim');
-    if (!correct) {
+    if (correct) {
+      feedback.textContent = '✓ Correct!';
+      feedback.className = 'feedback correct feedback-anim';
+    } else {
+      feedback.className = 'feedback wrong wrong-answer-card feedback-anim';
+      feedback.innerHTML = '';
+      var wrongLabel = document.createElement('div');
+      wrongLabel.className = 'wrong-answer-header';
+      wrongLabel.textContent = '❌ Wrong Answer';
+      var correctLabel = document.createElement('div');
+      correctLabel.className = 'wrong-answer-correct';
+      correctLabel.textContent = 'Correct Answer: ' + expected;
+      feedback.appendChild(wrongLabel);
+      feedback.appendChild(correctLabel);
+
       var card = ui.cardEl;
       if (card) card.classList.add('feedback-shake');
       setTimeout(function () { if (card) card.classList.remove('feedback-shake'); }, 400);
@@ -297,7 +307,8 @@ function createDrillEngine(container, opts) {
     if (typeof AIFeatures !== 'undefined' && (!correct || reviewMode)) {
       var explainBtn = document.createElement('button');
       explainBtn.className = 'drill-explain-btn';
-      explainBtn.textContent = '🧠 Explain';
+      var _canExplain = (typeof canAccessFeature === 'function') ? canAccessFeature('ai_explain') : true;
+      explainBtn.textContent = _canExplain ? '🧠 Explain' : '🧠 Explain 🔒';
       explainBtn.addEventListener('click', function () {
         if (typeof canAccessFeature === 'function' && !canAccessFeature('ai_explain')) {
           if (typeof showPaywall === 'function') showPaywall('settings');
@@ -305,7 +316,6 @@ function createDrillEngine(container, opts) {
         }
         AIFeatures.showExplanationModal(q.question, expected, q.category);
       });
-      feedback.appendChild(document.createElement('br'));
       feedback.appendChild(explainBtn);
     }
 
