@@ -98,6 +98,8 @@ function createDrillEngine(container, opts) {
     });
   }
 
+  function _escHtml(s) { var d = document.createElement('div'); d.textContent = s || ''; return d.innerHTML; }
+
   function renderQuestion() {
     answered = false;
     var q = questions[current];
@@ -117,7 +119,7 @@ function createDrillEngine(container, opts) {
           '<div class="drill-progress-bar"><div class="drill-progress-fill" style="width:' + progressPct + '%"></div></div>' +
           (timeLimit ? '<p id="globalTimer" class="timer"></p>' : '') +
           (perQLimit ? '<p id="perQTimer" class="timer"></p>' : '') +
-          '<h2 class="question-text">' + q.question + '</h2>' +
+          '<h2 class="question-text">' + _escHtml(q.question) + '</h2>' +
           '<input id="answerInput" class="input" type="text" inputmode="none" autocomplete="off" placeholder="Your answer" readonly />' +
           '<div id="feedback" class="feedback"></div>' +
         '</div>' +

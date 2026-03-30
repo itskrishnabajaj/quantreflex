@@ -1987,10 +1987,11 @@ function renderStatsView() {
           body.innerHTML = '<p class="ai-error">Unable to generate right now. Try again later.</p>';
           return;
         }
+        function _escAi(s) { var d = document.createElement('div'); d.textContent = s || ''; return d.innerHTML; }
         body.innerHTML =
-          '<div class="ai-insight-block"><p class="ai-insight-text">' + (insights.insight || '') + '</p></div>' +
-          (insights.problem ? '<div class="ai-insight-block ai-insight-problem"><strong>Focus area:</strong> ' + insights.problem + '</div>' : '') +
-          (insights.action ? '<div class="ai-insight-block ai-insight-action"><strong>Today\'s action:</strong> ' + insights.action + '</div>' : '');
+          '<div class="ai-insight-block"><p class="ai-insight-text">' + _escAi(insights.insight) + '</p></div>' +
+          (insights.problem ? '<div class="ai-insight-block ai-insight-problem"><strong>Focus area:</strong> ' + _escAi(insights.problem) + '</div>' : '') +
+          (insights.action ? '<div class="ai-insight-block ai-insight-action"><strong>Today\'s action:</strong> ' + _escAi(insights.action) + '</div>' : '');
       });
     } else {
       aiInsightsContainer.innerHTML = '<p class="secondary-text">Complete at least 5 questions to get AI insights.</p>';

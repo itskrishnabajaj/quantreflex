@@ -1,20 +1,36 @@
 var AIFeatures = (function () {
   var WP_FREE_LIMIT = 5;
   var WP_PREMIUM_DAILY_LIMIT = 30;
-  var WP_STORAGE_KEY = 'quant_ai_wp_usage';
-  var COACH_CACHE_KEY = 'quant_ai_coach_cache';
   var COACH_CACHE_HOURS = 24;
+
+  function _esc(str) {
+    if (typeof str !== 'string') return '';
+    var div = document.createElement('div');
+    div.textContent = str;
+    return div.innerHTML;
+  }
+
+  function _uid() {
+    if (typeof Auth !== 'undefined' && typeof Auth.getCurrentUser === 'function') {
+      var u = Auth.getCurrentUser();
+      if (u && u.uid) return u.uid;
+    }
+    return 'anon';
+  }
+
+  function _wpKey() { return 'quant_ai_wp_usage_' + _uid(); }
+  function _coachKey() { return 'quant_ai_coach_cache_' + _uid(); }
 
   function _getWpUsage() {
     try {
-      var raw = localStorage.getItem(WP_STORAGE_KEY);
+      var raw = localStorage.getItem(_wpKey());
       if (raw) return JSON.parse(raw);
     } catch (_) {}
     return { lifetimeUsed: 0, dailyUsed: 0, dailyDate: null };
   }
 
   function _saveWpUsage(usage) {
-    try { localStorage.setItem(WP_STORAGE_KEY, JSON.stringify(usage)); } catch (_) {}
+    try { localStorage.setItem(_wpKey(), JSON.stringify(usage)); } catch (_) {}
   }
 
   function _isPremium() {
@@ -158,7 +174,7 @@ var AIFeatures = (function () {
 
   function _getCachedCoach() {
     try {
-      var raw = localStorage.getItem(COACH_CACHE_KEY);
+      var raw = localStorage.getItem(_coachKey());
       if (!raw) return null;
       var cached = JSON.parse(raw);
       var age = Date.now() - (cached.timestamp || 0);
@@ -169,7 +185,7 @@ var AIFeatures = (function () {
 
   function _cacheCoach(data) {
     try {
-      localStorage.setItem(COACH_CACHE_KEY, JSON.stringify({ data: data, timestamp: Date.now() }));
+      localStorage.setItem(_coachKey(), JSON.stringify({ data: data, timestamp: Date.now() }));
     } catch (_) {}
   }
 
@@ -216,21 +232,21 @@ var AIFeatures = (function () {
       var stepsHtml = '';
       if (explanation.steps && explanation.steps.length > 0) {
         for (var i = 0; i < explanation.steps.length; i++) {
-          stepsHtml += '<li>' + explanation.steps[i] + '</li>';
+          stepsHtml += '<li>' + _esc(explanation.steps[i]) + '</li>';
         }
       }
 
       body.innerHTML =
         '<div class="ai-explain-section">' +
           '<h4>📌 Concept</h4>' +
-          '<p>' + (explanation.concept || '') + '</p>' +
+          '<p>' + _esc(explanation.concept) + '</p>' +
         '</div>' +
         '<div class="ai-explain-section">' +
           '<h4>📝 Step-by-Step Solution</h4>' +
           '<ol class="ai-steps-list">' + stepsHtml + '</ol>' +
         '</div>' +
-        (explanation.mistake ? '<div class="ai-explain-section"><h4>⚠️ Common Mistake</h4><p>' + explanation.mistake + '</p></div>' : '') +
-        (explanation.tip ? '<div class="ai-explain-section ai-tip-section"><h4>💡 Quick Tip</h4><p>' + explanation.tip + '</p></div>' : '');
+        (explanation.mistake ? '<div class="ai-explain-section"><h4>⚠️ Common Mistake</h4><p>' + _esc(explanation.mistake) + '</p></div>' : '') +
+        (explanation.tip ? '<div class="ai-explain-section ai-tip-section"><h4>💡 Quick Tip</h4><p>' + _esc(explanation.tip) + '</p></div>' : '');
     });
   }
 
@@ -279,10 +295,10 @@ var AIFeatures = (function () {
 
       body.innerHTML =
         '<div class="ai-insight-block">' +
-          '<p class="ai-insight-text">' + (insights.insight || '') + '</p>' +
+          '<p class="ai-insight-text">' + _esc(insights.insight) + '</p>' +
         '</div>' +
-        (insights.problem ? '<div class="ai-insight-block ai-insight-problem"><strong>Focus area:</strong> ' + insights.problem + '</div>' : '') +
-        (insights.action ? '<div class="ai-insight-block ai-insight-action"><strong>Today\'s action:</strong> ' + insights.action + '</div>' : '');
+        (insights.problem ? '<div class="ai-insight-block ai-insight-problem"><strong>Focus area:</strong> ' + _esc(insights.problem) + '</div>' : '') +
+        (insights.action ? '<div class="ai-insight-block ai-insight-action"><strong>Today\'s action:</strong> ' + _esc(insights.action) + '</div>' : '');
     });
   }
 
