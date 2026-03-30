@@ -1980,7 +1980,7 @@ function renderStatsView() {
     } else if (p.totalAttempted >= 5) {
       aiInsightsContainer.innerHTML =
         '<div class="ai-stats-body"><div class="ai-loading"><div class="ai-spinner"></div><p>Analyzing performance...</p></div></div>';
-      AIFeatures.fetchInsights(p, function (err, insights) {
+      AIFeatures.debouncedFetchInsights(p, function (err, insights) {
         var body = aiInsightsContainer.querySelector('.ai-stats-body');
         if (!body) body = aiInsightsContainer;
         if (err) {

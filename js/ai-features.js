@@ -296,7 +296,7 @@ var AIFeatures = (function () {
       return;
     }
 
-    fetchInsights(stats, function (err, insights) {
+    _debouncedFetchInsights(stats, function (err, insights) {
       var body = container.querySelector('.ai-coach-body');
       if (!body) return;
 
