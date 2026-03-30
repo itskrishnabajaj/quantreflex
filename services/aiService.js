@@ -91,11 +91,9 @@ async function checkWordProblemQuota(uid, isPremium) {
   var today = new Date().toDateString();
   if (isPremium) {
     if (entry.dailyDate !== today) { entry.daily = 0; entry.dailyDate = today; }
-    if (entry.daily >= WP_PREMIUM_DAILY) return false;
-  } else {
-    if (entry.lifetime >= WP_FREE_LIMIT) return false;
+    return WP_PREMIUM_DAILY - entry.daily;
   }
-  return true;
+  return WP_FREE_LIMIT - entry.lifetime;
 }
 
 async function consumeWordProblemQuota(uid, isPremium, count) {

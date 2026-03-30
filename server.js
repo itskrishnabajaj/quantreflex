@@ -90,7 +90,8 @@ function formatError(err) {
 
 app.post('/api/ai/word-problems', authMiddleware, rateLimitMiddleware, async function (req, res) {
   try {
-    if (!(await aiService.checkWordProblemQuota(req.userId, req.userPremium))) {
+    var remaining = await aiService.checkWordProblemQuota(req.userId, req.userPremium);
+    if (remaining <= 0) {
       var msg = req.userPremium ? 'Daily word problem limit reached. Come back tomorrow.' : 'Free word problem limit reached. Upgrade to Premium for more.';
       return res.status(429).json({ error: { code: 'QUOTA_EXCEEDED', message: msg, retryable: false } });
     }
@@ -106,9 +107,10 @@ app.post('/api/ai/word-problems', authMiddleware, rateLimitMiddleware, async fun
       return res.status(400).json({ error: { code: 'BAD_REQUEST', message: 'Invalid difficulty. Must be easy, medium, or hard.', retryable: false } });
     }
     var clampedCount = Math.min(Math.max(parseInt(count) || 5, 1), 20);
+    clampedCount = Math.min(clampedCount, remaining);
     var questions = await aiService.generateWordProblems(category, difficulty, clampedCount);
     await aiService.consumeWordProblemQuota(req.userId, req.userPremium, questions.length);
-    res.json({ questions: questions });
+    res.json({ questions: questions, remaining: remaining - questions.length });
   } catch (err) {
     console.error('Word problems error:', err.message);
     res.status(500).json({ error: formatError(err) });
