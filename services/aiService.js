@@ -76,7 +76,7 @@ async function _loadUsage(uid) {
   try {
     var doc = await db.collection('users').doc(uid).collection('usage').doc('ai').get();
     if (doc.exists) {
-      usageCache[uid] = doc.data();
+      usageCache[uid] = _normalizeUsageDoc(doc.data());
       return usageCache[uid];
     }
   } catch (err) {
@@ -91,6 +91,17 @@ async function _loadUsage(uid) {
   };
   usageCache[uid] = fresh;
   return fresh;
+}
+
+function _normalizeUsageDoc(data) {
+  if (data.lastUsedDate && !data.lastUsageDate) {
+    data.lastUsageDate = data.lastUsedDate;
+    delete data.lastUsedDate;
+  }
+  if (data.wordProblemsUsedLifetime === undefined) data.wordProblemsUsedLifetime = 0;
+  if (data.wordProblemsUsedToday === undefined) data.wordProblemsUsedToday = 0;
+  if (data.explanationsUsed === undefined) data.explanationsUsed = 0;
+  return data;
 }
 
 async function _saveUsage(uid) {
