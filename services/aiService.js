@@ -69,7 +69,7 @@ async function generateWordProblems(category, difficulty, count) {
   var m = getModel();
   if (!m) throw new AIServiceError('SERVICE_UNAVAILABLE', 'AI service unavailable', true);
 
-  var cacheRef = db.collection('ai_word_problems');
+  var cacheRef = db.collection('wordProblems');
   try {
     var cached = await cacheRef
       .where('category', '==', category)
@@ -143,7 +143,7 @@ async function generateExplanation(question, answer, category) {
   if (!m) throw new AIServiceError('SERVICE_UNAVAILABLE', 'AI service unavailable', true);
 
   var questionHash = _hashString(question + ':' + answer);
-  var cacheRef = db.collection('ai_explanations');
+  var cacheRef = db.collection('explanations');
 
   try {
     var cached = await cacheRef.doc(questionHash).get();
@@ -163,12 +163,10 @@ async function generateExplanation(question, answer, category) {
   var result = await _callAndParse(m, prompt, function (parsed) {
     if (!parsed || typeof parsed.concept !== 'string' || !Array.isArray(parsed.steps)) return null;
 
-    if (parsed.computedAnswer !== undefined) {
-      var expected = parseFloat(answer);
-      var computed = parseFloat(parsed.computedAnswer);
-      if (!isNaN(expected) && !isNaN(computed) && Math.abs(expected - computed) > 0.01) {
-        return null;
-      }
+    var expected = parseFloat(answer);
+    var computed = parseFloat(parsed.computedAnswer);
+    if (isNaN(computed) || (!isNaN(expected) && Math.abs(expected - computed) > 0.01)) {
+      return null;
     }
 
     return {
@@ -207,7 +205,7 @@ async function generateInsights(stats, userId) {
   var today = new Date();
   var dateKey = today.getFullYear() + '-' + (today.getMonth() + 1) + '-' + today.getDate();
   var cacheDocId = userId + '_' + dateKey;
-  var cacheRef = db.collection('ai_insights');
+  var cacheRef = db.collection('aiInsights');
 
   try {
     var cached = await cacheRef.doc(cacheDocId).get();

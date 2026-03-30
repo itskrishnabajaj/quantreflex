@@ -1984,7 +1984,7 @@ function renderStatsView() {
         var body = aiInsightsContainer.querySelector('.ai-stats-body');
         if (!body) body = aiInsightsContainer;
         if (err) {
-          body.innerHTML = '<p class="ai-error">Unable to load insights right now.</p>';
+          body.innerHTML = '<p class="ai-error">Unable to generate right now. Try again later.</p>';
           return;
         }
         body.innerHTML =

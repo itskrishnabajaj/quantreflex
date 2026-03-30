@@ -290,21 +290,21 @@ function createDrillEngine(container, opts) {
       var card = ui.cardEl;
       if (card) card.classList.add('feedback-shake');
       setTimeout(function () { if (card) card.classList.remove('feedback-shake'); }, 400);
+    }
 
-      if (typeof AIFeatures !== 'undefined') {
-        var explainBtn = document.createElement('button');
-        explainBtn.className = 'drill-explain-btn';
-        explainBtn.textContent = '🧠 Explain';
-        explainBtn.addEventListener('click', function () {
-          if (typeof canAccessFeature === 'function' && !canAccessFeature('ai_explain')) {
-            if (typeof showPaywall === 'function') showPaywall('settings');
-            return;
-          }
-          AIFeatures.showExplanationModal(q.question, expected, q.category);
-        });
-        feedback.appendChild(document.createElement('br'));
-        feedback.appendChild(explainBtn);
-      }
+    if (typeof AIFeatures !== 'undefined' && (!correct || reviewMode)) {
+      var explainBtn = document.createElement('button');
+      explainBtn.className = 'drill-explain-btn';
+      explainBtn.textContent = '🧠 Explain';
+      explainBtn.addEventListener('click', function () {
+        if (typeof canAccessFeature === 'function' && !canAccessFeature('ai_explain')) {
+          if (typeof showPaywall === 'function') showPaywall('settings');
+          return;
+        }
+        AIFeatures.showExplanationModal(q.question, expected, q.category);
+      });
+      feedback.appendChild(document.createElement('br'));
+      feedback.appendChild(explainBtn);
     }
 
     /* Replace submit with next */

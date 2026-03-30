@@ -40,10 +40,12 @@ var AIFeatures = (function () {
     callback(null);
   }
 
+  var FRIENDLY_ERROR = 'Unable to generate right now. Try again later.';
+
   function _sendAuthenticatedRequest(method, url, body, timeout, callback) {
     _getIdToken(function (token) {
       if (!token) {
-        callback('Authentication required. Please log in.');
+        callback(FRIENDLY_ERROR);
         return;
       }
       var xhr = new XMLHttpRequest();
@@ -56,20 +58,21 @@ var AIFeatures = (function () {
           try {
             callback(null, JSON.parse(xhr.responseText));
           } catch (e) {
-            callback('Failed to parse response');
+            callback(FRIENDLY_ERROR);
           }
-        } else {
+        } else if (xhr.status === 403) {
           try {
             var errData = JSON.parse(xhr.responseText);
-            var msg = errData.error && errData.error.message ? errData.error.message : 'Server error';
-            callback(msg);
+            callback(errData.error && errData.error.code === 'PREMIUM_REQUIRED' ? 'premium_required' : FRIENDLY_ERROR);
           } catch (_) {
-            callback('Server error');
+            callback(FRIENDLY_ERROR);
           }
+        } else {
+          callback(FRIENDLY_ERROR);
         }
       };
-      xhr.onerror = function () { callback('Network error. Check your connection.'); };
-      xhr.ontimeout = function () { callback('Request timed out. Try again.'); };
+      xhr.onerror = function () { callback(FRIENDLY_ERROR); };
+      xhr.ontimeout = function () { callback(FRIENDLY_ERROR); };
       xhr.send(JSON.stringify(body));
     });
   }
@@ -206,7 +209,7 @@ var AIFeatures = (function () {
       if (!body) return;
 
       if (err) {
-        body.innerHTML = '<p class="ai-error">' + (typeof err === 'string' ? err : 'Unable to generate explanation right now. Try again later.') + '</p>';
+        body.innerHTML = '<p class="ai-error">' + FRIENDLY_ERROR + '</p>';
         return;
       }
 
@@ -270,7 +273,7 @@ var AIFeatures = (function () {
       if (!body) return;
 
       if (err) {
-        body.innerHTML = '<p class="ai-error">Unable to load insights right now.</p>';
+        body.innerHTML = '<p class="ai-error">Unable to generate right now. Try again later.</p>';
         return;
       }
 
@@ -358,7 +361,7 @@ var AIFeatures = (function () {
           } else if (err === 'daily_limit_reached') {
             errorEl.textContent = 'You\'ve reached today\'s limit of 30 AI questions. Come back tomorrow!';
           } else {
-            errorEl.textContent = typeof err === 'string' ? err : 'Unable to generate right now. Try again later.';
+            errorEl.textContent = FRIENDLY_ERROR;
           }
           return;
         }
