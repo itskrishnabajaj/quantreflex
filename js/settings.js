@@ -328,7 +328,12 @@ function initSettingsView() {
   if (updateAppBtn) {
     rebind(updateAppBtn, 'click', function () {
       updateAppBtn.disabled = true;
-      updateAppBtn.textContent = '⏳ Updating app...';
+      var labelEl = updateAppBtn.querySelector('.settings-btn-label');
+      if (labelEl) {
+        labelEl.textContent = '⏳ Updating app...';
+      } else {
+        updateAppBtn.textContent = '⏳ Updating app...';
+      }
       if (typeof showToast === 'function') showToast('Updating app...');
       var done = function () {
         try {

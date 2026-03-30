@@ -67,13 +67,13 @@ function _getAccessUserState() {
 
 function canAccess(feature, user) {
   var normalizedUser = user || _getAccessUserState();
+  if (normalizedUser && normalizedUser.isPremium === true) return true;
   if (normalizedUser && normalizedUser.hasPaid === true) return true;
   if (normalizedUser && normalizedUser.isEarlyUser === true) return true;
   if (normalizedUser && normalizedUser.isTrial === true) {
     var trialEndMs = _toMillis(normalizedUser.trialEnd);
     if (trialEndMs > 0 && Date.now() <= trialEndMs) return true;
   }
-  if (normalizedUser && normalizedUser.isPremium === true && normalizedUser.isTrial !== true) return true;
   return !_LOCKED_FEATURES[feature];
 }
 
@@ -272,7 +272,8 @@ function openPayment(userId) {
 
 function showPaywall(featureType) {
   var user = _getAccessUserState();
-  if (user && (user.hasPaid === true || user.isEarlyUser === true || (user.isPremium === true && user.isTrial !== true))) return;
+  if (user && user.isPremium === true) return;
+  if (user && (user.hasPaid === true || user.isEarlyUser === true)) return;
   if (user && user.isTrial === true) {
     var te = _toMillis(user.trialEnd);
     if (te > 0 && Date.now() <= te) return;
@@ -351,7 +352,7 @@ function showFirstLoginPaywall() {
     var shown = localStorage.getItem('quant_first_login_paywall_shown');
     if (shown) return;
     var user = _getAccessUserState();
-    if (user && (user.hasPaid === true || user.isEarlyUser === true || (user.isPremium === true && user.isTrial !== true))) return;
+    if (user && (user.isPremium === true || user.hasPaid === true || user.isEarlyUser === true)) return;
     localStorage.setItem('quant_first_login_paywall_shown', '1');
     setTimeout(function () {
       showPaywall('settings');

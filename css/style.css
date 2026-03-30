@@ -3004,13 +3004,16 @@ html.drill-session-active {
 
 /* Scroll fix: allow question card to scroll when numpad overlaps content */
 body.drill-session-active #drillContainer {
+  position: relative;
   overflow-y: auto;
   -webkit-overflow-scrolling: touch;
   max-height: calc(100vh - 14rem - env(safe-area-inset-bottom, 0px));
   padding-bottom: 1rem;
 }
 body.drill-session-active #drillContainer > .card {
-  overflow: visible;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  max-height: calc(100vh - 14rem - env(safe-area-inset-bottom, 0px) - 2rem);
 }
 
 /* ---- Native App Feel Enhancements ---- */
@@ -4646,6 +4649,23 @@ body.dark-mode .settings-action-btn:active {
 body.dark-mode .settings-action-danger {
   color: #fda4af;
   border-color: rgba(244,63,94,.34);
+}
+.settings-action-with-desc {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: .15rem;
+  padding-top: .6rem;
+  padding-bottom: .6rem;
+}
+.settings-btn-label {
+  font-weight: 600;
+}
+.settings-btn-desc {
+  font-size: .68rem;
+  font-weight: 400;
+  opacity: .55;
+  line-height: 1.2;
 }
 .trial-upgrade-card {
   padding: 1rem;

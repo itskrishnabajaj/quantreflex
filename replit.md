@@ -96,6 +96,27 @@ Firebase configuration is embedded in the JS files. See `FIREBASE_SETUP.md` for 
 - **Navigation caching**: `index.html` fetched network-first with `cache: 'no-cache'`. Cached copy kept for offline fallback.
 - **Premium popup guard**: `showPaywall()` returns early if user is premium/paid/earlyUser/active-trial.
 
+## Final Polish Pass (March 2026)
+
+### Settings Button UI Refinement
+- **Update App** and **Clear Data** buttons now show small description text in brackets below the label
+- Divider lines removed between Logout, Delete Account, Update App, and Clear Data buttons
+- Button uses flex column layout with `.settings-action-with-desc`, `.settings-btn-label`, `.settings-btn-desc` classes
+
+### Question Card Scroll Fix
+- Drill container (`#drillContainer`) and inner `.card` both support `overflow-y: auto` during drill sessions
+- Content scrollable when numpad overlaps; buttons always accessible
+- Applied to all modes: Quick Drill, Reflex Drill, Timed Test, Focus Training, Custom Training, Review Mistakes
+
+### Premium Popup Hard Lock
+- `canAccess()` in `paywall.js` now checks `isPremium === true` FIRST, before any other checks
+- `showPaywall()` returns immediately if `isPremium === true` — no popup ever shown for premium users
+- `showFirstLoginPaywall()` also guards on `isPremium` first
+- Applied globally: all feature locks, timer toggle, daily goal, learn tab, stats tab
+
+### Workflow Change
+- Switched from `python3 -m http.server` to `serve . -l 5000 -s` (Node.js) due to python3 unavailability in environment
+
 ## Replit Migration Notes (March 2026)
 
 - Added a 5-second timeout fallback in `js/app.js` for Firebase Auth initialization. If `onAuthStateChanged` doesn't fire within 5 seconds (e.g., in sandboxed preview environments), the app falls back to showing the login screen rather than hanging indefinitely on the splash screen.
