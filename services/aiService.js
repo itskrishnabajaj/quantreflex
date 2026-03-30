@@ -59,11 +59,39 @@ async function isUserPremium(uid) {
     var doc = await db.collection('users').doc(uid).get();
     if (!doc.exists) return false;
     var data = doc.data();
-    return data.isPremium === true || data.premiumUser === true;
+    return data.isPremium === true || data.premiumUser === true || data.hasPaid === true || data.isEarlyUser === true || data.isTrial === true;
   } catch (err) {
     console.error('Premium lookup failed for uid ' + uid + ':', err.message);
     throw new AIServiceError('ENTITLEMENT_ERROR', 'Unable to verify subscription status. Please try again.', true);
   }
+}
+
+var wpQuotaStore = {};
+var WP_FREE_LIMIT = 5;
+var WP_PREMIUM_DAILY = 30;
+
+function checkWordProblemQuota(uid, isPremium) {
+  var now = Date.now();
+  var today = new Date().toDateString();
+  if (!wpQuotaStore[uid]) {
+    wpQuotaStore[uid] = { lifetime: 0, daily: 0, dailyDate: today };
+  }
+  var entry = wpQuotaStore[uid];
+  if (isPremium) {
+    if (entry.dailyDate !== today) { entry.daily = 0; entry.dailyDate = today; }
+    if (entry.daily >= WP_PREMIUM_DAILY) return false;
+  } else {
+    if (entry.lifetime >= WP_FREE_LIMIT) return false;
+  }
+  return true;
+}
+
+function consumeWordProblemQuota(uid, isPremium, count) {
+  if (!wpQuotaStore[uid]) {
+    wpQuotaStore[uid] = { lifetime: 0, daily: 0, dailyDate: new Date().toDateString() };
+  }
+  var entry = wpQuotaStore[uid];
+  if (isPremium) { entry.daily += count; } else { entry.lifetime += count; }
 }
 
 async function generateWordProblems(category, difficulty, count) {
@@ -324,4 +352,4 @@ function _shuffleInPlace(arr) {
   }
 }
 
-module.exports = { generateWordProblems, generateExplanation, generateInsights, verifyIdToken, isUserPremium, AIServiceError };
+module.exports = { generateWordProblems, generateExplanation, generateInsights, verifyIdToken, isUserPremium, checkWordProblemQuota, consumeWordProblemQuota, AIServiceError };
