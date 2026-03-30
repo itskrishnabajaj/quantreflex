@@ -25,17 +25,53 @@ var AIFeatures = (function () {
     return false;
   }
 
-  function _getUserId() {
+  function _getIdToken(callback) {
     if (typeof Auth !== 'undefined' && typeof Auth.getCurrentUser === 'function') {
       var u = Auth.getCurrentUser();
-      if (u && u.uid) return u.uid;
+      if (u && typeof u.getIdToken === 'function') {
+        u.getIdToken().then(function (token) {
+          callback(token);
+        }).catch(function () {
+          callback(null);
+        });
+        return;
+      }
     }
-    return '';
+    callback(null);
   }
 
-  function _setAuthHeaders(xhr) {
-    xhr.setRequestHeader('X-User-Id', _getUserId());
-    xhr.setRequestHeader('X-Premium', _isPremium() ? 'true' : 'false');
+  function _sendAuthenticatedRequest(method, url, body, timeout, callback) {
+    _getIdToken(function (token) {
+      if (!token) {
+        callback('Authentication required. Please log in.');
+        return;
+      }
+      var xhr = new XMLHttpRequest();
+      xhr.open(method, url, true);
+      xhr.setRequestHeader('Content-Type', 'application/json');
+      xhr.setRequestHeader('Authorization', 'Bearer ' + token);
+      xhr.timeout = timeout;
+      xhr.onload = function () {
+        if (xhr.status === 200) {
+          try {
+            callback(null, JSON.parse(xhr.responseText));
+          } catch (e) {
+            callback('Failed to parse response');
+          }
+        } else {
+          try {
+            var errData = JSON.parse(xhr.responseText);
+            var msg = errData.error && errData.error.message ? errData.error.message : 'Server error';
+            callback(msg);
+          } catch (_) {
+            callback('Server error');
+          }
+        }
+      };
+      xhr.onerror = function () { callback('Network error. Check your connection.'); };
+      xhr.ontimeout = function () { callback('Request timed out. Try again.'); };
+      xhr.send(JSON.stringify(body));
+    });
   }
 
   function getWordProblemQuota() {
@@ -79,65 +115,26 @@ var AIFeatures = (function () {
     }
     var actualCount = Math.min(count, quota.remaining);
 
-    var xhr = new XMLHttpRequest();
-    xhr.open('POST', '/api/ai/word-problems', true);
-    xhr.setRequestHeader('Content-Type', 'application/json');
-    _setAuthHeaders(xhr);
-    xhr.timeout = 30000;
-    xhr.onload = function () {
-      if (xhr.status === 200) {
-        try {
-          var data = JSON.parse(xhr.responseText);
-          if (data.questions && data.questions.length > 0) {
-            consumeWordProblemQuota(data.questions.length);
-            callback(null, data.questions);
-          } else {
-            callback('No questions generated');
-          }
-        } catch (e) {
-          callback('Failed to parse response');
+    _sendAuthenticatedRequest('POST', '/api/ai/word-problems',
+      { category: category, difficulty: difficulty, count: actualCount }, 30000,
+      function (err, data) {
+        if (err) { callback(err); return; }
+        if (data.questions && data.questions.length > 0) {
+          consumeWordProblemQuota(data.questions.length);
+          callback(null, data.questions);
+        } else {
+          callback('No questions generated');
         }
-      } else {
-        try {
-          var errData = JSON.parse(xhr.responseText);
-          var errMsg = errData.error && errData.error.message ? errData.error.message : (typeof errData.error === 'string' ? errData.error : 'Server error');
-          callback(errMsg);
-        } catch (_) {
-          callback('Server error');
-        }
-      }
-    };
-    xhr.onerror = function () { callback('Network error. Check your connection.'); };
-    xhr.ontimeout = function () { callback('Request timed out. Try again.'); };
-    xhr.send(JSON.stringify({ category: category, difficulty: difficulty, count: actualCount }));
+      });
   }
 
   function fetchExplanation(question, answer, category, callback) {
-    var xhr = new XMLHttpRequest();
-    xhr.open('POST', '/api/ai/explain', true);
-    xhr.setRequestHeader('Content-Type', 'application/json');
-    _setAuthHeaders(xhr);
-    xhr.timeout = 20000;
-    xhr.onload = function () {
-      if (xhr.status === 200) {
-        try {
-          var data = JSON.parse(xhr.responseText);
-          callback(null, data.explanation);
-        } catch (e) {
-          callback('Failed to parse response');
-        }
-      } else {
-        try {
-          var errData = JSON.parse(xhr.responseText);
-          callback(errData.error && errData.error.message ? errData.error.message : 'Unable to generate explanation right now.');
-        } catch (_) {
-          callback('Unable to generate explanation right now.');
-        }
-      }
-    };
-    xhr.onerror = function () { callback('Network error.'); };
-    xhr.ontimeout = function () { callback('Request timed out.'); };
-    xhr.send(JSON.stringify({ question: question, answer: answer, category: category }));
+    _sendAuthenticatedRequest('POST', '/api/ai/explain',
+      { question: question, answer: answer, category: category }, 20000,
+      function (err, data) {
+        if (err) { callback(err); return; }
+        callback(null, data.explanation);
+      });
   }
 
   function fetchInsights(stats, callback) {
@@ -147,32 +144,13 @@ var AIFeatures = (function () {
       return;
     }
 
-    var xhr = new XMLHttpRequest();
-    xhr.open('POST', '/api/ai/insights', true);
-    xhr.setRequestHeader('Content-Type', 'application/json');
-    _setAuthHeaders(xhr);
-    xhr.timeout = 20000;
-    xhr.onload = function () {
-      if (xhr.status === 200) {
-        try {
-          var data = JSON.parse(xhr.responseText);
-          _cacheCoach(data.insights);
-          callback(null, data.insights);
-        } catch (e) {
-          callback('Failed to parse response');
-        }
-      } else {
-        try {
-          var errData = JSON.parse(xhr.responseText);
-          callback(errData.error && errData.error.message ? errData.error.message : 'Unable to generate insights right now.');
-        } catch (_) {
-          callback('Unable to generate insights right now.');
-        }
-      }
-    };
-    xhr.onerror = function () { callback('Network error.'); };
-    xhr.ontimeout = function () { callback('Request timed out.'); };
-    xhr.send(JSON.stringify({ stats: stats }));
+    _sendAuthenticatedRequest('POST', '/api/ai/insights',
+      { stats: stats }, 20000,
+      function (err, data) {
+        if (err) { callback(err); return; }
+        _cacheCoach(data.insights);
+        callback(null, data.insights);
+      });
   }
 
   function _getCachedCoach() {

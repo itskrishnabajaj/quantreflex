@@ -1,9 +1,15 @@
 const { GoogleGenerativeAI } = require('@google/generative-ai');
+const admin = require('firebase-admin');
 
 const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
 if (!GEMINI_API_KEY) {
   console.warn('GEMINI_API_KEY not set. AI features will be unavailable.');
 }
+
+if (!admin.apps.length) {
+  admin.initializeApp({ projectId: 'quant-reflex-trainer' });
+}
+var db = admin.firestore();
 
 let genAI = null;
 let model = null;
@@ -39,66 +45,54 @@ const CATEGORY_LABELS = {
   'time-and-work': 'Time & Work'
 };
 
-const cache = {
-  wordProblems: new Map(),
-  explanations: new Map(),
-  insights: new Map()
-};
-
-const CACHE_TTL = {
-  wordProblems: 6 * 60 * 60 * 1000,
-  explanations: 24 * 60 * 60 * 1000,
-  insights: 24 * 60 * 60 * 1000
-};
-
-const MAX_CACHE_SIZE = 200;
-
-function _cacheGet(store, key) {
-  var entry = cache[store].get(key);
-  if (!entry) return null;
-  if (Date.now() - entry.ts > CACHE_TTL[store]) {
-    cache[store].delete(key);
+async function verifyIdToken(idToken) {
+  try {
+    var decoded = await admin.auth().verifyIdToken(idToken);
+    return decoded;
+  } catch (err) {
     return null;
   }
-  return entry;
 }
 
-function _cacheSet(store, key, data) {
-  if (cache[store].size >= MAX_CACHE_SIZE) {
-    var oldest = cache[store].keys().next().value;
-    cache[store].delete(oldest);
+async function isUserPremium(uid) {
+  try {
+    var doc = await db.collection('users').doc(uid).get();
+    if (!doc.exists) return false;
+    var data = doc.data();
+    return data.isPremium === true || data.premiumUser === true;
+  } catch (err) {
+    return false;
   }
-  cache[store].set(key, { data: data, ts: Date.now(), usageCount: 0 });
-}
-
-function _wpCacheKey(category, difficulty) {
-  return category + ':' + difficulty;
-}
-
-function _explainCacheKey(question, answer) {
-  var h = 0;
-  var str = question + ':' + answer;
-  for (var i = 0; i < str.length; i++) {
-    h = ((h << 5) - h + str.charCodeAt(i)) | 0;
-  }
-  return 'exp:' + h;
-}
-
-function _insightsCacheKey(userId) {
-  var d = new Date();
-  return 'ins:' + userId + ':' + d.getFullYear() + '-' + (d.getMonth() + 1) + '-' + d.getDate();
 }
 
 async function generateWordProblems(category, difficulty, count) {
   var m = getModel();
   if (!m) throw new AIServiceError('SERVICE_UNAVAILABLE', 'AI service unavailable', true);
 
-  var cacheKey = _wpCacheKey(category, difficulty);
-  var cached = _cacheGet('wordProblems', cacheKey);
-  if (cached && cached.data.length >= count) {
-    cached.usageCount++;
-    var shuffled = cached.data.slice().sort(function () { return Math.random() - 0.5; });
-    return shuffled.slice(0, count);
+  var cacheRef = db.collection('ai_word_problems');
+  try {
+    var cached = await cacheRef
+      .where('category', '==', category)
+      .where('difficulty', '==', difficulty)
+      .orderBy('usageCount', 'asc')
+      .limit(count * 2)
+      .get();
+
+    if (!cached.empty && cached.docs.length >= count) {
+      var pool = cached.docs.map(function (d) { return Object.assign({ _docId: d.id }, d.data()); });
+      _shuffleInPlace(pool);
+      var selected = pool.slice(0, count);
+      var batch = db.batch();
+      selected.forEach(function (item) {
+        batch.update(cacheRef.doc(item._docId), { usageCount: (item.usageCount || 0) + 1, lastUsed: admin.firestore.FieldValue.serverTimestamp() });
+      });
+      batch.commit().catch(function () {});
+      return selected.map(function (item) {
+        return { question: item.question, answer: item.answer, category: item.category };
+      });
+    }
+  } catch (cacheErr) {
+    console.warn('Firestore cache read failed, generating fresh:', cacheErr.message);
   }
 
   var catLabel = CATEGORY_LABELS[category] || category;
@@ -108,7 +102,8 @@ async function generateWordProblems(category, difficulty, count) {
     hard: 'challenging multi-step problems for competitive exam preparation'
   };
 
-  var prompt = 'Generate exactly ' + (count + 3) + ' unique word problems for the math category "' + catLabel + '" at ' + difficulty + ' difficulty level (' + (diffDesc[difficulty] || diffDesc.medium) + ').\n\nRequirements:\n- Each problem must be a real-world word problem (not just a bare equation)\n- The answer must be a single number (integer or decimal up to 2 decimal places)\n- Problems should be varied and not repetitive\n- Suitable for competitive exam prep (CAT/GMAT/placement tests)\n\nReturn ONLY a valid JSON array with exactly ' + (count + 3) + ' objects. Each object must have:\n- "question": the word problem text (string, no line breaks)\n- "answer": the numeric answer (number, not string)\n- "category": "' + category + '"\n\nExample format:\n[{"question":"A shopkeeper buys an item for ₹200 and sells it for ₹250. What is the profit percentage?","answer":25,"category":"profit-loss"}]\n\nReturn ONLY the JSON array, no markdown, no explanation, no code fences.';
+  var genCount = count + 3;
+  var prompt = 'Generate exactly ' + genCount + ' unique word problems for the math category "' + catLabel + '" at ' + difficulty + ' difficulty level (' + (diffDesc[difficulty] || diffDesc.medium) + ').\n\nRequirements:\n- Each problem must be a real-world word problem (not just a bare equation)\n- The answer must be a single number (integer or decimal up to 2 decimal places)\n- Problems should be varied and not repetitive\n- Suitable for competitive exam prep (CAT/GMAT/placement tests)\n\nReturn ONLY a valid JSON array with exactly ' + genCount + ' objects. Each object must have:\n- "question": the word problem text (string, no line breaks)\n- "answer": the numeric answer (number, not string)\n- "category": "' + category + '"\n\nExample format:\n[{"question":"A shopkeeper buys an item for ₹200 and sells it for ₹250. What is the profit percentage?","answer":25,"category":"profit-loss"}]\n\nReturn ONLY the JSON array, no markdown, no explanation, no code fences.';
 
   var valid = await _callAndParse(m, prompt, function (parsed) {
     if (!Array.isArray(parsed)) return null;
@@ -122,7 +117,24 @@ async function generateWordProblems(category, difficulty, count) {
 
   if (!valid) throw new AIServiceError('INVALID_RESPONSE', 'No valid questions generated after retries', true);
 
-  _cacheSet('wordProblems', cacheKey, valid);
+  try {
+    var writeBatch = db.batch();
+    valid.forEach(function (item) {
+      var docRef = cacheRef.doc();
+      writeBatch.set(docRef, {
+        question: item.question,
+        answer: item.answer,
+        category: item.category || category,
+        difficulty: difficulty,
+        usageCount: 0,
+        createdAt: admin.firestore.FieldValue.serverTimestamp()
+      });
+    });
+    await writeBatch.commit();
+  } catch (writeErr) {
+    console.warn('Firestore cache write failed:', writeErr.message);
+  }
+
   return valid.slice(0, count);
 }
 
@@ -130,19 +142,35 @@ async function generateExplanation(question, answer, category) {
   var m = getModel();
   if (!m) throw new AIServiceError('SERVICE_UNAVAILABLE', 'AI service unavailable', true);
 
-  var cacheKey = _explainCacheKey(question, answer);
-  var cached = _cacheGet('explanations', cacheKey);
-  if (cached) {
-    cached.usageCount++;
-    return cached.data;
+  var questionHash = _hashString(question + ':' + answer);
+  var cacheRef = db.collection('ai_explanations');
+
+  try {
+    var cached = await cacheRef.doc(questionHash).get();
+    if (cached.exists) {
+      var data = cached.data();
+      await cacheRef.doc(questionHash).update({ usageCount: (data.usageCount || 0) + 1 });
+      return { concept: data.concept, steps: data.steps, mistake: data.mistake, tip: data.tip };
+    }
+  } catch (cacheErr) {
+    console.warn('Firestore explain cache read failed:', cacheErr.message);
   }
 
   var catLabel = CATEGORY_LABELS[category] || category || 'General Math';
 
-  var prompt = 'A student got this math question wrong. Explain the solution clearly and concisely.\n\nQuestion: ' + question + '\nCorrect Answer: ' + answer + '\nCategory: ' + catLabel + '\n\nReturn ONLY a valid JSON object with these fields:\n- "concept": A one-line description of the math concept being tested (string)\n- "steps": An array of step-by-step solution strings, each step being 1-2 sentences (array of strings)\n- "mistake": The most common mistake students make on this type of problem (string)\n- "tip": A quick mental math tip or shortcut for similar problems (string)\n\nIMPORTANT: The final step must arrive at the answer ' + answer + '. Your explanation must be consistent with this correct answer.\n\nReturn ONLY the JSON object, no markdown, no explanation, no code fences.';
+  var prompt = 'A student got this math question wrong. Explain the solution clearly and concisely.\n\nQuestion: ' + question + '\nCorrect Answer: ' + answer + '\nCategory: ' + catLabel + '\n\nReturn ONLY a valid JSON object with these fields:\n- "concept": A one-line description of the math concept being tested (string)\n- "steps": An array of step-by-step solution strings, each step being 1-2 sentences (array of strings). The final step MUST state the final answer as ' + answer + '.\n- "mistake": The most common mistake students make on this type of problem (string)\n- "tip": A quick mental math tip or shortcut for similar problems (string)\n- "computedAnswer": The numeric answer your steps arrive at (number)\n\nIMPORTANT: Your solution steps must arrive at exactly ' + answer + ' as the final answer. Include the computed answer in the computedAnswer field for verification.\n\nReturn ONLY the JSON object, no markdown, no explanation, no code fences.';
 
   var result = await _callAndParse(m, prompt, function (parsed) {
     if (!parsed || typeof parsed.concept !== 'string' || !Array.isArray(parsed.steps)) return null;
+
+    if (parsed.computedAnswer !== undefined) {
+      var expected = parseFloat(answer);
+      var computed = parseFloat(parsed.computedAnswer);
+      if (!isNaN(expected) && !isNaN(computed) && Math.abs(expected - computed) > 0.01) {
+        return null;
+      }
+    }
+
     return {
       concept: parsed.concept,
       steps: parsed.steps.filter(function (s) { return typeof s === 'string'; }),
@@ -153,7 +181,22 @@ async function generateExplanation(question, answer, category) {
 
   if (!result) throw new AIServiceError('INVALID_RESPONSE', 'Invalid explanation format after retries', true);
 
-  _cacheSet('explanations', cacheKey, result);
+  try {
+    await cacheRef.doc(questionHash).set({
+      question: question,
+      answer: answer,
+      category: category || '',
+      concept: result.concept,
+      steps: result.steps,
+      mistake: result.mistake,
+      tip: result.tip,
+      usageCount: 1,
+      createdAt: admin.firestore.FieldValue.serverTimestamp()
+    });
+  } catch (writeErr) {
+    console.warn('Firestore explain cache write failed:', writeErr.message);
+  }
+
   return result;
 }
 
@@ -161,11 +204,19 @@ async function generateInsights(stats, userId) {
   var m = getModel();
   if (!m) throw new AIServiceError('SERVICE_UNAVAILABLE', 'AI service unavailable', true);
 
-  var cacheKey = _insightsCacheKey(userId || 'anon');
-  var cached = _cacheGet('insights', cacheKey);
-  if (cached) {
-    cached.usageCount++;
-    return cached.data;
+  var today = new Date();
+  var dateKey = today.getFullYear() + '-' + (today.getMonth() + 1) + '-' + today.getDate();
+  var cacheDocId = userId + '_' + dateKey;
+  var cacheRef = db.collection('ai_insights');
+
+  try {
+    var cached = await cacheRef.doc(cacheDocId).get();
+    if (cached.exists) {
+      var data = cached.data();
+      return { insight: data.insight, problem: data.problem, action: data.action };
+    }
+  } catch (cacheErr) {
+    console.warn('Firestore insights cache read failed:', cacheErr.message);
   }
 
   var accuracy = stats.totalAttempted > 0
@@ -179,9 +230,9 @@ async function generateInsights(stats, userId) {
   var weakCats = [];
   var strongCats = [];
   for (var cat in catStats) {
-    var data = catStats[cat];
-    if (data.attempted >= 3) {
-      var catAcc = (data.correct / data.attempted) * 100;
+    var d = catStats[cat];
+    if (d.attempted >= 3) {
+      var catAcc = (d.correct / d.attempted) * 100;
       if (catAcc < 60) weakCats.push(cat + ' (' + catAcc.toFixed(0) + '%)');
       else if (catAcc >= 80) strongCats.push(cat + ' (' + catAcc.toFixed(0) + '%)');
     }
@@ -200,7 +251,19 @@ async function generateInsights(stats, userId) {
 
   if (!result) throw new AIServiceError('INVALID_RESPONSE', 'Invalid insights format after retries', true);
 
-  _cacheSet('insights', cacheKey, result);
+  try {
+    await cacheRef.doc(cacheDocId).set({
+      userId: userId,
+      dateKey: dateKey,
+      insight: result.insight,
+      problem: result.problem,
+      action: result.action,
+      createdAt: admin.firestore.FieldValue.serverTimestamp()
+    });
+  } catch (writeErr) {
+    console.warn('Firestore insights cache write failed:', writeErr.message);
+  }
+
   return result;
 }
 
@@ -245,4 +308,21 @@ function _parseJsonResponse(text) {
   }
 }
 
-module.exports = { generateWordProblems, generateExplanation, generateInsights, AIServiceError };
+function _hashString(str) {
+  var hash = 5381;
+  for (var i = 0; i < str.length; i++) {
+    hash = ((hash << 5) + hash + str.charCodeAt(i)) & 0x7fffffff;
+  }
+  return hash.toString(36);
+}
+
+function _shuffleInPlace(arr) {
+  for (var i = arr.length - 1; i > 0; i--) {
+    var j = Math.floor(Math.random() * (i + 1));
+    var tmp = arr[i];
+    arr[i] = arr[j];
+    arr[j] = tmp;
+  }
+}
+
+module.exports = { generateWordProblems, generateExplanation, generateInsights, verifyIdToken, isUserPremium, AIServiceError };

@@ -28,7 +28,7 @@ setInterval(function () {
 function rateLimitMiddleware(req, res, next) {
   var ip = req.ip || req.connection.remoteAddress || 'unknown';
   var now = Date.now();
-  var isPremium = req.headers['x-premium'] === 'true';
+  var isPremium = req.userPremium === true;
   var limit = isPremium ? RATE_LIMIT_PREMIUM : RATE_LIMIT_FREE;
 
   if (!rateLimitStore[ip] || now - rateLimitStore[ip].windowStart > RATE_WINDOW_MS) {
@@ -45,21 +45,30 @@ function rateLimitMiddleware(req, res, next) {
   next();
 }
 
-function authMiddleware(req, res, next) {
-  var uid = req.headers['x-user-id'];
-  if (!uid || typeof uid !== 'string' || uid.length < 5) {
+async function authMiddleware(req, res, next) {
+  var authHeader = req.headers['authorization'];
+  if (!authHeader || !authHeader.startsWith('Bearer ')) {
     return res.status(401).json({
       error: { code: 'UNAUTHORIZED', message: 'Authentication required to use AI features.', retryable: false }
     });
   }
-  req.userId = uid;
+
+  var idToken = authHeader.substring(7);
+  var decoded = await aiService.verifyIdToken(idToken);
+  if (!decoded || !decoded.uid) {
+    return res.status(401).json({
+      error: { code: 'UNAUTHORIZED', message: 'Invalid or expired authentication token.', retryable: false }
+    });
+  }
+
+  req.userId = decoded.uid;
+  req.userPremium = await aiService.isUserPremium(decoded.uid);
   next();
 }
 
 function premiumGate(featureKey) {
   return function (req, res, next) {
-    var isPremium = req.headers['x-premium'] === 'true';
-    if (!isPremium) {
+    if (!req.userPremium) {
       return res.status(403).json({
         error: { code: 'PREMIUM_REQUIRED', message: 'This feature requires a premium subscription.', retryable: false }
       });
@@ -75,7 +84,7 @@ function formatError(err) {
   return { code: 'INTERNAL_ERROR', message: 'An unexpected error occurred. Try again later.', retryable: true };
 }
 
-app.post('/api/ai/word-problems', rateLimitMiddleware, authMiddleware, async function (req, res) {
+app.post('/api/ai/word-problems', authMiddleware, rateLimitMiddleware, async function (req, res) {
   try {
     var body = req.body;
     var category = body.category;
@@ -97,7 +106,7 @@ app.post('/api/ai/word-problems', rateLimitMiddleware, authMiddleware, async fun
   }
 });
 
-app.post('/api/ai/explain', rateLimitMiddleware, authMiddleware, premiumGate('ai_explain'), async function (req, res) {
+app.post('/api/ai/explain', authMiddleware, rateLimitMiddleware, premiumGate('ai_explain'), async function (req, res) {
   try {
     var body = req.body;
     var question = body.question;
@@ -114,7 +123,7 @@ app.post('/api/ai/explain', rateLimitMiddleware, authMiddleware, premiumGate('ai
   }
 });
 
-app.post('/api/ai/insights', rateLimitMiddleware, authMiddleware, premiumGate('ai_coach'), async function (req, res) {
+app.post('/api/ai/insights', authMiddleware, rateLimitMiddleware, premiumGate('ai_coach'), async function (req, res) {
   try {
     var stats = req.body.stats;
     if (!stats) {
