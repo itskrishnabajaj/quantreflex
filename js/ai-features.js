@@ -48,15 +48,6 @@ var AIFeatures = (function () {
     return false;
   }
 
-  var _insightsDebounceTimer = null;
-  function _debouncedFetchInsights(stats, callback) {
-    if (_insightsDebounceTimer) clearTimeout(_insightsDebounceTimer);
-    _insightsDebounceTimer = setTimeout(function () {
-      _insightsDebounceTimer = null;
-      fetchInsights(stats, callback);
-    }, 500);
-  }
-
   function _getIdToken(callback) {
     if (typeof Auth !== 'undefined' && typeof Auth.getCurrentUser === 'function') {
       var u = Auth.getCurrentUser();
