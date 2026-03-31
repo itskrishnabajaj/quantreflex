@@ -123,9 +123,9 @@ function createDrillEngine(container, opts) {
           '<input id="answerInput" class="input" type="text" inputmode="none" autocomplete="off" placeholder="Your answer" readonly />' +
           '<div id="feedback" class="feedback"></div>' +
         '</div>' +
-        '<div class="drill-actions">' +
-          '<button id="submitBtn" class="btn accent">Submit</button>' +
-        '</div>' +
+      '</div>' +
+      '<div class="drill-actions">' +
+        '<button id="submitBtn" class="btn accent">Submit</button>' +
       '</div>';
     ui.globalTimerEl = container.querySelector('#globalTimer');
     ui.perQTimerEl = container.querySelector('#perQTimer');
@@ -321,13 +321,17 @@ function createDrillEngine(container, opts) {
       feedback.appendChild(explainBtn);
     }
 
-    /* Hide skip button after answer and revert to single-button layout */
     var actionsDiv = container.querySelector('.drill-actions');
     if (actionsDiv) {
       var existingSkip = actionsDiv.querySelector('.skip-btn');
       if (existingSkip) {
-        existingSkip.parentNode.removeChild(existingSkip);
-        actionsDiv.classList.remove('has-skip');
+        if (correct) {
+          existingSkip.parentNode.removeChild(existingSkip);
+          actionsDiv.classList.remove('has-skip');
+        } else {
+          existingSkip.disabled = true;
+          existingSkip.classList.add('skip-btn-disabled');
+        }
       }
     }
 
