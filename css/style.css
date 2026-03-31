@@ -3082,9 +3082,6 @@ body.drill-session-active #drillContainer > .card {
   opacity: .4;
   pointer-events: none;
 }
-body.dark-mode .drill-actions {
-  border-top-color: rgba(51, 65, 85, .5);
-}
 
 /* ---- Native App Feel Enhancements ---- */
 
@@ -3820,10 +3817,6 @@ body.theme-playful .drill-exit-btn:active {
   background: rgba(0,0,0,.10);
   color: #1a1a2e;
 }
-body.theme-playful .drill-actions {
-  border-top-color: rgba(226, 222, 214, .5);
-}
-
 body.theme-playful .add-formula-btn,
 body.theme-playful .add-topic-btn {
   background: rgba(79,143,247,.06);
@@ -4287,10 +4280,6 @@ body.theme-playful.dark-mode .drill-exit-btn:active {
   background: rgba(255,255,255,.12);
   color: #e6edf3;
 }
-body.theme-playful.dark-mode .drill-actions {
-  border-top-color: rgba(255, 255, 255, .06);
-}
-
 body.theme-playful.dark-mode .add-formula-btn,
 body.theme-playful.dark-mode .add-topic-btn {
   background: rgba(88,166,255,.08);
