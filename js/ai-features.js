@@ -344,7 +344,8 @@ var AIFeatures = (function () {
     { key: 'area', label: 'Area' },
     { key: 'volume', label: 'Volume' }
   ];
-  var WP_MAX_QUESTIONS = 25;
+  var WP_MAX_QUESTIONS_PREMIUM = 25;
+  var WP_MAX_QUESTIONS_FREE = 5;
   var WP_DEFAULT_QUESTIONS = 5;
 
   var _wpSelectedCategory = null;
@@ -359,8 +360,11 @@ var AIFeatures = (function () {
       ? quota.remaining + '/' + quota.limit + ' free AI questions remaining'
       : quota.remaining + '/' + quota.limit + ' daily AI questions remaining';
 
+    var wpMaxQuestions = _isPremium() ? WP_MAX_QUESTIONS_PREMIUM : WP_MAX_QUESTIONS_FREE;
+    var wpDefaultCount = Math.min(WP_DEFAULT_QUESTIONS, wpMaxQuestions);
+
     _wpSelectedCategory = null;
-    _wpQuestionCount = WP_DEFAULT_QUESTIONS;
+    _wpQuestionCount = wpDefaultCount;
     _wpTimerEnabled = false;
     _wpTimerPillMode = 'per';
     _wpTimerSeconds = 15;
@@ -378,10 +382,10 @@ var AIFeatures = (function () {
           '<div class="category-grid">' + catHtml + '</div>' +
           '<div class="wp-config-section">' +
             '<label class="secondary-text" for="wpQuestionSlider">Number of Questions</label>' +
-            '<input id="wpQuestionSlider" class="custom-question-range" type="range" min="1" max="' + WP_MAX_QUESTIONS + '" value="' + WP_DEFAULT_QUESTIONS + '" />' +
+            '<input id="wpQuestionSlider" class="custom-question-range" type="range" min="1" max="' + wpMaxQuestions + '" value="' + wpDefaultCount + '" />' +
             '<div class="custom-practice-meta-row">' +
-              '<strong id="wpQuestionCountValue">' + WP_DEFAULT_QUESTIONS + '</strong>' +
-              '<span class="secondary-text" id="wpQuestionCountText">You will solve ' + WP_DEFAULT_QUESTIONS + ' questions</span>' +
+              '<strong id="wpQuestionCountValue">' + wpDefaultCount + '</strong>' +
+              '<span class="secondary-text" id="wpQuestionCountText">You will solve ' + wpDefaultCount + ' questions</span>' +
             '</div>' +
           '</div>' +
           '<div class="timer-select-section wp-timer-section">' +
@@ -439,8 +443,8 @@ var AIFeatures = (function () {
     if (slider) {
       slider.addEventListener('input', function () {
         var val = parseInt(slider.value, 10);
-        if (isNaN(val)) val = WP_DEFAULT_QUESTIONS;
-        _wpQuestionCount = Math.max(1, Math.min(WP_MAX_QUESTIONS, val));
+        if (isNaN(val)) val = wpDefaultCount;
+        _wpQuestionCount = Math.max(1, Math.min(wpMaxQuestions, val));
         if (countValue) countValue.textContent = String(_wpQuestionCount);
         if (countText) countText.textContent = 'You will solve ' + _wpQuestionCount + ' questions';
       });

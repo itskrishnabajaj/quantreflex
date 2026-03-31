@@ -191,7 +191,7 @@ Firebase configuration is embedded in the JS files. See `FIREBASE_SETUP.md` for 
 
 ## Replit Migration Notes (March 2026)
 
-- Added a 5-second timeout fallback in `js/app.js` for Firebase Auth initialization. If `onAuthStateChanged` doesn't fire within 5 seconds (e.g., in sandboxed preview environments), the app falls back to showing the login screen rather than hanging indefinitely on the splash screen.
+- Auth timeout increased to 8 seconds in `js/app.js` for Firebase Auth initialization. Cold starts with cached LOCAL persistence credentials can take 3-6s on slow networks. The splash screen remains visible until auth resolves, preventing login screen flicker for already-authenticated users.
 
 ## Security Fixes Applied (March 2026)
 

@@ -186,12 +186,14 @@ function createDrillEngine(container, opts) {
         if (answered) return;
         answered = true;
         if (perQTimer) { clearInterval(perQTimer); perQTimer = null; }
-        /* Record skipped question as incorrect with 0 response time */
         recordAnswer(false, q.category, q, 0);
         nextQuestion();
       });
       var actionsDiv = container.querySelector('.drill-actions');
-      if (actionsDiv) actionsDiv.appendChild(skipBtn);
+      if (actionsDiv) {
+        actionsDiv.classList.add('has-skip');
+        actionsDiv.insertBefore(skipBtn, submitBtn);
+      }
     }
 
     qStart = performance.now();

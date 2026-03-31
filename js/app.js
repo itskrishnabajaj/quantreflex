@@ -978,14 +978,15 @@ document.addEventListener('DOMContentLoaded', function () {
     if (bottomNav) bottomNav.style.display = 'none';
 
     var _authResolved = false;
-    /* Fallback: if Firebase auth doesn't respond within 5 seconds, show login */
+    /* Fallback: if Firebase auth doesn't respond within 8 seconds, show login.
+       Cold starts with cached credentials can take 3-6s on slow networks. */
     var _authTimeoutId = setTimeout(function () {
       if (!_authResolved) {
         _authResolved = true;
         console.warn('Firebase auth timeout — falling back to login screen.');
         showLogin();
       }
-    }, 5000);
+    }, 8000);
 
     Auth.onAuthReady(function (user) {
       if (_authResolved) return;
