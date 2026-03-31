@@ -3045,11 +3045,19 @@ body.drill-session-active #drillContainer > .card {
   display: flex;
   flex-direction: column;
   align-items: center;
-  justify-content: center;
   text-align: center;
   min-height: 0;
-  padding-top: 1.5rem;
   padding-bottom: .5rem;
+}
+.drill-question-scroll::before {
+  content: '';
+  flex: 1;
+  min-height: 1.5rem;
+}
+.drill-question-scroll::after {
+  content: '';
+  flex: 1;
+  min-height: 0;
 }
 
 /* Action buttons pinned at bottom of card, always visible */

@@ -321,6 +321,16 @@ function createDrillEngine(container, opts) {
       feedback.appendChild(explainBtn);
     }
 
+    /* Hide skip button after answer and revert to single-button layout */
+    var actionsDiv = container.querySelector('.drill-actions');
+    if (actionsDiv) {
+      var existingSkip = actionsDiv.querySelector('.skip-btn');
+      if (existingSkip) {
+        existingSkip.parentNode.removeChild(existingSkip);
+        actionsDiv.classList.remove('has-skip');
+      }
+    }
+
     /* Replace submit with next */
     var submitBtn = ui.submitBtnEl;
     submitBtn.textContent = current + 1 < count ? 'Next →' : 'See Results';

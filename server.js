@@ -112,7 +112,7 @@ app.post('/api/ai/word-problems', authMiddleware, rateLimitMiddleware, async fun
     if (validDifficulties.indexOf(difficulty) === -1) {
       return res.status(400).json({ error: { code: 'BAD_REQUEST', message: 'Invalid difficulty. Must be easy, medium, or hard.', retryable: false } });
     }
-    var clampedCount = Math.min(Math.max(parseInt(count) || 5, 1), 20);
+    var clampedCount = Math.min(Math.max(parseInt(count) || 5, 1), 25);
     clampedCount = Math.min(clampedCount, remaining);
     var questions = await aiService.generateWordProblems(category, difficulty, clampedCount);
     await aiService.consumeWordProblemQuota(req.userId, req.userPremium, questions.length);
