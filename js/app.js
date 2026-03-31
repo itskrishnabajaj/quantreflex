@@ -1973,7 +1973,7 @@ function renderStatsView() {
     }
   }
 
-  /* AI Insights section */
+  /* AI Insights section — on-demand generation */
   var aiInsightsContainer = document.getElementById('aiInsightsContainer');
   if (aiInsightsContainer && typeof AIFeatures !== 'undefined') {
     if (!AIFeatures.isPremium()) {
@@ -1983,21 +1983,22 @@ function renderStatsView() {
       var aiUnlockBtn = aiInsightsContainer.querySelector('.ai-coach-unlock-btn');
       if (aiUnlockBtn) aiUnlockBtn.addEventListener('click', function () { showPaywall('settings'); });
     } else if (p.totalAttempted >= 5) {
-      aiInsightsContainer.innerHTML =
-        '<div class="ai-stats-body"><div class="ai-loading"><div class="ai-spinner"></div><p>Analyzing performance...</p></div></div>';
-      AIFeatures.debouncedFetchInsights(p, function (err, insights) {
-        var body = aiInsightsContainer.querySelector('.ai-stats-body');
-        if (!body) body = aiInsightsContainer;
-        if (err) {
-          body.innerHTML = '<p class="ai-error">Unable to generate right now. Try again later.</p>';
-          return;
-        }
-        function _escAi(s) { var d = document.createElement('div'); d.textContent = s || ''; return d.innerHTML; }
-        body.innerHTML =
-          '<div class="ai-insight-block"><p class="ai-insight-text">' + _escAi(insights.insight) + '</p></div>' +
-          (insights.problem ? '<div class="ai-insight-block ai-insight-problem"><strong>Focus area:</strong> ' + _escAi(insights.problem) + '</div>' : '') +
-          (insights.action ? '<div class="ai-insight-block ai-insight-action"><strong>Today\'s action:</strong> ' + _escAi(insights.action) + '</div>' : '');
-      });
+      var _statsCachedInsights = AIFeatures.getCachedInsights();
+      if (_statsCachedInsights) {
+        aiInsightsContainer.innerHTML = '<div class="ai-stats-body"></div>';
+        AIFeatures.renderInsightsResult(aiInsightsContainer.querySelector('.ai-stats-body'), _statsCachedInsights);
+      } else {
+        aiInsightsContainer.innerHTML =
+          '<div class="ai-stats-body">' +
+            '<button class="btn accent ai-insights-btn" type="button">View AI Insights ✨</button>' +
+          '</div>';
+        var _statsInsightsBtn = aiInsightsContainer.querySelector('.ai-insights-btn');
+        var _statsInsightsBody = aiInsightsContainer.querySelector('.ai-stats-body');
+        _statsInsightsBtn.addEventListener('click', function () {
+          _statsInsightsBtn.disabled = true;
+          AIFeatures.triggerInsightsFetch(_statsInsightsBody, _statsInsightsBtn, p);
+        });
+      }
     } else {
       aiInsightsContainer.innerHTML = '<p class="secondary-text">Complete at least 5 questions to get AI insights.</p>';
     }

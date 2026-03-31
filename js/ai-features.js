@@ -281,6 +281,33 @@ var AIFeatures = (function () {
     });
   }
 
+  function _renderInsightsResult(container, insights) {
+    container.innerHTML =
+      '<div class="ai-insight-block">' +
+        '<p class="ai-insight-text">' + _esc(insights.insight) + '</p>' +
+      '</div>' +
+      (insights.problem ? '<div class="ai-insight-block ai-insight-problem"><strong>Focus area:</strong> ' + _esc(insights.problem) + '</div>' : '') +
+      (insights.action ? '<div class="ai-insight-block ai-insight-action"><strong>Today\'s action:</strong> ' + _esc(insights.action) + '</div>' : '');
+  }
+
+  function _triggerInsightsFetch(bodyEl, btnEl, stats) {
+    var cached = _getCachedCoach();
+    if (cached) {
+      _renderInsightsResult(bodyEl, cached);
+      return;
+    }
+    if (btnEl) btnEl.style.display = 'none';
+    bodyEl.innerHTML = '<div class="ai-loading"><div class="ai-spinner"></div><p>Analyzing your performance...</p></div>';
+    fetchInsights(stats, function (err, insights) {
+      if (err) {
+        bodyEl.innerHTML = '<p class="ai-error">Unable to generate right now. Try again later.</p>';
+        if (btnEl) { btnEl.style.display = ''; btnEl.disabled = false; }
+        return;
+      }
+      _renderInsightsResult(bodyEl, insights);
+    });
+  }
+
   function renderAICoachCard(containerId, stats) {
     var container = document.getElementById(containerId);
     if (!container) return;
@@ -301,35 +328,41 @@ var AIFeatures = (function () {
       return;
     }
 
+    if (!stats || !stats.totalAttempted || stats.totalAttempted < 5) {
+      container.innerHTML =
+        '<div class="card ai-coach-card">' +
+          '<h3>🤖 AI Coach</h3>' +
+          '<div class="ai-coach-body">' +
+            '<p class="secondary-text">Complete at least 5 questions to get your first AI insight.</p>' +
+          '</div>' +
+        '</div>';
+      return;
+    }
+
+    var cached = _getCachedCoach();
+    if (cached) {
+      container.innerHTML =
+        '<div class="card ai-coach-card">' +
+          '<h3>🤖 AI Coach</h3>' +
+          '<div class="ai-coach-body"></div>' +
+        '</div>';
+      _renderInsightsResult(container.querySelector('.ai-coach-body'), cached);
+      return;
+    }
+
     container.innerHTML =
       '<div class="card ai-coach-card">' +
         '<h3>🤖 AI Coach</h3>' +
         '<div class="ai-coach-body">' +
-          '<div class="ai-loading"><div class="ai-spinner"></div><p>Analyzing your performance...</p></div>' +
+          '<button class="btn accent ai-insights-btn" type="button">View AI Insights ✨</button>' +
         '</div>' +
       '</div>';
 
-    if (!stats || !stats.totalAttempted || stats.totalAttempted < 5) {
-      container.querySelector('.ai-coach-body').innerHTML =
-        '<p class="secondary-text">Complete at least 5 questions to get your first AI insight.</p>';
-      return;
-    }
-
-    _debouncedFetchInsights(stats, function (err, insights) {
-      var body = container.querySelector('.ai-coach-body');
-      if (!body) return;
-
-      if (err) {
-        body.innerHTML = '<p class="ai-error">Unable to generate right now. Try again later.</p>';
-        return;
-      }
-
-      body.innerHTML =
-        '<div class="ai-insight-block">' +
-          '<p class="ai-insight-text">' + _esc(insights.insight) + '</p>' +
-        '</div>' +
-        (insights.problem ? '<div class="ai-insight-block ai-insight-problem"><strong>Focus area:</strong> ' + _esc(insights.problem) + '</div>' : '') +
-        (insights.action ? '<div class="ai-insight-block ai-insight-action"><strong>Today\'s action:</strong> ' + _esc(insights.action) + '</div>' : '');
+    var insightsBtn = container.querySelector('.ai-insights-btn');
+    var bodyEl = container.querySelector('.ai-coach-body');
+    insightsBtn.addEventListener('click', function () {
+      insightsBtn.disabled = true;
+      _triggerInsightsFetch(bodyEl, insightsBtn, stats);
     });
   }
 
@@ -549,6 +582,8 @@ var AIFeatures = (function () {
     renderAICoachCard: renderAICoachCard,
     renderWordProblemsSetup: renderWordProblemsSetup,
     isPremium: _isPremium,
-    debouncedFetchInsights: _debouncedFetchInsights
+    getCachedInsights: _getCachedCoach,
+    triggerInsightsFetch: _triggerInsightsFetch,
+    renderInsightsResult: _renderInsightsResult
   };
 })();
