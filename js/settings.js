@@ -686,7 +686,9 @@ function openDeleteAccountModal() {
             var batch = db.batch();
             snap.docs.forEach(function (doc) { batch.delete(doc.ref); });
             return batch.commit();
-          }).catch(function () {});
+          }).catch(function (err) {
+            console.warn('Failed to delete subcollection ' + sub + ':', err);
+          });
         });
 
         var paymentsDeletePromise = db.collection('payments')
@@ -695,7 +697,9 @@ function openDeleteAccountModal() {
             var batch = db.batch();
             snap.docs.forEach(function (doc) { batch.delete(doc.ref); });
             return batch.commit();
-          }).catch(function () {});
+          }).catch(function (err) {
+            console.warn('Failed to delete payment records:', err);
+          });
 
         Promise.all(subDeletePromises.concat([paymentsDeletePromise]))
           .then(function () {
