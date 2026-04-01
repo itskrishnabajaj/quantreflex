@@ -590,11 +590,29 @@ var AIFeatures = (function () {
         plan: plan,
         timestamp: Date.now()
       }));
+      _saveLastUsed(examDate, examName, dailyTimeMinutes);
     } catch (_) {}
   }
 
   function _clearStudyPlanCache(examDate) {
     try { localStorage.removeItem(_spCacheKey(examDate)); } catch (_) {}
+  }
+
+  function _spLastUsedKey() {
+    return 'quant_ai_sp_last_' + _uid();
+  }
+
+  function _saveLastUsed(examDate, examName, dailyTimeMinutes) {
+    try {
+      localStorage.setItem(_spLastUsedKey(), JSON.stringify({ examDate: examDate, examName: examName, dailyTimeMinutes: dailyTimeMinutes }));
+    } catch (_) {}
+  }
+
+  function _getLastUsed() {
+    try {
+      var raw = localStorage.getItem(_spLastUsedKey());
+      return raw ? JSON.parse(raw) : null;
+    } catch (_) { return null; }
   }
 
   function _renderStudyPlanResult(bodyEl, plan, examName, examDate, daysRemaining) {
@@ -693,6 +711,17 @@ var AIFeatures = (function () {
     var generateBtn = overlay.querySelector('#spGenerateBtn');
     var errorEl = overlay.querySelector('#spError');
     var bodyEl = overlay.querySelector('#spModalBody');
+
+    var lastUsed = _getLastUsed();
+    if (lastUsed && lastUsed.examDate && lastUsed.examName && lastUsed.dailyTimeMinutes) {
+      var lastCached = _getStudyPlanCache(lastUsed.examDate);
+      if (lastCached && lastCached.examName === lastUsed.examName && lastCached.dailyTimeMinutes === lastUsed.dailyTimeMinutes && lastCached.plan) {
+        var lastExamMs = new Date(lastUsed.examDate).getTime();
+        var lastDaysRemaining = Math.max(1, Math.ceil((lastExamMs - Date.now()) / (1000 * 60 * 60 * 24)));
+        _renderStudyPlanResult(bodyEl, lastCached.plan, lastCached.examName, lastUsed.examDate, lastDaysRemaining);
+        _bindRegenerateBtn(bodyEl, containerId, lastUsed.examDate, lastCached.examName, lastUsed.dailyTimeMinutes, lastDaysRemaining);
+      }
+    }
 
     examSelect.addEventListener('change', function () {
       if (this.value === 'Other') {

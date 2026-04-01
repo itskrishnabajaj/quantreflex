@@ -508,7 +508,7 @@ async function generateStudyPlan(params) {
 
   var result = await _callAndParse(m, prompt, function (parsed) {
     if (!parsed || typeof parsed.strategy !== 'string') return null;
-    if (!Array.isArray(parsed.weeklyPlan) || parsed.weeklyPlan.length < 1) return null;
+    if (!Array.isArray(parsed.weeklyPlan) || parsed.weeklyPlan.length < 1 || parsed.weeklyPlan.length > 8) return null;
     if (typeof parsed.dailyStructure !== 'string') return null;
     if (typeof parsed.tip !== 'string') return null;
     return {
