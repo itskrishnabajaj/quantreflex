@@ -2027,6 +2027,43 @@ function renderStatsView() {
       '<div class="stat-card"><div class="value">' + (p.todayAttempted || 0) + '</div><div class="label">Today\'s Questions</div></div>';
   }
 
+  /* Section 4b — 7-Day Accuracy Sparkline */
+  var sparklineEl = document.getElementById('statsSparkline');
+  if (sparklineEl) {
+    var _allDates = Object.keys(history).sort();
+    var _last7 = _allDates.slice(-7);
+    if (_last7.length < 2) {
+      sparklineEl.innerHTML = '<p class="secondary-text sparkline-empty">Practice for 2+ days to see your accuracy trend.</p>';
+    } else {
+      var _barW = 28, _barGap = 8, _chartH = 64, _labelH = 18;
+      var _svgW = _last7.length * (_barW + _barGap) - _barGap;
+      var _svgH = _chartH + _labelH;
+      var _values = _last7.map(function (d) {
+        var e = history[d];
+        return e && e.attempted > 0 ? Math.round((e.correct / e.attempted) * 100) : 0;
+      });
+      var _max = Math.max.apply(null, _values) || 1;
+      var _bars = '';
+      for (var _i = 0; _i < _last7.length; _i++) {
+        var _pct = _values[_i];
+        var _barH = Math.max(4, Math.round((_pct / 100) * _chartH));
+        var _x = _i * (_barW + _barGap);
+        var _y = _chartH - _barH;
+        var _barColor = _pct >= 80 ? '#16a34a' : _pct >= 60 ? '#2563eb' : '#ef4444';
+        var _dayLabel = _last7[_i].split(' ').slice(0, 2).join(' ');
+        _bars +=
+          '<rect x="' + _x + '" y="' + _y + '" width="' + _barW + '" height="' + _barH + '" rx="4" fill="' + _barColor + '" opacity="0.85"/>' +
+          '<text x="' + (_x + _barW / 2) + '" y="' + (_y - 3) + '" text-anchor="middle" class="sparkline-val">' + _pct + '%</text>' +
+          '<text x="' + (_x + _barW / 2) + '" y="' + (_chartH + _labelH - 2) + '" text-anchor="middle" class="sparkline-day">' + _dayLabel + '</text>';
+      }
+      sparklineEl.innerHTML =
+        '<svg class="stats-sparkline" viewBox="0 0 ' + _svgW + ' ' + _svgH + '" width="100%" preserveAspectRatio="xMidYMid meet" aria-label="7-day accuracy chart">' +
+          '<line x1="0" y1="' + _chartH + '" x2="' + _svgW + '" y2="' + _chartH + '" stroke="currentColor" opacity="0.15" stroke-width="1"/>' +
+          _bars +
+        '</svg>';
+    }
+  }
+
   /* Section 5 — Performance Insights (3 cols) */
   var insightsEl = document.getElementById('statsInsights');
   if (insightsEl) {

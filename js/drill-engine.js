@@ -79,6 +79,7 @@ function createDrillEngine(container, opts) {
   var bestSessionStreak = 0;
   var currentSessionStreak = 0;
   var perQuestionTimes = [];
+  var sessionWrongCategories = {}; /* category → wrong count for insight engine */
   var qStart = 0;
   var overallStart = 0;
   var overallTimer = null;
@@ -297,6 +298,9 @@ function createDrillEngine(container, opts) {
       if (currentSessionStreak > bestSessionStreak) bestSessionStreak = currentSessionStreak;
     } else {
       currentSessionStreak = 0;
+      /* Track wrong-answer categories for post-session insight */
+      var _wCat = q.category || 'unknown';
+      sessionWrongCategories[_wCat] = (sessionWrongCategories[_wCat] || 0) + 1;
       /* In review mode, re-queue incorrect questions at the end so users
          cycle through remaining mistakes before seeing the same one again.
          Only re-queue if this exact question isn't already waiting in the
@@ -507,6 +511,58 @@ function createDrillEngine(container, opts) {
     return tips[cat] || 'Tip: Re-read the question carefully and check each calculation step.';
   }
 
+  function _computeSessionInsight(accNum, times, wrongCats, _unused, mode) {
+    /* Load 7-day rolling average from progress localStorage for comparison */
+    var rollingAvg = null;
+    try {
+      var _prog = JSON.parse(localStorage.getItem('quant_reflex_progress') || '{}');
+      var _hist = _prog.dailyHistory || {};
+      var _histDates = Object.keys(_hist).sort().slice(-7);
+      var _histCorrect = 0, _histAttempted = 0;
+      for (var _hd = 0; _hd < _histDates.length; _hd++) {
+        var _he = _hist[_histDates[_hd]];
+        if (_he && _he.attempted > 0) { _histCorrect += _he.correct; _histAttempted += _he.attempted; }
+      }
+      if (_histAttempted > 0) rollingAvg = (_histCorrect / _histAttempted) * 100;
+    } catch (_) {}
+
+    /* Find top missed category in this session */
+    var topMissedCat = null, topMissedCount = 0;
+    var _catKeys = Object.keys(wrongCats);
+    for (var _ci = 0; _ci < _catKeys.length; _ci++) {
+      if (wrongCats[_catKeys[_ci]] > topMissedCount) {
+        topMissedCount = wrongCats[_catKeys[_ci]];
+        topMissedCat = _catKeys[_ci];
+      }
+    }
+    var _catLabels = {
+      squares: 'squares', cubes: 'cubes', area: 'area', volume: 'volume',
+      percentages: 'percentages', multiplication: 'multiplication', fractions: 'fractions',
+      averages: 'averages', ratios: 'ratios', 'profit-loss': 'profit & loss',
+      'time-speed-distance': 'time-speed-distance', 'time-and-work': 'time & work'
+    };
+    var catLabel = topMissedCat ? (_catLabels[topMissedCat] || topMissedCat) : null;
+
+    /* Streak from progress */
+    var streak = 0;
+    try { streak = parseInt((JSON.parse(localStorage.getItem('quant_reflex_progress') || '{}')).dailyStreak) || 0; } catch (_) {}
+
+    /* Build insight message */
+    if (accNum === 100) return '\uD83C\uDF1F Perfect score! Flawless session — push the difficulty up next time.';
+    if (rollingAvg !== null) {
+      var diff = accNum - rollingAvg;
+      if (diff <= -8 && catLabel) return '\uD83D\uDCC9 Accuracy dropped ' + Math.abs(Math.round(diff)) + '% vs your average — focus on ' + catLabel + ' next session.';
+      if (diff <= -8) return '\uD83D\uDCC9 Accuracy dropped ' + Math.abs(Math.round(diff)) + '% below your 7-day average — keep practising to bounce back.';
+      if (diff >= 8) return '\uD83D\uDCC8 Strong session! Accuracy is ' + Math.round(diff) + '% above your 7-day average — great form.';
+    }
+    if (catLabel && topMissedCount >= 2) return '\u26A0\uFE0F You missed ' + topMissedCount + ' ' + catLabel + ' question' + (topMissedCount > 1 ? 's' : '') + ' — try a focused ' + catLabel + ' drill next.';
+    if (accNum >= 90) return '\uD83D\uDCAA Excellent accuracy (' + accNum + '%) — try a timed session to sharpen your speed.';
+    if (accNum >= 75) return '\uD83D\uDC4D Good session! A little more practice on your weak spots will push you into the top tier.';
+    if (accNum < 50) return '\uD83D\uDCDA Tough session — review the concepts and try again with fewer questions.';
+    if (streak >= 3) return '\uD83D\uDD25 ' + streak + '-day streak! Consistency is your biggest advantage — keep showing up.';
+    return '\uD83D\uDCCB Session done. Focus on accuracy first, speed will follow.';
+  }
+
   function finish() {
     cleanup();
     _exitDrillSession();
@@ -572,11 +628,15 @@ function createDrillEngine(container, opts) {
     /* Retry challenge text */
     var retryChallenge = avg !== '0.0' ? 'Beat your ' + avg + 's avg?' : 'Try to go faster!';
 
+    /* Rule-based post-session insight (always visible, no AI call) */
+    var _insightText = _computeSessionInsight(accNum, perQuestionTimes, sessionWrongCategories, null, mode);
+
     container.innerHTML =
       '<div class="card center-content fade-in">' +
         '<h2>Results</h2>' +
         (isNewBest ? '<div class="new-best-badge">🎉 New Best!</div>' : '') +
         '<div class="performance-badge ' + badgeClass + '">' + badgeText + '</div>' +
+        '<div class="session-insight-card">' + _escHtml(_insightText) + '</div>' +
         '<div class="results-grid">' +
           '<div class="result-item"><span class="result-value">' + score + '/' + count + '</span><span class="result-label">Score</span></div>' +
           '<div class="result-item"><span class="result-value">' + accuracy + '%</span><span class="result-label">Accuracy</span></div>' +
@@ -836,6 +896,7 @@ function createDrillEngine(container, opts) {
     bestSessionStreak = 0;
     currentSessionStreak = 0;
     perQuestionTimes = [];
+    sessionWrongCategories = {};
     overallStart = performance.now();
     startGlobalTimer();
     renderQuestion();

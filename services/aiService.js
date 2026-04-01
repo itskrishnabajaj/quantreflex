@@ -135,15 +135,6 @@ async function _saveUsage(uid) {
   } catch (err) {
     console.warn('Usage write failed:', err.message);
   }
-  /* Mirror to structured ai/usage subcollection (non-destructive, fire-and-forget) */
-  db.collection('users').doc(uid).collection('ai').doc('usage').set({
-    wordProblemsUsedLifetime: entry.wordProblemsUsedLifetime || 0,
-    wordProblemsUsedToday: entry.wordProblemsUsedToday || 0,
-    explanationsUsed: entry.explanationsUsed || 0,
-    updatedAt: new Date().toISOString()
-  }, { merge: true }).catch(function (err) {
-    console.warn('ai/usage mirror write failed:', err.message);
-  });
 }
 
 async function checkWordProblemQuota(uid, isPremium) {
