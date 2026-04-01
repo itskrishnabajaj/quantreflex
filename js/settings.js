@@ -415,20 +415,6 @@ function updateAboutUserStatus() {
   }
 }
 
-function _toMillis(value) {
-  if (!value) return 0;
-  if (typeof value === 'number') return value;
-  if (value instanceof Date) return value.getTime();
-  if (typeof value === 'string') {
-    var parsed = Date.parse(value);
-    return isNaN(parsed) ? 0 : parsed;
-  }
-  if (typeof value.toDate === 'function') {
-    try { return value.toDate().getTime(); } catch (_) { return 0; }
-  }
-  return 0;
-}
-
 /**
  * Open the Clear Data modal with options.
  */

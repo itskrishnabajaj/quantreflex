@@ -384,7 +384,6 @@ function hasReachedDailyLimit() {
 
 global.canAccess = canAccess;
 global.canAccessFeature = canAccessFeature;
-global.canAccessCustomMode = canAccessCustomMode;
 global.showPaywall = showPaywall;
 global.openPayment = openPayment;
 global.verifyPaymentResponse = verifyPaymentResponse;

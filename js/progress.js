@@ -189,13 +189,6 @@ function getMistakes() {
   return p.mistakes || [];
 }
 
-/** Clear reviewed mistakes */
-function clearMistakes() {
-  var p = loadProgress();
-  p.mistakes = [];
-  saveProgress(p);
-}
-
 /** Get average response time */
 function getAvgResponseTime() {
   var p = loadProgress();
@@ -258,12 +251,6 @@ function getStrongestCategory() {
     }
   }
   return best;
-}
-
-/** Get longest daily streak from history */
-function getLongestDailyStreak() {
-  var p = loadProgress();
-  return p.bestDailyStreak || p.dailyStreak || 0;
 }
 
 /** Reset all progress */

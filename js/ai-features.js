@@ -1113,17 +1113,11 @@ var AIFeatures = (function () {
   }
 
   return {
-    getWordProblemQuota: getWordProblemQuota,
-    consumeWordProblemQuota: consumeWordProblemQuota,
-    fetchWordProblems: fetchWordProblems,
-    fetchExplanation: fetchExplanation,
-    fetchInsights: fetchInsights,
     fetchSpeedBenchmark: fetchSpeedBenchmark,
     prefetchQuestionPattern: prefetchQuestionPattern,
     showExplanationModal: showExplanationModal,
     renderAICoachCard: renderAICoachCard,
     renderStudyPlanCard: renderStudyPlanCard,
-    renderStudyPlanModal: _openStudyPlanModal,
     renderWordProblemsSetup: renderWordProblemsSetup,
     resetWpAdaptive: resetWpAdaptive,
     isPremium: _isPremium,
