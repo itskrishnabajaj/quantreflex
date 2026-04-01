@@ -359,7 +359,7 @@ function showPaywall(featureType) {
           '<th>Premium+</th>' +
         '</tr></thead>' +
         '<tbody>' +
-          '<tr><td>Practice drills</td><td>✓</td><td class="paywall-compare-highlight">✓</td><td>✓</td></tr>' +
+          '<tr><td>Practice</td><td>✓</td><td class="paywall-compare-highlight">✓</td><td>✓</td></tr>' +
           '<tr><td>Custom training</td><td>✗</td><td class="paywall-compare-highlight">✓</td><td>✓</td></tr>' +
           '<tr><td>Review mistakes</td><td>✗</td><td class="paywall-compare-highlight">✓</td><td>✓</td></tr>' +
           '<tr><td>Adaptive training</td><td>✗</td><td class="paywall-compare-highlight">✓</td><td>✓</td></tr>' +
