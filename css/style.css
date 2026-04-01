@@ -1833,7 +1833,15 @@ body.paywall-open {
   color: #475569;
 }
 
-/* --- Free Continue --- */
+/* --- Sticky Footer with Continue Free --- */
+.paywall-sticky-footer {
+  position: sticky;
+  bottom: 0;
+  background: #f8fafc;
+  padding: .5rem 0 .25rem;
+  text-align: center;
+}
+
 .paywall-free-continue {
   background: none;
   border: none;
@@ -1843,7 +1851,6 @@ body.paywall-open {
   padding: .3rem .5rem;
   text-decoration: underline;
   text-underline-offset: .15em;
-  margin-top: .15rem;
 }
 
 .paywall-free-continue:hover {
@@ -2018,6 +2025,7 @@ body.dark-mode .paywall-compare-highlight {
 }
 body.dark-mode .paywall-trust,
 body.dark-mode .paywall-urgency { color: #94a3b8; }
+body.dark-mode .paywall-sticky-footer { background: #0f172a; }
 body.dark-mode .paywall-free-continue { color: #64748b; }
 body.dark-mode .paywall-free-continue:hover { color: #94a3b8; }
 body.dark-mode .paywall-footnote { color: #94a3b8; }

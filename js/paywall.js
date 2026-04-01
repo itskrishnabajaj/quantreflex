@@ -326,7 +326,7 @@ function showPaywall(featureType) {
             '<li>✓ Speed benchmark & analytics</li>' +
             '<li>✓ All future updates included</li>' +
           '</ul>' +
-          '<button class="btn accent paywall-upgrade" type="button">Unlock Premium · ₹79</button>' +
+          '<button class="btn accent paywall-upgrade" type="button">Unlock Premium – ₹79</button>' +
           '<p class="paywall-plan-note">One-time payment · No subscription</p>' +
         '</div>' +
 
@@ -356,9 +356,7 @@ function showPaywall(featureType) {
         '<tbody>' +
           '<tr><td>Practice drills</td><td>✓</td><td class="paywall-compare-highlight">✓</td><td>✓</td></tr>' +
           '<tr><td>Custom training</td><td>✗</td><td class="paywall-compare-highlight">✓</td><td>✓</td></tr>' +
-          '<tr><td>Mistake review</td><td>✗</td><td class="paywall-compare-highlight">✓</td><td>✓</td></tr>' +
           '<tr><td>Adaptive training</td><td>✗</td><td class="paywall-compare-highlight">✓</td><td>✓</td></tr>' +
-          '<tr><td>Analytics & insights</td><td>✗</td><td class="paywall-compare-highlight">✓</td><td>✓</td></tr>' +
           '<tr><td>AI features</td><td>✗</td><td class="paywall-compare-highlight">✗</td><td>✓</td></tr>' +
         '</tbody>' +
       '</table>' +
@@ -368,7 +366,9 @@ function showPaywall(featureType) {
         '<p class="paywall-urgency">🔥 Lifetime pricing — only while it lasts</p>' +
       '</div>' +
 
-      '<button class="paywall-free-continue" type="button">Continue with Free</button>' +
+      '<div class="paywall-sticky-footer">' +
+        '<button class="paywall-free-continue" type="button">Continue Free</button>' +
+      '</div>' +
     '</div>';
 
   overlay.addEventListener('click', function (e) {
