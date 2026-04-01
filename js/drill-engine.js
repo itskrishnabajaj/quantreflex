@@ -344,22 +344,29 @@ function createDrillEngine(container, opts) {
       feedback.appendChild(wrongLabel);
       feedback.appendChild(correctLabel);
 
-      /* Auto-explain: show a rule-based tip immediately, no button press needed */
+      /* Auto-explain: show a rule-based tip immediately, no button press needed.
+         Premium users always see the tip. Free users get 5 lifetime credits. */
       var autoTipEl = document.createElement('div');
-      var _credits = _getExplainCredits();
-      if (_credits > 0) {
-        _decrementExplainCredits();
+      var _isPremium = (typeof canAccessFeature === 'function') ? canAccessFeature('adaptive_training') : false;
+      if (_isPremium) {
         autoTipEl.className = 'auto-explain-tip';
         autoTipEl.textContent = _getAutoTip(q.category);
       } else {
-        autoTipEl.className = 'auto-explain-tip auto-explain-locked';
-        autoTipEl.innerHTML = '🔒 <a class="auto-explain-unlock" href="#">Unlock unlimited explanations</a>';
-        var _lockLink = autoTipEl.querySelector('.auto-explain-unlock');
-        if (_lockLink) {
-          _lockLink.addEventListener('click', function (e) {
-            e.preventDefault();
-            if (typeof showPaywall === 'function') showPaywall('settings');
-          });
+        var _credits = _getExplainCredits();
+        if (_credits > 0) {
+          _decrementExplainCredits();
+          autoTipEl.className = 'auto-explain-tip';
+          autoTipEl.textContent = _getAutoTip(q.category);
+        } else {
+          autoTipEl.className = 'auto-explain-tip auto-explain-locked';
+          autoTipEl.innerHTML = '🔒 <a class="auto-explain-unlock" href="#">Unlock unlimited explanations</a>';
+          var _lockLink = autoTipEl.querySelector('.auto-explain-unlock');
+          if (_lockLink) {
+            _lockLink.addEventListener('click', function (e) {
+              e.preventDefault();
+              if (typeof showPaywall === 'function') showPaywall('settings');
+            });
+          }
         }
       }
       feedback.appendChild(autoTipEl);
