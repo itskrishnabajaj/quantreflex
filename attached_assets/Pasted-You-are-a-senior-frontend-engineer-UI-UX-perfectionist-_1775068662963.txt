@@ -1,0 +1,195 @@
+You are a senior frontend engineer, UI/UX perfectionist, and product conversion specialist working on "Quant Reflex Trainer".
+
+The App Guide has already been restructured into Premium and Premium+ sections.
+
+Your task is to perform a FINAL POLISH PASS to:
+
+- improve readability
+- enhance visual hierarchy
+- increase perceived value
+- make it feel like a premium product
+
+---
+
+🚨 STRICT RULES
+
+- DO NOT change feature list or logic
+- DO NOT remove any sections
+- ONLY improve UI, spacing, hierarchy, and clarity
+- Maintain current design system
+
+---
+
+🎯 SECTION 1: SECTION SEPARATION (VERY IMPORTANT)
+
+Ensure Premium and Premium+ sections feel clearly separated:
+
+- Add sufficient vertical spacing between sections
+- Optionally use subtle divider or container difference
+- Each section should feel like its own block
+
+---
+
+---
+
+🎯 SECTION 2: CARD-BASED GROUPING
+
+Wrap each subgroup into clean visual containers:
+
+- Core Training Power
+- Performance & Feedback
+- Control & Flexibility
+- Experience
+- AI Learning System
+
+---
+
+Ensure:
+
+- rounded corners
+- consistent padding
+- slight elevation or background contrast
+
+---
+
+---
+
+🎯 SECTION 3: TYPOGRAPHY HIERARCHY
+
+Improve readability:
+
+- Section headers → bold, larger
+- Subgroup titles → medium emphasis
+- Feature titles → semi-bold
+- Descriptions → lighter, smaller
+
+---
+
+Ensure:
+
+- no text looks cramped
+- clear visual hierarchy
+
+---
+
+---
+
+🎯 SECTION 4: ICON ALIGNMENT
+
+Ensure:
+
+- 🔓 🤖 ⭐ icons are perfectly aligned
+- consistent spacing between icon and text
+- no vertical misalignment
+
+---
+
+---
+
+🎯 SECTION 5: TEXT REFINEMENT
+
+Check ALL text:
+
+- remove any robotic phrasing
+- ensure natural human tone
+- short, clear, impactful sentences
+
+---
+
+---
+
+🎯 SECTION 6: SCROLL EXPERIENCE
+
+Ensure:
+
+- smooth scrolling
+- no sudden jumps
+- proper spacing at top and bottom
+
+---
+
+---
+
+🎯 SECTION 7: VISUAL BALANCE
+
+Fix:
+
+- uneven margins
+- inconsistent spacing
+- crowded sections
+
+---
+
+Goal:
+
+Each section should feel breathable and clean
+
+---
+
+---
+
+🎯 SECTION 8: PREMIUM+ EMPHASIS
+
+Make Premium+ feel aspirational:
+
+- slightly more visual emphasis than Premium
+- but not overwhelming
+
+---
+
+---
+
+🎯 SECTION 9: FOOTER POLISH
+
+Ensure:
+
+Premium footer:
+"One-time payment. Lifetime access. No subscriptions."
+
+---
+
+Ensure:
+
+- centered alignment
+- proper spacing
+- visually separated from features
+
+---
+
+---
+
+🎯 SECTION 10: FINAL QA
+
+Test:
+
+- small screen devices
+- long text wrapping
+- modal overflow
+
+---
+
+Ensure:
+
+- no UI break
+- no clipping
+- no misalignment
+
+---
+
+---
+
+📊 OUTPUT REQUIRED
+
+Provide:
+
+1. UI improvements made
+2. Spacing fixes
+3. Alignment corrections
+4. Readability improvements
+5. Final confirmation:
+
+"App Guide polished to premium-level UI with clean hierarchy, balanced spacing, and high conversion clarity."
+
+---
+
+Think like a product designer building a paid app, not a student project.
