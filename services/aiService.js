@@ -66,14 +66,30 @@ async function isUserPremium(uid) {
   }
 }
 
+function _toExpiryMillis(value) {
+  if (!value) return 0;
+  if (typeof value === 'number') return value;
+  if (typeof value.toMillis === 'function') {
+    try { return value.toMillis(); } catch (_) { return 0; }
+  }
+  if (typeof value.toDate === 'function') {
+    try { return value.toDate().getTime(); } catch (_) { return 0; }
+  }
+  if (typeof value === 'string') {
+    var parsed = Date.parse(value);
+    return isNaN(parsed) ? 0 : parsed;
+  }
+  return 0;
+}
+
 async function isUserPremiumPlus(uid) {
   try {
     var doc = await db.collection('users').doc(uid).get();
     if (!doc.exists) return false;
     var data = doc.data();
     if (data.isPremiumPlus !== true) return false;
-    var expiry = data.premiumPlusExpiry;
-    if (expiry && typeof expiry === 'number' && expiry < Date.now()) {
+    var expiryMs = _toExpiryMillis(data.premiumPlusExpiry);
+    if (expiryMs > 0 && expiryMs < Date.now()) {
       db.collection('users').doc(uid).set(
         { isPremiumPlus: false, premiumPlusStatus: 'expired' },
         { merge: true }
@@ -94,6 +110,8 @@ async function unlockPremiumPlus(uid, plan, paymentId) {
   var paymentRef = db.collection('payments').doc(String(paymentId));
   var userRef = db.collection('users').doc(uid);
 
+  var finalExpiry = expiry;
+
   await db.runTransaction(async function (tx) {
     var paymentDoc = await tx.get(paymentRef);
     if (paymentDoc.exists) {
@@ -101,6 +119,14 @@ async function unlockPremiumPlus(uid, plan, paymentId) {
       if (existing.uid !== uid) {
         throw new AIServiceError('PAYMENT_REPLAY', 'Payment already used by another account.', false);
       }
+      finalExpiry = existing.expiry || expiry;
+      tx.set(userRef, {
+        isPremiumPlus: true,
+        premiumPlusPlan: existing.plan || plan,
+        premiumPlusExpiry: finalExpiry,
+        premiumPlusStatus: 'active',
+        lastPremiumPlusPaymentId: String(paymentId)
+      }, { merge: true });
       return;
     }
     tx.create(paymentRef, {
@@ -118,7 +144,7 @@ async function unlockPremiumPlus(uid, plan, paymentId) {
     }, { merge: true });
   });
 
-  return expiry;
+  return finalExpiry;
 }
 
 var WP_FREE_LIMIT = 5;
