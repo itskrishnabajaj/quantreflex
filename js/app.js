@@ -1587,9 +1587,14 @@ function startDrillFromPractice(modeKey, category, categoryLabel) {
             if (_cd.attempted >= 5 && (_cd.correct / _cd.attempted) < 0.6) _weakAreas.push(_k);
           }
         } catch (_) {}
-        /* Start engine once pattern arrives; fall back after 2.5s regardless */
-        var _patternTimeout = setTimeout(_doStartEngine, 2500);
-        AIFeatures.prefetchQuestionPattern(_prefetchTopic, _s.difficulty || 'medium', _weakAreas, function () {
+        /* Start engine once pattern arrives; abort and fall back after 2.5s if Gemini is slow */
+        var _cancelPrefetch = null;
+        var _patternTimeout = setTimeout(function () {
+          /* Abort the in-flight request so no AI work overlaps with the active session */
+          if (typeof _cancelPrefetch === 'function') _cancelPrefetch();
+          _doStartEngine();
+        }, 2500);
+        _cancelPrefetch = AIFeatures.prefetchQuestionPattern(_prefetchTopic, _s.difficulty || 'medium', _weakAreas, function () {
           clearTimeout(_patternTimeout);
           _doStartEngine();
         });

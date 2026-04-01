@@ -554,14 +554,13 @@ async function clearStudyPlanCache(userId, examDate) {
 var PATTERN_TTL_DAYS = 30;
 
 async function generateQuestionPattern(params) {
-  var m = getModel();
-  if (!m) throw new AIServiceError('SERVICE_UNAVAILABLE', 'AI service unavailable', true);
-
   var topic = params.topic;
   var difficulty = params.difficulty;
   var weakAreas = Array.isArray(params.weakAreas) ? params.weakAreas : [];
 
   var cacheId = topic + '_' + difficulty;
+
+  /* Check Firestore cache FIRST — must not require model/AI for a cache hit */
   try {
     var cached = await db.collection('aiPatterns').doc(cacheId).get();
     if (cached.exists) {
@@ -574,6 +573,10 @@ async function generateQuestionPattern(params) {
   } catch (cacheErr) {
     console.warn('Pattern cache read failed:', cacheErr.message);
   }
+
+  /* Cache miss — now require the model for a live Gemini call */
+  var m = getModel();
+  if (!m) throw new AIServiceError('SERVICE_UNAVAILABLE', 'AI service unavailable', true);
 
   var topicLabel = CATEGORY_LABELS[topic] || topic;
   var weakStr = weakAreas.length > 0 ? weakAreas.join(', ') : 'none identified';

@@ -944,18 +944,50 @@ var AIFeatures = (function () {
 
   function prefetchQuestionPattern(topic, difficulty, weakAreas, callback) {
     var key = topic + '_' + difficulty;
-    if (_patternInFlight[key]) { if (callback) callback('request_in_progress'); return; }
+    if (_patternInFlight[key]) { if (callback) callback('request_in_progress'); return function () {}; }
     _patternInFlight[key] = true;
 
-    _sendAuthenticatedRequest('POST', '/api/ai/question-pattern',
-      { topic: topic, difficulty: difficulty, weakAreas: weakAreas || [] }, 15000,
-      function (err, data) {
+    var _activeXhr = null;
+    var _cancelled = false;
+
+    /* Inline XHR with abort support (does not use _sendAuthenticatedRequest to allow cancellation) */
+    _getIdToken(function (token) {
+      if (_cancelled) { _patternInFlight[key] = false; return; }
+      if (!token) { _patternInFlight[key] = false; if (callback) callback(FRIENDLY_ERROR); return; }
+
+      var xhr = new XMLHttpRequest();
+      _activeXhr = xhr;
+      xhr.open('POST', '/api/ai/question-pattern', true);
+      xhr.setRequestHeader('Content-Type', 'application/json');
+      xhr.setRequestHeader('Authorization', 'Bearer ' + token);
+      xhr.timeout = 15000;
+
+      xhr.onload = function () {
+        if (_cancelled) return; /* session started while in-flight — discard */
         _patternInFlight[key] = false;
-        if (err || !data) { if (callback) callback(err); return; }
-        /* Response is {pattern, type, logic} directly — store for questions.js _getAdaptiveHint() */
-        window._sessionAdaptivePattern = data;
-        if (callback) callback(null, data);
-      });
+        if (xhr.status === 200) {
+          try {
+            var data = JSON.parse(xhr.responseText);
+            /* Response is {pattern, type, logic} directly */
+            window._sessionAdaptivePattern = data;
+            if (callback) callback(null, data);
+          } catch (e) { if (callback) callback(FRIENDLY_ERROR); }
+        } else {
+          if (callback) callback(FRIENDLY_ERROR);
+        }
+      };
+      xhr.onerror = function () { if (!_cancelled) { _patternInFlight[key] = false; if (callback) callback(FRIENDLY_ERROR); } };
+      xhr.ontimeout = function () { if (!_cancelled) { _patternInFlight[key] = false; if (callback) callback(FRIENDLY_ERROR); } };
+      xhr.send(JSON.stringify({ topic: topic, difficulty: difficulty, weakAreas: weakAreas || [] }));
+    });
+
+    /* Return cancel function — aborts XHR and prevents late response from updating session pattern */
+    return function cancel() {
+      _cancelled = true;
+      _patternInFlight[key] = false;
+      if (_activeXhr) { try { _activeXhr.abort(); } catch (_) {} _activeXhr = null; }
+      window._sessionAdaptivePattern = null;
+    };
   }
 
   return {
