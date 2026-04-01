@@ -875,6 +875,7 @@ var AIFeatures = (function () {
     showExplanationModal: showExplanationModal,
     renderAICoachCard: renderAICoachCard,
     renderStudyPlanCard: renderStudyPlanCard,
+    renderStudyPlanModal: _openStudyPlanModal,
     renderWordProblemsSetup: renderWordProblemsSetup,
     isPremium: _isPremium,
     getCachedInsights: _getCachedCoach,

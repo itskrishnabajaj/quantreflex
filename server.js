@@ -199,8 +199,8 @@ app.post('/api/ai/study-plan', authMiddleware, rateLimitMiddleware, premiumGate(
       return res.status(400).json({ error: { code: 'BAD_REQUEST', message: 'Exam date must be in the future.', retryable: false } });
     }
 
-    if (dailyTimeMinutes < 15 || dailyTimeMinutes > 480) {
-      return res.status(400).json({ error: { code: 'BAD_REQUEST', message: 'Daily time must be between 15 and 480 minutes.', retryable: false } });
+    if (dailyTimeMinutes < 15 || dailyTimeMinutes > 180) {
+      return res.status(400).json({ error: { code: 'BAD_REQUEST', message: 'Daily time must be between 15 and 180 minutes.', retryable: false } });
     }
 
     var rawStats = body.stats || {};
