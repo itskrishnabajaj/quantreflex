@@ -2039,9 +2039,9 @@ function renderStatsView() {
       sparklineEl.innerHTML = '<p class="secondary-text sparkline-empty">Practice for 2+ days to see your accuracy trend.</p>';
     } else {
       var _DAY_ABBREV = ['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa'];
-      var _barW = 36, _barGap = 10, _chartH = 80, _labelH = 22;
+      var _barW = 36, _barGap = 10, _chartH = 80, _labelH = 22, _topPad = 14;
       var _svgW = _last7.length * (_barW + _barGap) - _barGap;
-      var _svgH = _chartH + _labelH;
+      var _svgH = _topPad + _chartH + _labelH;
       var _values = _last7.map(function (d) {
         var e = history[d];
         return e && e.attempted > 0 ? Math.round((e.correct / e.attempted) * 100) : 0;
@@ -2053,7 +2053,7 @@ function renderStatsView() {
         var _pct = _values[_i];
         var _barH = Math.max(4, Math.round((_pct / 100) * _chartH));
         var _x = _i * (_barW + _barGap);
-        var _y = _chartH - _barH;
+        var _y = _topPad + (_chartH - _barH);
         /* Highlight the best day in accent cyan; others use accuracy-tier colors */
         var _barColor = (_pct === _maxVal && _maxVal > 0) ? '#22d3ee'
           : _pct >= 80 ? '#16a34a' : _pct >= 60 ? '#2563eb' : '#ef4444';
@@ -2063,12 +2063,12 @@ function renderStatsView() {
         _bars +=
           '<rect x="' + _x + '" y="' + _y + '" width="' + _barW + '" height="' + _barH + '" rx="5" fill="' + _barColor + '" opacity="0.9"/>' +
           '<text x="' + (_x + _barW / 2) + '" y="' + (_y - 4) + '" text-anchor="middle" class="sparkline-val">' + _valDisplay + '</text>' +
-          '<text x="' + (_x + _barW / 2) + '" y="' + (_chartH + _labelH - 4) + '" text-anchor="middle" class="sparkline-day">' + _dayLabel + '</text>';
+          '<text x="' + (_x + _barW / 2) + '" y="' + (_topPad + _chartH + _labelH - 4) + '" text-anchor="middle" class="sparkline-day">' + _dayLabel + '</text>';
       }
       var _trendLabel = trend !== '-' ? trend : '';
       sparklineEl.innerHTML =
         '<svg class="stats-sparkline" viewBox="0 0 ' + _svgW + ' ' + _svgH + '" width="100%" preserveAspectRatio="xMidYMid meet" aria-label="7-day accuracy chart">' +
-          '<line x1="0" y1="' + _chartH + '" x2="' + _svgW + '" y2="' + _chartH + '" stroke="currentColor" opacity="0.15" stroke-width="1"/>' +
+          '<line x1="0" y1="' + (_topPad + _chartH) + '" x2="' + _svgW + '" y2="' + (_topPad + _chartH) + '" stroke="currentColor" opacity="0.15" stroke-width="1"/>' +
           _bars +
         '</svg>' +
         (_trendLabel ? '<div class="sparkline-trend-label">' + _trendLabel + '</div>' : '');

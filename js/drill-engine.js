@@ -604,7 +604,7 @@ function createDrillEngine(container, opts) {
     var rightX = W / 2 + 100;
     ctx.fillStyle = '#f8fafc';
     ctx.font = 'bold 22px system-ui, -apple-system, sans-serif';
-    ctx.fillText('Top ' + (100 - percentile) + '%', rightX, 248);
+    ctx.fillText('Top ' + Math.max(1, 100 - percentile) + '%', rightX, 248);
     ctx.fillStyle = '#64748b';
     ctx.font = '12px system-ui, -apple-system, sans-serif';
     ctx.fillText('Speed Rank', rightX, 266);

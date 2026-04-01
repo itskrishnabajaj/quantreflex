@@ -673,24 +673,7 @@ body.dark-mode .benchmark-suggestion { color: #c4b5fd; }
   color: #7c3aed;
 }
 body.dark-mode .benchmark-tip-label { color: #a78bfa; }
-.benchmark-cta-btn {
-  width: 100%;
-  padding: .65rem 1rem;
-  background: linear-gradient(135deg, #7c3aed, #6d28d9);
-  color: #fff;
-  border: none;
-  border-radius: 10px;
-  font-size: .88rem;
-  font-weight: 700;
-  cursor: pointer;
-  transition: opacity .15s, transform .1s;
-  letter-spacing: .02em;
-}
-.benchmark-cta-btn:hover { opacity: .9; }
-.benchmark-cta-btn:active { transform: scale(.98); }
-body.dark-mode .benchmark-cta-btn {
-  background: linear-gradient(135deg, #6d28d9, #5b21b6);
-}
+
 .benchmark-unlock-btn {
   width: 100%;
   padding: .65rem 1rem;
@@ -5551,6 +5534,8 @@ body.reduced-motion .spa-view-active {
   width: 100%;
   box-sizing: border-box;
   line-height: 1.45;
+  word-break: break-word;
+  overflow-wrap: break-word;
 }
 .auto-explain-locked {
   color: #6b7280;
@@ -5648,6 +5633,8 @@ body.dark-mode .results-share-btn {
   box-sizing: border-box;
   text-align: left;
   line-height: 1.5;
+  word-break: break-word;
+  overflow-wrap: break-word;
 }
 body.dark-mode .session-insight-card {
   color: #bfdbfe;

@@ -454,7 +454,7 @@ var AIFeatures = (function () {
             '</div>' +
           '</div>' +
           '<div id="wpAdaptiveActiveChip" class="adaptive-toggle-hint" style="display:none;">' +
-            '<p class="adaptive-hint-text">Adaptive Mode Active ✨ &mdash; difficulty is auto-managed based on your performance.</p>' +
+            '<p class="adaptive-hint-text">Difficulty is auto-managed based on your performance.</p>' +
           '</div>' +
           '<div class="timer-select-section wp-timer-section">' +
             '<div class="timer-toggle-row">' +
