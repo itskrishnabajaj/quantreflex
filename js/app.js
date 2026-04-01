@@ -1566,49 +1566,7 @@ function startDrillFromPractice(modeKey, category, categoryLabel) {
    * cannot be influenced by a prior adaptive run's AI hints. */
   window._sessionAdaptivePattern = null;
 
-  /* Prefetch AI question pattern for adaptive sessions.
-   * Works for both Focus mode (config.category) and Custom mode (config.topics[0]).
-   * Waits up to 2.5s for pattern arrival before starting engine (with immediate fallback). */
-  var _didStartEngine = false;
-  function _doStartEngine() {
-    if (_didStartEngine) return;
-    _didStartEngine = true;
-    _startPracticeEngine(drillContainer, config);
-  }
-
-  if (_useAdaptive && typeof AIFeatures !== 'undefined' && typeof AIFeatures.prefetchQuestionPattern === 'function') {
-    var _prefetchTopic = config.category || (Array.isArray(config.topics) && config.topics.length > 0 ? config.topics[0] : null);
-    if (_prefetchTopic) {
-      try {
-        var _s = JSON.parse(localStorage.getItem('quant_reflex_settings') || '{}');
-        var _weakAreas = [];
-        try {
-          var _p = typeof loadProgress === 'function' ? loadProgress() : {};
-          var _cats = _p.categoryStats || {};
-          for (var _k in _cats) {
-            var _cd = _cats[_k];
-            if (_cd.attempted >= 5 && (_cd.correct / _cd.attempted) < 0.6) _weakAreas.push(_k);
-          }
-        } catch (_) {}
-        /* Start engine once pattern arrives; abort and fall back after 2.5s if Gemini is slow */
-        var _cancelPrefetch = null;
-        var _patternTimeout = setTimeout(function () {
-          /* Abort the in-flight request so no AI work overlaps with the active session */
-          if (typeof _cancelPrefetch === 'function') _cancelPrefetch();
-          _doStartEngine();
-        }, 2500);
-        _cancelPrefetch = AIFeatures.prefetchQuestionPattern(_prefetchTopic, _s.difficulty || 'medium', _weakAreas, function () {
-          clearTimeout(_patternTimeout);
-          _doStartEngine();
-        });
-      } catch (_) {
-        _doStartEngine();
-      }
-      return; /* Engine will be started asynchronously above */
-    }
-  }
-
-  _doStartEngine();
+  _startPracticeEngine(drillContainer, config);
 }
 
 function _startPracticeEngine(drillContainer, config) {

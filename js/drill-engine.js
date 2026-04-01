@@ -549,35 +549,16 @@ function createDrillEngine(container, opts) {
       });
     }
 
-    /* Speed Benchmark AI summary (premium only) */
+    /* Speed Benchmark summary — generated locally, available to all users */
     var benchmarkPlaceholder = container.querySelector('#benchmarkAiPlaceholder');
-    if (benchmarkPlaceholder) {
-      var canUseBenchmark = (typeof canAccessFeature === 'function') ? canAccessFeature('adaptive_training') : false;
-      if (!canUseBenchmark) {
-        benchmarkPlaceholder.innerHTML =
-          '<button class="benchmark-unlock-btn" type="button" id="benchmarkUnlockBtn">🔒 Unlock AI Analysis with Premium</button>';
-        var unlockBtn = container.querySelector('#benchmarkUnlockBtn');
-        if (unlockBtn) unlockBtn.addEventListener('click', function () { if (typeof showPaywall === 'function') showPaywall('settings'); });
-      } else if (typeof AIFeatures !== 'undefined' && typeof AIFeatures.fetchSpeedBenchmark === 'function') {
-        /* Check localStorage cache keyed by session fingerprint */
-        var sessionKey = 'qr_bench_' + accuracy + '_' + avg + '_' + count;
-        var cached = null;
-        try { cached = JSON.parse(localStorage.getItem(sessionKey) || 'null'); } catch (_) {}
-
-        if (cached && cached.summary) {
-          _renderBenchmarkAi(benchmarkPlaceholder, cached);
-        } else {
-          benchmarkPlaceholder.innerHTML = '<p class="benchmark-loading">Analyzing your performance...</p>';
-          AIFeatures.fetchSpeedBenchmark(accNum, parseFloat(avg), speedScore, percentileBand, count, mode, function (err, data) {
-            if (err || !data) {
-              benchmarkPlaceholder.innerHTML = '';
-              return;
-            }
-            try { localStorage.setItem(sessionKey, JSON.stringify(data)); } catch (_) {}
-            _renderBenchmarkAi(benchmarkPlaceholder, data);
-          });
+    if (benchmarkPlaceholder && typeof AIFeatures !== 'undefined' && typeof AIFeatures.fetchSpeedBenchmark === 'function') {
+      AIFeatures.fetchSpeedBenchmark(accNum, parseFloat(avg), speedScore, percentileBand, count, mode, function (err, data) {
+        if (err || !data) {
+          benchmarkPlaceholder.innerHTML = '';
+          return;
         }
-      }
+        _renderBenchmarkAi(benchmarkPlaceholder, data);
+      });
     }
   }
 

@@ -1042,70 +1042,52 @@ var AIFeatures = (function () {
     });
   }
 
-  var _benchmarkInFlight = false;
-
   function fetchSpeedBenchmark(accuracy, avgTimeSec, speedScore, percentileBand, questionCount, mode, callback) {
-    if (_benchmarkInFlight) { callback('request_in_progress'); return; }
-    _benchmarkInFlight = true;
-
-    _sendAuthenticatedRequest('POST', '/api/ai/speed-benchmark',
-      { accuracy: accuracy, avgTimeSec: avgTimeSec, speedScore: speedScore, percentileBand: percentileBand, questionCount: questionCount, mode: mode }, 20000,
-      function (err, data) {
-        _benchmarkInFlight = false;
-        if (err) { callback(err); return; }
-        /* Response is {summary, level, suggestion} directly */
-        callback(null, data);
-      });
+    try {
+      var result = _generateLocalBenchmark(accuracy, avgTimeSec, speedScore);
+      callback(null, result);
+    } catch (e) {
+      callback('benchmark_error');
+    }
   }
 
-  var _patternInFlight = {};
+  function _generateLocalBenchmark(accuracy, avgTimeSec, speedScore) {
+    var level, summary, suggestion;
 
-  function prefetchQuestionPattern(topic, difficulty, weakAreas, callback) {
-    var key = topic + '_' + difficulty;
-    if (_patternInFlight[key]) { if (callback) callback('request_in_progress'); return function () {}; }
-    _patternInFlight[key] = true;
+    if (speedScore >= 85) {
+      level = 'Blazing Fast';
+    } else if (speedScore >= 65) {
+      level = 'Quick Thinker';
+    } else if (speedScore >= 40) {
+      level = 'Steady Pacer';
+    } else {
+      level = 'Needs Speed Work';
+    }
 
-    var _activeXhr = null;
-    var _cancelled = false;
+    var accNum = parseFloat(accuracy) || 0;
+    var timeNum = parseFloat(avgTimeSec) || 0;
 
-    /* Inline XHR with abort support (does not use _sendAuthenticatedRequest to allow cancellation) */
-    _getIdToken(function (token) {
-      if (_cancelled) { _patternInFlight[key] = false; return; }
-      if (!token) { _patternInFlight[key] = false; if (callback) callback(FRIENDLY_ERROR); return; }
+    if (speedScore >= 85) {
+      summary = 'Outstanding session! You nailed ' + accNum.toFixed(0) + '% accuracy at ' + timeNum.toFixed(1) + 's per question — that\'s top-tier reflex performance.';
+    } else if (speedScore >= 65) {
+      summary = 'Strong work — ' + accNum.toFixed(0) + '% accuracy with an average of ' + timeNum.toFixed(1) + 's per question. Your speed and precision are well balanced.';
+    } else if (speedScore >= 40) {
+      summary = 'Solid effort with ' + accNum.toFixed(0) + '% accuracy. At ' + timeNum.toFixed(1) + 's per question you\'re building a reliable base — keep pushing the pace.';
+    } else {
+      summary = 'You answered at ' + accNum.toFixed(0) + '% accuracy and ' + timeNum.toFixed(1) + 's per question. Focus on core formulas first, then chip away at your response time.';
+    }
 
-      var xhr = new XMLHttpRequest();
-      _activeXhr = xhr;
-      xhr.open('POST', '/api/ai/question-pattern', true);
-      xhr.setRequestHeader('Content-Type', 'application/json');
-      xhr.setRequestHeader('Authorization', 'Bearer ' + token);
-      xhr.timeout = 15000;
+    if (accNum < 60) {
+      suggestion = 'Accuracy first — slow down slightly and double-check each step before answering. Speed will follow naturally once the fundamentals are solid.';
+    } else if (timeNum > 12) {
+      suggestion = 'Try the Quick Drill mode daily to build faster recall. Aim to shave 1–2 seconds off your average time each session.';
+    } else if (speedScore < 65) {
+      suggestion = 'Run a focused 10-question Reflex Drill on your weakest category to push both accuracy and speed simultaneously.';
+    } else {
+      suggestion = 'Challenge yourself with Hard mode questions or timed tests to sharpen your edge even further.';
+    }
 
-      xhr.onload = function () {
-        if (_cancelled) return; /* session started while in-flight — discard */
-        _patternInFlight[key] = false;
-        if (xhr.status === 200) {
-          try {
-            var data = JSON.parse(xhr.responseText);
-            /* Response is {pattern, type, logic} directly */
-            window._sessionAdaptivePattern = data;
-            if (callback) callback(null, data);
-          } catch (e) { if (callback) callback(FRIENDLY_ERROR); }
-        } else {
-          if (callback) callback(FRIENDLY_ERROR);
-        }
-      };
-      xhr.onerror = function () { if (!_cancelled) { _patternInFlight[key] = false; if (callback) callback(FRIENDLY_ERROR); } };
-      xhr.ontimeout = function () { if (!_cancelled) { _patternInFlight[key] = false; if (callback) callback(FRIENDLY_ERROR); } };
-      xhr.send(JSON.stringify({ topic: topic, difficulty: difficulty, weakAreas: weakAreas || [] }));
-    });
-
-    /* Return cancel function — aborts XHR and prevents late response from updating session pattern */
-    return function cancel() {
-      _cancelled = true;
-      _patternInFlight[key] = false;
-      if (_activeXhr) { try { _activeXhr.abort(); } catch (_) {} _activeXhr = null; }
-      window._sessionAdaptivePattern = null;
-    };
+    return { level: level, summary: summary, suggestion: suggestion };
   }
 
   function resetWpAdaptive() {
@@ -1114,7 +1096,6 @@ var AIFeatures = (function () {
 
   return {
     fetchSpeedBenchmark: fetchSpeedBenchmark,
-    prefetchQuestionPattern: prefetchQuestionPattern,
     showExplanationModal: showExplanationModal,
     renderAICoachCard: renderAICoachCard,
     renderStudyPlanCard: renderStudyPlanCard,
