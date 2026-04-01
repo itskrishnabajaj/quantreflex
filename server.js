@@ -1,6 +1,7 @@
 const express = require('express');
 const path = require('path');
 const aiService = require('./services/aiService');
+const paymentService = require('./services/paymentService');
 
 const app = express();
 const PORT = process.env.PORT || 5000;
@@ -263,6 +264,48 @@ app.post('/api/ai/study-plan', authMiddleware, rateLimitMiddleware, premiumPlusG
   }
 });
 
+
+app.post('/api/subscriptions/create-order', authMiddleware, async function (req, res) {
+  try {
+    var plan = req.body && req.body.plan;
+    if (plan !== 'monthly' && plan !== 'yearly') {
+      return res.status(400).json({ error: { code: 'BAD_REQUEST', message: 'Invalid plan. Must be "monthly" or "yearly".', retryable: false } });
+    }
+    var order = await paymentService.createPremiumPlusOrder(plan);
+    res.json(order);
+  } catch (err) {
+    console.error('Create order error:', err.message);
+    res.status(500).json({ error: { code: 'INTERNAL_ERROR', message: 'Could not create payment order. Please try again.', retryable: true } });
+  }
+});
+
+app.post('/api/subscriptions/verify', authMiddleware, async function (req, res) {
+  try {
+    var body = req.body || {};
+    var orderId = typeof body.orderId === 'string' ? body.orderId.trim() : '';
+    var paymentId = typeof body.paymentId === 'string' ? body.paymentId.trim() : '';
+    var signature = typeof body.signature === 'string' ? body.signature.trim() : '';
+    var plan = body.plan;
+
+    if (!orderId || !paymentId || !signature) {
+      return res.status(400).json({ error: { code: 'BAD_REQUEST', message: 'Missing required fields: orderId, paymentId, signature.', retryable: false } });
+    }
+    if (plan !== 'monthly' && plan !== 'yearly') {
+      return res.status(400).json({ error: { code: 'BAD_REQUEST', message: 'Invalid plan.', retryable: false } });
+    }
+
+    var valid = paymentService.verifyRazorpaySignature(orderId, paymentId, signature);
+    if (!valid) {
+      return res.status(400).json({ error: { code: 'SIGNATURE_INVALID', message: 'Payment verification failed. Please contact support.', retryable: false } });
+    }
+
+    var expiry = await aiService.unlockPremiumPlus(req.userId, plan, paymentId);
+    res.json({ success: true, expiry: expiry, plan: plan });
+  } catch (err) {
+    console.error('Verify subscription error:', err.message);
+    res.status(500).json({ error: { code: 'INTERNAL_ERROR', message: 'Could not activate subscription. Please contact support.', retryable: false } });
+  }
+});
 
 app.get('/{*splat}', function (req, res) {
   res.sendFile(path.join(__dirname, 'index.html'));

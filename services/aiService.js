@@ -71,11 +71,34 @@ async function isUserPremiumPlus(uid) {
     var doc = await db.collection('users').doc(uid).get();
     if (!doc.exists) return false;
     var data = doc.data();
-    return data.isPremiumPlus === true;
+    if (data.isPremiumPlus !== true) return false;
+    var expiry = data.premiumPlusExpiry;
+    if (expiry && typeof expiry === 'number' && expiry < Date.now()) {
+      db.collection('users').doc(uid).set(
+        { isPremiumPlus: false, premiumPlusStatus: 'expired' },
+        { merge: true }
+      ).catch(function (e) { console.warn('PremiumPlus expiry write failed:', e.message); });
+      return false;
+    }
+    return true;
   } catch (err) {
     console.error('PremiumPlus lookup failed for uid ' + uid + ':', err.message);
     throw new AIServiceError('ENTITLEMENT_ERROR', 'Unable to verify subscription status. Please try again.', true);
   }
+}
+
+async function unlockPremiumPlus(uid, plan, paymentId) {
+  var days = plan === 'yearly' ? 365 : 30;
+  var expiry = Date.now() + days * 24 * 60 * 60 * 1000;
+  var payload = {
+    isPremiumPlus: true,
+    premiumPlusPlan: plan,
+    premiumPlusExpiry: expiry,
+    premiumPlusStatus: 'active'
+  };
+  if (paymentId) payload.lastPremiumPlusPaymentId = String(paymentId);
+  await db.collection('users').doc(uid).set(payload, { merge: true });
+  return expiry;
 }
 
 var WP_FREE_LIMIT = 5;
@@ -563,4 +586,4 @@ async function clearStudyPlanCache(userId, examDate) {
   }
 }
 
-module.exports = { generateWordProblems, generateExplanation, generateInsights, generateStudyPlan, clearStudyPlanCache, verifyIdToken, isUserPremium, isUserPremiumPlus, checkWordProblemQuota, consumeWordProblemQuota, trackExplanationUsage, trackInsightsUsage, AIServiceError };
+module.exports = { generateWordProblems, generateExplanation, generateInsights, generateStudyPlan, clearStudyPlanCache, verifyIdToken, isUserPremium, isUserPremiumPlus, unlockPremiumPlus, checkWordProblemQuota, consumeWordProblemQuota, trackExplanationUsage, trackInsightsUsage, AIServiceError };

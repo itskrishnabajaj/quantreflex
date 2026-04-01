@@ -827,9 +827,10 @@ var FirestoreSync = (function () {
     },
     getAccessState: function () {
       if (!_memoryCache) return null;
+      var now = Date.now();
       if (_memoryCache.isTrial === true) {
         var trialEndMs = _toMillis(_memoryCache.trialEnd);
-        if (trialEndMs > 0 && Date.now() > trialEndMs) {
+        if (trialEndMs > 0 && now > trialEndMs) {
           _memoryCache.isPremium = false;
           _memoryCache.isTrial = false;
           if (!_trialExpiryPersistInFlight) {
@@ -845,14 +846,57 @@ var FirestoreSync = (function () {
           }
         }
       }
+      if (_memoryCache.isPremiumPlus === true) {
+        var ppExpiry = _memoryCache.premiumPlusExpiry;
+        if (ppExpiry && typeof ppExpiry === 'number' && ppExpiry < now) {
+          _memoryCache.isPremiumPlus = false;
+          _memoryCache.premiumPlusStatus = 'expired';
+          var ppDocRef = _getUserDocRef();
+          if (ppDocRef) {
+            ppDocRef.set({ isPremiumPlus: false, premiumPlusStatus: 'expired' }, { merge: true }).catch(function (err) {
+              console.warn('Failed to persist PremiumPlus expiry from access state:', err);
+            });
+          }
+        }
+      }
       return {
         isPremium: _memoryCache.isPremium === true,
+        isPremiumPlus: _memoryCache.isPremiumPlus === true,
+        premiumPlusPlan: _memoryCache.premiumPlusPlan || null,
+        premiumPlusExpiry: _memoryCache.premiumPlusExpiry || null,
         isTrial: _memoryCache.isTrial === true,
         trialEnd: _memoryCache.trialEnd || null,
         hasPaid: _memoryCache.hasPaid === true,
         isEarlyUser: _memoryCache.isEarlyUser === true,
         createdAt: _memoryCache.createdAt || null
       };
+    },
+    unlockPremiumPlus: function (plan, expiry, paymentId, callback) {
+      var docRef = _getUserDocRef();
+      if (!docRef) {
+        if (callback) callback('User not authenticated');
+        return;
+      }
+      var payload = {
+        isPremiumPlus: true,
+        premiumPlusPlan: plan,
+        premiumPlusExpiry: expiry,
+        premiumPlusStatus: 'active'
+      };
+      if (paymentId) payload.lastPremiumPlusPaymentId = String(paymentId);
+      if (_memoryCache) {
+        _memoryCache.isPremiumPlus = true;
+        _memoryCache.premiumPlusPlan = plan;
+        _memoryCache.premiumPlusExpiry = expiry;
+        _memoryCache.premiumPlusStatus = 'active';
+        if (paymentId) _memoryCache.lastPremiumPlusPaymentId = String(paymentId);
+      }
+      docRef.set(payload, { merge: true }).then(function () {
+        if (callback) callback(null);
+        _syncProfileSubcollection(null, { isPremiumPlus: true, premiumPlusPlan: plan });
+      }).catch(function (err) {
+        if (callback) callback(err && err.message ? err.message : 'PremiumPlus unlock failed');
+      });
     },
     unlockPremium: function (paymentId, callback) {
       var docRef = _getUserDocRef();

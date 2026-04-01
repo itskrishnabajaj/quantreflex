@@ -35,6 +35,8 @@ var _paywallGuestPromptAt = 0;
 var _paywallLastOpenAt = 0;
 var _paymentSafetyTimer = null;
 var _unlockGuard = {};
+var _paywallPlusPaymentBusy = false;
+var _paywallPlusGuestPromptAt = 0;
 
 function _toMillis(value) {
   if (!value) return 0;
@@ -265,6 +267,141 @@ function openPayment(userId) {
   });
 }
 
+function _getPlusIdToken(callback) {
+  if (typeof Auth !== 'undefined' && typeof Auth.getCurrentUser === 'function') {
+    var u = Auth.getCurrentUser();
+    if (u && typeof u.getIdToken === 'function') {
+      u.getIdToken().then(function (tok) { callback(tok); }).catch(function () { callback(null); });
+      return;
+    }
+  }
+  callback(null);
+}
+
+function openPremiumPlusPayment(plan, userId) {
+  if (_paywallPlusPaymentBusy) return;
+  _paywallPlusPaymentBusy = true;
+  var plusBtn = document.querySelector('.paywall-plus-subscribe');
+  if (plusBtn) plusBtn.disabled = true;
+
+  _loadRazorpayScript(function (loadErr) {
+    if (loadErr || typeof Razorpay === 'undefined') {
+      _paywallPlusPaymentBusy = false;
+      if (plusBtn) plusBtn.disabled = false;
+      showToast('Payment service is unavailable right now.');
+      return;
+    }
+
+    _getPlusIdToken(function (idToken) {
+      if (!idToken) {
+        _paywallPlusPaymentBusy = false;
+        if (plusBtn) plusBtn.disabled = false;
+        showToast('Please login to continue payment.');
+        return;
+      }
+
+      fetch('/api/subscriptions/create-order', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + idToken },
+        body: JSON.stringify({ plan: plan })
+      })
+        .then(function (resp) { return resp.json(); })
+        .then(function (data) {
+          if (!data || !data.orderId) {
+            _paywallPlusPaymentBusy = false;
+            if (plusBtn) plusBtn.disabled = false;
+            showToast('Could not start payment. Please try again.');
+            return;
+          }
+
+          var description = plan === 'yearly' ? 'Premium+ Yearly - Rs 499/yr' : 'Premium+ Monthly - Rs 49/mo';
+          var options = {
+            key: RAZORPAY_LIVE_KEY,
+            amount: data.amount,
+            currency: data.currency || 'INR',
+            name: 'QuantReflex',
+            description: description,
+            order_id: data.orderId,
+            modal: {
+              ondismiss: function () {
+                _paywallPlusPaymentBusy = false;
+                if (plusBtn) plusBtn.disabled = false;
+                showToast('Payment cancelled. You can subscribe anytime.');
+              }
+            },
+            handler: function (response) {
+              var paymentId = response.razorpay_payment_id;
+              var rzpOrderId = response.razorpay_order_id;
+              var signature = response.razorpay_signature;
+              if (!paymentId || !rzpOrderId || !signature) {
+                _paywallPlusPaymentBusy = false;
+                if (plusBtn) plusBtn.disabled = false;
+                showToast('Payment verification failed. Please retry.');
+                return;
+              }
+
+              _getPlusIdToken(function (freshToken) {
+                fetch('/api/subscriptions/verify', {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + (freshToken || idToken) },
+                  body: JSON.stringify({ orderId: rzpOrderId, paymentId: paymentId, signature: signature, plan: plan })
+                })
+                  .then(function (r) { return r.json(); })
+                  .then(function (result) {
+                    _paywallPlusPaymentBusy = false;
+                    if (plusBtn) plusBtn.disabled = false;
+                    if (!result || !result.success) {
+                      showToast('Subscription activation failed. Please contact support.');
+                      return;
+                    }
+                    if (typeof FirestoreSync !== 'undefined' && typeof FirestoreSync.unlockPremiumPlus === 'function') {
+                      FirestoreSync.unlockPremiumPlus(result.plan, result.expiry, paymentId, function (err) {
+                        if (err) {
+                          showToast('Subscribed! Refresh to see your benefits.');
+                        } else {
+                          showToast('Premium+ activated! AI features unlocked.');
+                          _closePaywallModal();
+                          var currentView = (typeof Router !== 'undefined' && Router.getCurrentView) ? Router.getCurrentView() : 'home';
+                          if (currentView && typeof Router !== 'undefined' && Router.showView) Router.showView(currentView);
+                        }
+                      });
+                    } else {
+                      showToast('Subscribed! Refresh to see your benefits.');
+                      _closePaywallModal();
+                    }
+                  })
+                  .catch(function () {
+                    _paywallPlusPaymentBusy = false;
+                    if (plusBtn) plusBtn.disabled = false;
+                    showToast('Subscription activation failed. Please contact support.');
+                  });
+              });
+            }
+          };
+
+          try {
+            var rzp = new Razorpay(options);
+            rzp.on('payment.failed', function () {
+              _paywallPlusPaymentBusy = false;
+              if (plusBtn) plusBtn.disabled = false;
+              showToast('Payment failed. Please try again.');
+            });
+            rzp.open();
+          } catch (_) {
+            _paywallPlusPaymentBusy = false;
+            if (plusBtn) plusBtn.disabled = false;
+            showToast('Could not open payment. Check your network and retry.');
+          }
+        })
+        .catch(function () {
+          _paywallPlusPaymentBusy = false;
+          if (plusBtn) plusBtn.disabled = false;
+          showToast('Could not start payment. Check your network and retry.');
+        });
+    });
+  });
+}
+
 function showPaywall(featureType) {
   var user = _getAccessUserState();
   if (user && user.isPremium === true) return;
@@ -337,8 +474,11 @@ function showPaywall(featureType) {
 
         '<div class="paywall-plan paywall-plan-plus">' +
           '<div class="paywall-plan-name">Premium+</div>' +
-          '<div class="paywall-plan-price">₹49<span class="paywall-plan-period">/mo</span></div>' +
-          '<div class="paywall-plan-or">or ₹499/yr</div>' +
+          '<div class="paywall-plus-toggle">' +
+            '<button class="paywall-plus-toggle-btn paywall-plus-toggle-monthly active" type="button" data-plan="monthly">Monthly · ₹49</button>' +
+            '<button class="paywall-plus-toggle-btn paywall-plus-toggle-yearly" type="button" data-plan="yearly">Yearly · ₹499</button>' +
+          '</div>' +
+          '<div class="paywall-plan-price paywall-plus-price">₹49<span class="paywall-plan-period">/mo</span></div>' +
           '<ul class="paywall-plan-features">' +
             '<li>✓ Everything in Premium</li>' +
             '<li>✓ AI mistake explanations</li>' +
@@ -346,8 +486,8 @@ function showPaywall(featureType) {
             '<li>✓ Study plan generator</li>' +
             '<li>✓ AI word problem trainer</li>' +
           '</ul>' +
-          '<button class="btn paywall-plus-btn" type="button">Coming Soon</button>' +
-          '<p class="paywall-plan-note">Notify me when available</p>' +
+          '<button class="btn accent paywall-plus-subscribe" type="button">Subscribe Monthly · ₹49</button>' +
+          '<p class="paywall-plan-note">Cancel anytime · Billed via Razorpay</p>' +
         '</div>' +
       '</div>' +
 
@@ -406,10 +546,43 @@ function showPaywall(featureType) {
     });
   }
 
-  var plusBtn = overlay.querySelector('.paywall-plus-btn');
-  if (plusBtn) {
-    plusBtn.addEventListener('click', function () {
-      showToast('Premium+ coming soon. Contact us to express interest.');
+  var _selectedPlan = 'monthly';
+  var monthlyBtn = overlay.querySelector('.paywall-plus-toggle-monthly');
+  var yearlyBtn = overlay.querySelector('.paywall-plus-toggle-yearly');
+  var plusPriceEl = overlay.querySelector('.paywall-plus-price');
+  var subscribeBtn = overlay.querySelector('.paywall-plus-subscribe');
+
+  function _updatePlanUI(plan) {
+    _selectedPlan = plan;
+    if (monthlyBtn) monthlyBtn.classList.toggle('active', plan === 'monthly');
+    if (yearlyBtn) yearlyBtn.classList.toggle('active', plan === 'yearly');
+    if (plusPriceEl) {
+      plusPriceEl.innerHTML = plan === 'yearly'
+        ? '₹499<span class="paywall-plan-period">/yr</span>'
+        : '₹49<span class="paywall-plan-period">/mo</span>';
+    }
+    if (subscribeBtn) {
+      subscribeBtn.textContent = plan === 'yearly' ? 'Subscribe Yearly · ₹499' : 'Subscribe Monthly · ₹49';
+    }
+  }
+
+  if (monthlyBtn) {
+    monthlyBtn.addEventListener('click', function () { _updatePlanUI('monthly'); });
+  }
+  if (yearlyBtn) {
+    yearlyBtn.addEventListener('click', function () { _updatePlanUI('yearly'); });
+  }
+
+  if (subscribeBtn) {
+    subscribeBtn.addEventListener('click', function () {
+      if (!userId) {
+        var _now2 = Date.now();
+        if (_now2 - _paywallPlusGuestPromptAt < 1000) return;
+        _paywallPlusGuestPromptAt = _now2;
+        showToast('Please login to continue payment.');
+        return;
+      }
+      openPremiumPlusPayment(_selectedPlan, userId);
     });
   }
 
@@ -452,6 +625,7 @@ global.canAccess = canAccess;
 global.canAccessFeature = canAccessFeature;
 global.showPaywall = showPaywall;
 global.openPayment = openPayment;
+global.openPremiumPlusPayment = openPremiumPlusPayment;
 global.verifyPaymentResponse = verifyPaymentResponse;
 global.unlockPremium = unlockPremium;
 global.getDailyQuestionLimit = getDailyQuestionLimit;
