@@ -46,7 +46,7 @@ function createDrillEngine(container, opts) {
   /* ---- Adaptive controller state ---- */
   var _adaptiveHistory = [];   /* [{correct, timeSec}] last N answers */
   var _adaptiveDifficulty = 'medium';
-  var _ADAPTIVE_WINDOW = 5;    /* look at last 5 answers to decide band */
+  var _ADAPTIVE_WINDOW = 10;   /* rolling 10-answer window for stable band decisions */
 
   function _computeAdaptiveDifficulty() {
     if (_adaptiveHistory.length < 2) return _adaptiveDifficulty;

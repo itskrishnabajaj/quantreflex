@@ -568,7 +568,7 @@ async function generateQuestionPattern(params) {
       var data = cached.data();
       var ageMs = Date.now() - (data.createdAt ? data.createdAt.toMillis() : 0);
       if (ageMs < PATTERN_TTL_DAYS * 24 * 60 * 60 * 1000) {
-        return { pattern: data.pattern, type: data.type, subTypes: data.subTypes };
+        return { pattern: data.pattern, type: data.type, logic: data.logic || data.subTypes || [] };
       }
     }
   } catch (cacheErr) {
@@ -578,13 +578,15 @@ async function generateQuestionPattern(params) {
   var topicLabel = CATEGORY_LABELS[topic] || topic;
   var weakStr = weakAreas.length > 0 ? weakAreas.join(', ') : 'none identified';
 
-  var prompt = 'You are an expert quantitative aptitude coach.\n\nGenerate a question pattern guide for:\n- Topic: ' + topicLabel + '\n- Difficulty: ' + difficulty + '\n- User weak areas: ' + weakStr + '\n\nReturn ONLY a valid JSON object:\n{\n  "pattern": "2-3 sentence description of the optimal question pattern and mental approach for this difficulty level",\n  "type": "one of: direct, inverse, multi-step, application, estimation",\n  "subTypes": ["specific sub-type 1", "specific sub-type 2", "specific sub-type 3"]\n}\n\nFor ' + difficulty + ' difficulty on ' + topicLabel + ':\n- easy: focus on straightforward recall and direct computation\n- medium: include inverse operations and two-step problems\n- hard: multi-step problems, application to word problems, estimation under pressure\n\nReturn ONLY the JSON object, no markdown, no explanation.';
+  var prompt = 'You are an expert quantitative aptitude coach.\n\nGenerate a question pattern guide for:\n- Topic: ' + topicLabel + '\n- Difficulty: ' + difficulty + '\n- User weak areas: ' + weakStr + '\n\nReturn ONLY a valid JSON object:\n{\n  "pattern": "2-3 sentence description of the optimal question pattern and mental approach for this difficulty level",\n  "type": "one of: direct, inverse, multi-step, application, estimation",\n  "logic": ["specific sub-type 1", "specific sub-type 2", "specific sub-type 3"]\n}\n\nFor ' + difficulty + ' difficulty on ' + topicLabel + ':\n- easy: focus on straightforward recall and direct computation\n- medium: include inverse operations and two-step problems\n- hard: multi-step problems, application to word problems, estimation under pressure\n\nReturn ONLY the JSON object, no markdown, no explanation.';
 
   var result = await _callAndParse(m, prompt, function (parsed) {
     if (!parsed || typeof parsed.pattern !== 'string') return null;
     if (typeof parsed.type !== 'string') return null;
-    if (!Array.isArray(parsed.subTypes)) return null;
-    return { pattern: parsed.pattern, type: parsed.type, subTypes: parsed.subTypes.slice(0, 5).map(String) };
+    /* Accept either `logic` or `subTypes` for backward-compat with cached Firestore docs */
+    var logicArr = Array.isArray(parsed.logic) ? parsed.logic : (Array.isArray(parsed.subTypes) ? parsed.subTypes : null);
+    if (!logicArr) return null;
+    return { pattern: parsed.pattern, type: parsed.type, logic: logicArr.slice(0, 5).map(String) };
   });
 
   if (!result) throw new AIServiceError('INVALID_RESPONSE', 'Invalid pattern format after retries', true);
@@ -595,7 +597,7 @@ async function generateQuestionPattern(params) {
       difficulty: difficulty,
       pattern: result.pattern,
       type: result.type,
-      subTypes: result.subTypes,
+      logic: result.logic,
       createdAt: admin.firestore.FieldValue.serverTimestamp()
     });
   } catch (writeErr) {

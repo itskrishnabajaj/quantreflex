@@ -1559,21 +1559,26 @@ function startDrillFromPractice(modeKey, category, categoryLabel) {
   if (customPracticeConfig) customPracticeConfig.style.display = 'none';
   drillContainer.style.display = 'block';
 
-  /* Prefetch AI question pattern for adaptive Focus mode (fire-and-forget, non-blocking) */
-  if (_useAdaptive && config.category && typeof AIFeatures !== 'undefined' && typeof AIFeatures.prefetchQuestionPattern === 'function') {
-    try {
-      var _s = JSON.parse(localStorage.getItem('quant_reflex_settings') || '{}');
-      var _weakAreas = [];
+  /* Prefetch AI question pattern for adaptive sessions (fire-and-forget, non-blocking).
+   * Works for both Focus mode (config.category) and Custom mode (config.topics array).
+   * Picks the first topic when multiple are selected (pattern guidance is per-topic). */
+  if (_useAdaptive && typeof AIFeatures !== 'undefined' && typeof AIFeatures.prefetchQuestionPattern === 'function') {
+    var _prefetchTopic = config.category || (Array.isArray(config.topics) && config.topics.length > 0 ? config.topics[0] : null);
+    if (_prefetchTopic) {
       try {
-        var _p = typeof loadProgress === 'function' ? loadProgress() : {};
-        var _cats = _p.categoryStats || {};
-        for (var _k in _cats) {
-          var _cd = _cats[_k];
-          if (_cd.attempted >= 5 && (_cd.correct / _cd.attempted) < 0.6) _weakAreas.push(_k);
-        }
+        var _s = JSON.parse(localStorage.getItem('quant_reflex_settings') || '{}');
+        var _weakAreas = [];
+        try {
+          var _p = typeof loadProgress === 'function' ? loadProgress() : {};
+          var _cats = _p.categoryStats || {};
+          for (var _k in _cats) {
+            var _cd = _cats[_k];
+            if (_cd.attempted >= 5 && (_cd.correct / _cd.attempted) < 0.6) _weakAreas.push(_k);
+          }
+        } catch (_) {}
+        AIFeatures.prefetchQuestionPattern(_prefetchTopic, _s.difficulty || 'medium', _weakAreas, null);
       } catch (_) {}
-      AIFeatures.prefetchQuestionPattern(config.category, _s.difficulty || 'medium', _weakAreas, null);
-    } catch (_) {}
+    }
   }
 
   _startPracticeEngine(drillContainer, config);
@@ -1664,6 +1669,24 @@ function _updateTimerOptionFromUI() {
 function _initAdaptiveToggle() {
   var toggle = document.getElementById('adaptiveTrainingToggle');
   if (!toggle) return;
+
+  /* Render lock indicator on the label for non-premium users */
+  var labelEl = document.querySelector('#adaptiveTrainingSection .timer-toggle-label');
+  if (labelEl) {
+    var isPrem = typeof canAccessFeature === 'function' ? canAccessFeature('adaptive_training') : false;
+    if (!isPrem) {
+      if (!labelEl.querySelector('.adaptive-lock')) {
+        var lockSpan = document.createElement('span');
+        lockSpan.className = 'adaptive-lock';
+        lockSpan.textContent = ' 🔒';
+        lockSpan.setAttribute('aria-label', 'Premium required');
+        labelEl.appendChild(lockSpan);
+      }
+    } else {
+      var existing = labelEl.querySelector('.adaptive-lock');
+      if (existing) existing.remove();
+    }
+  }
 
   toggle.addEventListener('change', function () {
     if (this.checked) {

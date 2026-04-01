@@ -516,6 +516,7 @@ body.dark-mode .drill-exit-btn:active {
   text-align: center;
 }
 body.dark-mode .adaptive-hint-text { color: #c4b5fd; }
+.adaptive-lock { font-size: .85em; opacity: .7; pointer-events: none; }
 
 /* ---- Speed Benchmark Card ---- */
 .speed-benchmark-card {

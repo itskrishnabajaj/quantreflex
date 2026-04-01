@@ -35,11 +35,26 @@ function _getDifficulty() {
   } catch (_) { return 'medium'; }
 }
 
+/**
+ * Get adaptive hint from pre-fetched AI session pattern.
+ * Returns an object {type, logic} or null if not available.
+ * type: 'direct' | 'inverse' | 'multi-step' | 'application' | 'estimation'
+ * logic: array of sub-type descriptors to bias generation toward
+ */
+function _getAdaptiveHint() {
+  try {
+    var pattern = window._sessionAdaptivePattern;
+    if (!pattern || typeof pattern !== 'object') return null;
+    return { type: pattern.type || 'direct', logic: Array.isArray(pattern.logic) ? pattern.logic : [] };
+  } catch (_) { return null; }
+}
+
 /* ---- category generators ---- */
 
 /** Squares: n² */
 function genSquare() {
   var diff = _getDifficulty();
+  var hint = _getAdaptiveHint();
   var n;
   if (diff === 'easy') {
     n = randInt(1, 15);
@@ -48,7 +63,9 @@ function genSquare() {
   } else {
     n = randInt(1, 30);
   }
-  if (diff !== 'easy' && randInt(0, 4) === 0) {
+  /* Bias toward inverse variant when adaptive hint type is 'inverse' */
+  var forceInverse = hint && hint.type === 'inverse';
+  if (forceInverse || (diff !== 'easy' && randInt(0, 4) === 0)) {
     var sq = n * n;
     return { question: '√' + sq + ' = ?', answer: n, category: 'squares' };
   }
@@ -226,6 +243,7 @@ function genPercentage() {
 /** Mental multiplication: x × y, with occasional division variant */
 function genMultiplication() {
   var diff = _getDifficulty();
+  var hint = _getAdaptiveHint();
   var x, y;
   if (diff === 'easy') {
     x = randInt(2, 20);
@@ -237,7 +255,10 @@ function genMultiplication() {
     x = randInt(2, 30);
     y = randInt(2, 20);
   }
-  if (diff !== 'easy' && randInt(0, 3) === 0) {
+  /* Bias toward division variant when adaptive hint type is 'inverse' or logic includes 'division' */
+  var hintLogic = hint ? hint.logic : [];
+  var biasInverse = hint && (hint.type === 'inverse' || hintLogic.indexOf('division') !== -1);
+  if (biasInverse || (diff !== 'easy' && randInt(0, 3) === 0)) {
     var product = x * y;
     return { question: product + ' ÷ ' + x + ' = ?', answer: y, category: 'multiplication' };
   }
