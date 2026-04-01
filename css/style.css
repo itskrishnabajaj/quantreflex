@@ -2992,9 +2992,26 @@ body.numpad-active {
   padding-bottom: calc(4.5rem + env(safe-area-inset-bottom, 0px) + 14rem);
 }
 
-/* When in drill session (nav hidden), numpad sits at screen bottom */
-body.drill-session-active .custom-numpad {
-  bottom: env(safe-area-inset-bottom, 0px);
+/* ---- Drill Session: Fixed-Position Layout ----
+   Each layer is independently position-fixed so content changes
+   (long questions, wrong-answer feedback) never shift the action
+   bar or numpad.
+
+   Stack (bottom → top):
+     drillContainer  z-index: 10  (background only)
+     card            z-index: 11  (fixed viewport, internal scroll)
+     drill-actions   z-index: 98  (fixed above numpad)
+     custom-numpad   z-index: 99  (fixed bottom — unchanged)
+     drill-exit-btn  z-index: 100 (fixed top-right)
+
+   CSS custom properties keep height calculations DRY.
+   --drill-numpad-h accounts for: 4 rows × 48px + 3 gaps × .4rem + .5rem×2 padding + 1px border
+*/
+
+body.drill-session-active {
+  --drill-numpad-h: 14.25rem;
+  --drill-actions-h: 3.5rem;
+  --drill-safe-b: env(safe-area-inset-bottom, 0px);
 }
 
 body.drill-session-active,
@@ -3002,19 +3019,19 @@ html.drill-session-active {
   overflow: hidden;
 }
 
-/* Drill layout: fixed container fills viewport above numpad */
+/* Numpad: fixed bottom (already position:fixed from base rule) */
+body.drill-session-active .custom-numpad {
+  bottom: var(--drill-safe-b);
+}
+
+/* Background layer — fills viewport, provides theme background */
 body.drill-session-active #drillContainer {
   position: fixed;
   top: 0;
   left: 0;
   right: 0;
   bottom: 0;
-  padding: .75rem;
-  padding-bottom: calc(14.5rem + env(safe-area-inset-bottom, 0px));
-  display: flex;
-  flex-direction: column;
   z-index: 10;
-  overflow: hidden;
   background: #f8fafc;
 }
 body.dark-mode.drill-session-active #drillContainer {
@@ -3027,17 +3044,32 @@ body.theme-playful.dark-mode.drill-session-active #drillContainer {
   background: #0d1117;
 }
 
-/* Card fills remaining space as flex column */
+/* Exit button: fixed top-right, above everything */
+body.drill-session-active .drill-exit-btn {
+  position: fixed;
+  top: .75rem;
+  right: .75rem;
+  z-index: 100;
+}
+
+/* Question card: fixed viewport between exit area and action bar */
 body.drill-session-active #drillContainer > .card {
-  flex: 1;
+  position: fixed;
+  top: 3rem;
+  left: .75rem;
+  right: .75rem;
+  bottom: calc(var(--drill-numpad-h) + var(--drill-actions-h) + var(--drill-safe-b));
   display: flex;
   flex-direction: column;
   overflow: hidden;
-  margin-bottom: 0;
-  min-height: 0;
+  margin: 0;
+  z-index: 11;
+}
+body.drill-session-active #drillContainer > .card:active {
+  transform: none;
 }
 
-/* Scrollable question content area */
+/* Scrollable question content inside the fixed card */
 .drill-question-scroll {
   flex: 1;
   overflow-y: auto;
@@ -3060,23 +3092,26 @@ body.drill-session-active #drillContainer > .card {
   min-height: 0;
 }
 
-/* Action bar: sits between card and numpad, outside the card */
-.drill-actions {
-  flex-shrink: 0;
+/* Action bar: fixed, directly above numpad */
+body.drill-session-active .drill-actions {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: calc(var(--drill-numpad-h) + var(--drill-safe-b));
+  z-index: 98;
   display: flex;
-  flex-direction: column;
-  align-items: center;
-  padding: .5rem .75rem;
-  width: 100%;
+  align-items: stretch;
+  padding: .375rem .75rem;
 }
-.drill-actions.has-skip {
-  flex-direction: row;
-  gap: .5rem;
-}
-.drill-actions.has-skip .btn {
+body.drill-session-active .drill-actions .btn {
   flex: 1;
-  width: auto;
+  max-width: none;
+  margin-top: 0;
   min-width: 0;
+  min-height: 2.75rem;
+}
+body.drill-session-active .drill-actions.has-skip {
+  gap: .5rem;
 }
 .skip-btn-disabled {
   opacity: .4;
