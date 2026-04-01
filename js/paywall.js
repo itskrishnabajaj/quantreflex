@@ -402,7 +402,7 @@ function showPaywall(featureType) {
   var plusBtn = overlay.querySelector('.paywall-plus-btn');
   if (plusBtn) {
     plusBtn.addEventListener('click', function () {
-      showToast('Premium+ is coming soon! We\'ll notify you when it launches.');
+      showToast('Premium+ coming soon — contact us to express interest.');
     });
   }
 

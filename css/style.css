@@ -1815,6 +1815,14 @@ body.paywall-open {
   border-bottom: 1px solid #f1f5f9;
 }
 
+.paywall-compare tbody tr:nth-child(even) td {
+  background: #f1f5f9;
+}
+
+.paywall-compare tbody tr:nth-child(even) td.paywall-compare-highlight {
+  background: rgba(37,99,235,.1);
+}
+
 .paywall-compare-highlight {
   background: rgba(37,99,235,.06);
   color: #1d4ed8 !important;
@@ -2018,6 +2026,12 @@ body.dark-mode .paywall-compare th {
 body.dark-mode .paywall-compare td {
   color: #94a3b8;
   border-bottom-color: #1e293b;
+}
+body.dark-mode .paywall-compare tbody tr:nth-child(even) td {
+  background: #1e293b;
+}
+body.dark-mode .paywall-compare tbody tr:nth-child(even) td.paywall-compare-highlight {
+  background: rgba(37,99,235,.18);
 }
 body.dark-mode .paywall-compare-highlight {
   background: rgba(37,99,235,.15);
