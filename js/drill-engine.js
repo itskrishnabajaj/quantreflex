@@ -496,6 +496,10 @@ function createDrillEngine(container, opts) {
           '</div>' +
           '<div class="benchmark-score-row">' +
             '<div class="benchmark-score-block">' +
+              '<span class="benchmark-score-value">' + avg + 's</span>' +
+              '<span class="benchmark-score-label">Avg Response</span>' +
+            '</div>' +
+            '<div class="benchmark-score-block">' +
               '<span class="benchmark-score-value">' + speedScore + '</span>' +
               '<span class="benchmark-score-label">Speed Score</span>' +
             '</div>' +

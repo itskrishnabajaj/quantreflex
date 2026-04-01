@@ -1670,9 +1670,11 @@ function _resetAdaptiveToggle() {
   if (toggle) toggle.checked = false;
   var hint = document.getElementById('adaptiveHint');
   if (hint) hint.style.display = 'none';
-  /* Restore difficulty selector in case adaptive had disabled it */
+  /* Restore difficulty row and selector in case adaptive had hidden/disabled it */
+  var diffRow = document.getElementById('difficultySettingsRow');
+  if (diffRow) diffRow.style.display = '';
   var diffSel = document.getElementById('difficultySelect');
-  if (diffSel) { diffSel.disabled = false; diffSel.title = ''; diffSel.style.opacity = ''; }
+  if (diffSel) { diffSel.disabled = false; diffSel.title = ''; }
 }
 
 function _updateTimerOptionFromUI() {
@@ -1720,16 +1722,20 @@ function _initAdaptiveToggle() {
       _adaptiveModeActive = true;
       var hint = document.getElementById('adaptiveHint');
       if (hint) hint.style.display = 'block';
-      /* Disable manual difficulty selector while adaptive is active */
+      /* Hide manual difficulty row while adaptive is active */
+      var diffRow = document.getElementById('difficultySettingsRow');
+      if (diffRow) diffRow.style.display = 'none';
       var diffSel = document.getElementById('difficultySelect');
-      if (diffSel) { diffSel.disabled = true; diffSel.title = 'Difficulty is auto-managed by Adaptive Training'; diffSel.style.opacity = '0.45'; }
+      if (diffSel) { diffSel.disabled = true; diffSel.title = 'Difficulty is auto-managed by Adaptive Training'; }
     } else {
       _adaptiveModeActive = false;
       var hint2 = document.getElementById('adaptiveHint');
       if (hint2) hint2.style.display = 'none';
-      /* Restore manual difficulty selector */
+      /* Restore manual difficulty row */
+      var diffRow2 = document.getElementById('difficultySettingsRow');
+      if (diffRow2) diffRow2.style.display = '';
       var diffSel2 = document.getElementById('difficultySelect');
-      if (diffSel2) { diffSel2.disabled = false; diffSel2.title = ''; diffSel2.style.opacity = ''; }
+      if (diffSel2) { diffSel2.disabled = false; diffSel2.title = ''; }
     }
     if (typeof SoundEngine !== 'undefined') SoundEngine.play('settingsToggle');
   });
