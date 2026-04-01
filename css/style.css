@@ -5240,6 +5240,14 @@ body.dark-mode .drill-explain-btn:active {
 .sp-tip-section .sp-section-body {
   color: #78350f;
 }
+.sp-regen-error {
+  font-size: .83rem;
+  color: #dc2626;
+  background: rgba(220,38,38,.06);
+  border-radius: .5rem;
+  padding: .4rem .7rem;
+  margin-bottom: .5rem;
+}
 .sp-result-actions {
   display: flex;
   gap: .6rem;

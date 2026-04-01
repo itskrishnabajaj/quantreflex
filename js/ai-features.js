@@ -641,9 +641,10 @@ var AIFeatures = (function () {
         '<p class="sp-section-body">' + _esc(plan.dailyStructure) + '</p>' +
       '</div>' +
       '<div class="sp-section sp-tip-section">' +
-        '<h4 class="sp-section-title">💡 Pro Tip</h4>' +
+        '<h4 class="sp-section-title">💡 Tip</h4>' +
         '<p class="sp-section-body">' + _esc(plan.tip) + '</p>' +
       '</div>' +
+      '<div class="sp-regen-error" id="spRegenError" style="display:none;"></div>' +
       '<div class="sp-result-actions">' +
         '<button class="btn sp-edit-inputs-btn" type="button">✏️ Edit Inputs</button>' +
         '<button class="btn sp-regenerate-btn" type="button">Regenerate ↺</button>' +
@@ -717,6 +718,7 @@ var AIFeatures = (function () {
       var editBtn = bodyEl.querySelector('.sp-edit-inputs-btn');
       if (editBtn) editBtn.addEventListener('click', showForm);
 
+      var regenErrorEl = bodyEl.querySelector('#spRegenError');
       var regenBtn = bodyEl.querySelector('.sp-regenerate-btn');
       if (regenBtn) {
         regenBtn.addEventListener('click', function () {
@@ -724,6 +726,7 @@ var AIFeatures = (function () {
           _studyPlanInFlight = true;
           regenBtn.disabled = true;
           regenBtn.innerHTML = '<div class="ai-spinner-inline"></div>';
+          if (regenErrorEl) regenErrorEl.style.display = 'none';
           _clearStudyPlanCache(examDate);
 
           var progress = typeof loadProgress === 'function' ? loadProgress() : {};
@@ -744,6 +747,10 @@ var AIFeatures = (function () {
             if (err || !data || !data.plan) {
               regenBtn.disabled = false;
               regenBtn.innerHTML = 'Regenerate ↺';
+              if (regenErrorEl) {
+                regenErrorEl.textContent = 'Unable to regenerate right now. Please try again.';
+                regenErrorEl.style.display = 'block';
+              }
               return;
             }
             _setStudyPlanCache(examDate, examName, dailyMins, data.plan);
