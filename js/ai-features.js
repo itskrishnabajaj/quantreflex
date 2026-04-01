@@ -4,6 +4,7 @@ var AIFeatures = (function () {
   var COACH_CACHE_HOURS = 24;
 
   var _wpInFlight = false;
+  var _wpAdaptiveModeActive = false;
   var _explainInFlight = false;
   var _insightsInFlight = false;
 
@@ -378,6 +379,24 @@ var AIFeatures = (function () {
   var _wpTimerPillMode = 'per';
   var _wpTimerSeconds = 15;
 
+  function _computeWpAdaptiveDifficulty() {
+    try {
+      var progress = (typeof loadProgress === 'function') ? loadProgress() : {};
+      var attempted = parseInt(progress.totalAttempted, 10) || 0;
+      var correct = parseInt(progress.totalCorrect, 10) || 0;
+      if (attempted >= 5) {
+        var acc = (correct / attempted) * 100;
+        if (acc > 80) return 'hard';
+        if (acc >= 50) return 'medium';
+        return 'easy';
+      }
+    } catch (_) {}
+    try {
+      var s = JSON.parse(localStorage.getItem('quant_reflex_settings') || '{}');
+      return s.difficulty || 'medium';
+    } catch (_) { return 'medium'; }
+  }
+
   function renderWordProblemsSetup(container, onStart) {
     var quota = getWordProblemQuota();
     var quotaText = quota.type === 'lifetime'
@@ -392,6 +411,9 @@ var AIFeatures = (function () {
     _wpTimerEnabled = false;
     _wpTimerPillMode = 'per';
     _wpTimerSeconds = 15;
+    _wpAdaptiveModeActive = false;
+
+    var wpCanAdaptive = (typeof canAccessFeature === 'function') ? canAccessFeature('adaptive_training') : false;
 
     var catHtml = '';
     for (var c = 0; c < WP_CATEGORIES.length; c++) {
@@ -410,6 +432,18 @@ var AIFeatures = (function () {
             '<div class="custom-practice-meta-row">' +
               '<strong id="wpQuestionCountValue">' + wpDefaultCount + '</strong>' +
               '<span class="secondary-text" id="wpQuestionCountText">You will solve ' + wpDefaultCount + ' questions</span>' +
+            '</div>' +
+          '</div>' +
+          '<div class="timer-select-section adaptive-toggle-section">' +
+            '<div class="timer-toggle-row">' +
+              '<span class="timer-toggle-label">Adaptive Training ✨' + (wpCanAdaptive ? '' : ' <span class="adaptive-lock">🔒</span>') + '</span>' +
+              '<label class="toggle">' +
+                '<input type="checkbox" id="wpAdaptiveToggle" />' +
+                '<span class="toggle-slider"></span>' +
+              '</label>' +
+            '</div>' +
+            '<div id="wpAdaptiveActiveChip" class="adaptive-toggle-hint" style="display:none;">' +
+              '<p class="adaptive-hint-text">Adaptive Mode Active ✨ &mdash; difficulty is auto-managed based on your performance.</p>' +
             '</div>' +
           '</div>' +
           '<div class="timer-select-section wp-timer-section">' +
@@ -447,6 +481,8 @@ var AIFeatures = (function () {
     var wpTimerConfigArea = container.querySelector('#wpTimerConfigArea');
     var wpTimerPillContainer = container.querySelector('.wp-timer-section .timer-pill-selector');
     var wpTimerSecondsInput = container.querySelector('#wpTimerSecondsInput');
+    var wpAdaptiveToggle = container.querySelector('#wpAdaptiveToggle');
+    var wpAdaptiveChip = container.querySelector('#wpAdaptiveActiveChip');
 
     var catBtns = container.querySelectorAll('.wp-cat-btn');
     for (var cb = 0; cb < catBtns.length; cb++) {
@@ -471,6 +507,23 @@ var AIFeatures = (function () {
         _wpQuestionCount = Math.max(1, Math.min(wpMaxQuestions, val));
         if (countValue) countValue.textContent = String(_wpQuestionCount);
         if (countText) countText.textContent = 'You will solve ' + _wpQuestionCount + ' questions';
+      });
+    }
+
+    if (wpAdaptiveToggle) {
+      wpAdaptiveToggle.addEventListener('change', function () {
+        if (this.checked) {
+          if (!wpCanAdaptive) {
+            this.checked = false;
+            if (typeof showPaywall === 'function') showPaywall('adaptive_training');
+            return;
+          }
+          _wpAdaptiveModeActive = true;
+          if (wpAdaptiveChip) wpAdaptiveChip.style.display = 'block';
+        } else {
+          _wpAdaptiveModeActive = false;
+          if (wpAdaptiveChip) wpAdaptiveChip.style.display = 'none';
+        }
       });
     }
 
@@ -513,8 +566,7 @@ var AIFeatures = (function () {
         if (errorEl) errorEl.textContent = 'Please select a category';
         return;
       }
-      var settings = (typeof loadSettings === 'function') ? loadSettings() : {};
-      var diff = settings.difficulty || 'medium';
+      var diff = _wpAdaptiveModeActive ? _computeWpAdaptiveDifficulty() : ((typeof loadSettings === 'function') ? (loadSettings().difficulty || 'medium') : 'medium');
       var cnt = Math.min(_wpQuestionCount, quota.remaining);
       if (cnt <= 0) {
         if (errorEl) errorEl.textContent = quota.type === 'lifetime' ? 'No free questions remaining.' : 'Daily limit reached.';
