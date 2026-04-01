@@ -3082,14 +3082,17 @@ body.drill-session-active #drillContainer > .card:active {
   min-height: 0;
   padding-bottom: .5rem;
 }
+.drill-question-scroll > * {
+  flex-shrink: 0;
+}
 .drill-question-scroll::before {
   content: '';
-  flex: 1;
+  flex: 1 1 0%;
   min-height: 1.5rem;
 }
 .drill-question-scroll::after {
   content: '';
-  flex: 1;
+  flex: 1 1 0%;
   min-height: 0;
 }
 
@@ -5016,27 +5019,32 @@ body.dark-mode .ai-tip-section {
 }
 
 .wrong-answer-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: .35rem;
   border: none !important;
   border-left: 3px solid #ef4444 !important;
   border-radius: .5rem;
-  padding: .75rem 1rem .75rem 1rem !important;
+  padding: .75rem 1rem !important;
   background: rgba(239,68,68,.05) !important;
   text-align: center;
   width: 100%;
   max-width: 22rem;
   box-sizing: border-box;
+  flex-shrink: 0;
+  font-size: inherit;
+  min-height: auto;
 }
 .wrong-answer-header {
   font-size: .95rem;
   font-weight: 700;
   color: #dc2626;
-  margin-bottom: .4rem;
 }
 .wrong-answer-correct {
   font-size: .95rem;
   font-weight: 600;
   color: #0f172a;
-  margin-bottom: 0;
   line-height: 1.4;
 }
 body.dark-mode .wrong-answer-card {
@@ -5050,8 +5058,8 @@ body.dark-mode .wrong-answer-correct {
   color: #e2e8f0;
 }
 .drill-explain-btn {
-  display: inline-block;
-  margin-top: .6rem;
+  display: block;
+  margin-top: .75rem;
   padding: .5rem 1.25rem;
   font-size: .85rem;
   font-weight: 600;
@@ -5060,6 +5068,7 @@ body.dark-mode .wrong-answer-correct {
   background: none;
   color: #8b5cf6;
   cursor: pointer;
+  flex-shrink: 0;
   transition: background .15s ease, color .15s ease;
 }
 .drill-explain-btn:active {
