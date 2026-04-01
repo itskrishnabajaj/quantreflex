@@ -3011,6 +3011,7 @@ body.numpad-active {
 body.drill-session-active {
   --drill-numpad-h: 14.25rem;
   --drill-actions-h: 3.5rem;
+  --drill-card-gap: .5rem;
   --drill-safe-b: env(safe-area-inset-bottom, 0px);
 }
 
@@ -3058,7 +3059,7 @@ body.drill-session-active #drillContainer > .card {
   top: 3rem;
   left: .75rem;
   right: .75rem;
-  bottom: calc(var(--drill-numpad-h) + var(--drill-actions-h) + var(--drill-safe-b));
+  bottom: calc(var(--drill-numpad-h) + var(--drill-actions-h) + var(--drill-card-gap) + var(--drill-safe-b));
   display: flex;
   flex-direction: column;
   overflow: hidden;
@@ -3110,9 +3111,25 @@ body.drill-session-active .drill-actions .btn {
   margin-top: 0;
   min-width: 0;
   min-height: 2.75rem;
+  border-radius: .75rem;
+  font-size: 1rem;
+  padding: .9rem 1rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 body.drill-session-active .drill-actions.has-skip {
   gap: .5rem;
+}
+body.drill-session-active .drill-actions .skip-btn {
+  font-size: 1rem;
+  font-weight: 600;
+  padding: .9rem 1rem;
+  border-radius: .75rem;
+  min-height: 2.75rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 .skip-btn-disabled {
   opacity: .4;
@@ -5025,27 +5042,32 @@ body.dark-mode .drill-explain-btn:active {
 }
 
 .wrong-answer-card {
-  border: 2px solid #ef4444 !important;
-  border-radius: .75rem;
-  padding: .75rem 1rem !important;
-  background: rgba(239,68,68,.06) !important;
+  border: none !important;
+  border-left: 3px solid #ef4444 !important;
+  border-radius: .5rem;
+  padding: .75rem 1rem .75rem 1rem !important;
+  background: rgba(239,68,68,.05) !important;
   text-align: center;
+  width: 100%;
+  max-width: 22rem;
+  box-sizing: border-box;
 }
 .wrong-answer-header {
-  font-size: 1.05rem;
+  font-size: .95rem;
   font-weight: 700;
   color: #dc2626;
-  margin-bottom: .35rem;
+  margin-bottom: .4rem;
 }
 .wrong-answer-correct {
-  font-size: 1rem;
+  font-size: .95rem;
   font-weight: 600;
   color: #0f172a;
   margin-bottom: .5rem;
+  line-height: 1.4;
 }
 body.dark-mode .wrong-answer-card {
-  border-color: #f87171 !important;
-  background: rgba(239,68,68,.12) !important;
+  border-left-color: #f87171 !important;
+  background: rgba(239,68,68,.1) !important;
 }
 body.dark-mode .wrong-answer-header {
   color: #f87171;
@@ -5055,11 +5077,11 @@ body.dark-mode .wrong-answer-correct {
 }
 .wrong-answer-card .drill-explain-btn {
   margin-top: .5rem;
-  padding: .5rem 1.25rem;
-  font-size: .88rem;
-  border-radius: .6rem;
-  border-width: 2px;
-  box-shadow: 0 2px 6px rgba(139,92,246,.15);
+  padding: .45rem 1.1rem;
+  font-size: .85rem;
+  border-radius: .5rem;
+  border-width: 1.5px;
+  box-shadow: none;
 }
 
 /* Task 14: Reduced motion for view transitions */
