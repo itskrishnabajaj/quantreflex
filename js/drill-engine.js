@@ -354,13 +354,13 @@ function createDrillEngine(container, opts) {
       var _isPremium = (typeof canAccessFeature === 'function') ? canAccessFeature('adaptive_training') : false;
       if (_isPremium) {
         autoTipEl.className = 'auto-explain-tip';
-        autoTipEl.textContent = _getAutoTip(q.category);
+        autoTipEl.textContent = _getAutoTip(q.category, q.subtype);
       } else {
         var _credits = _getExplainCredits();
         if (_credits > 0) {
           _decrementExplainCredits();
           autoTipEl.className = 'auto-explain-tip';
-          autoTipEl.textContent = _getAutoTip(q.category);
+          autoTipEl.textContent = _getAutoTip(q.category, q.subtype);
         } else {
           autoTipEl.className = 'auto-explain-tip auto-explain-locked';
           autoTipEl.innerHTML = '🔒 <a class="auto-explain-unlock" href="#">Unlock unlimited explanations</a>';
@@ -493,8 +493,25 @@ function createDrillEngine(container, opts) {
     if (v > 0) { try { localStorage.setItem(_EXPLAIN_CREDITS_KEY, String(v - 1)); } catch (_) {} }
   }
 
-  function _getAutoTip(cat) {
-    var tips = {
+  function _getAutoTip(cat, subtype) {
+    var subtypeTips = {
+      square:           'Tip: Area of a square = side². Multiply the side length by itself.',
+      rectangle:        'Tip: Area of a rectangle = length × breadth. Double-check which is length and which is breadth.',
+      triangle:         'Tip: Area of a triangle = ½ × base × height. Divide by 2 at the end.',
+      circle:           'Tip: Area of a circle = π × r² (π ≈ 3.14). Square the radius first, then multiply.',
+      parallelogram:    'Tip: Area of a parallelogram = base × height (the perpendicular height, not the slant side).',
+      trapezium:        'Tip: Area of a trapezium = ½ × (sum of parallel sides) × height.',
+      cube:             'Tip: Volume of a cube = side³. Multiply the side by itself three times.',
+      cuboid:           'Tip: Volume of a cuboid = length × breadth × height. Multiply all three dimensions.',
+      cylinder:         'Tip: Volume of a cylinder = π × r² × height (π ≈ 3.14). Find the base area first.',
+      sphere:           'Tip: Volume of a sphere = (4/3) × π × r³ (π ≈ 3.14). Cube the radius, then multiply by 4/3.',
+      cone:             'Tip: Volume of a cone = (1/3) × π × r² × height. It\'s one-third of the matching cylinder.',
+      multiplication:   'Tip: Break apart: 18 × 7 = (20 − 2) × 7 = 140 − 14 = 126.',
+      division:         'Tip: Division is the inverse of multiplication — multiply back to verify your answer.',
+      average:          'Tip: Average = Sum ÷ Count. Recount items — it\'s the most common error.',
+      'average-missing': 'Tip: Missing number = (Average × Count) − Sum of known numbers.'
+    };
+    var categoryTips = {
       squares:             'Tip: Use (a±b)² = a² ± 2ab + b² to break large squares into manageable parts.',
       cubes:               'Tip: Memorise cube values 1–10 — fast recall beats calculation every time.',
       area:                'Tip: Write the formula first, then substitute. For circles, π ≈ 3.14.',
@@ -508,7 +525,8 @@ function createDrillEngine(container, opts) {
       'time-speed-distance': 'Tip: D = S × T. Write it down and substitute known values first.',
       'time-and-work':     'Tip: If A does work in N days, rate = 1/N. Add rates for combined work.'
     };
-    return tips[cat] || 'Tip: Re-read the question carefully and check each calculation step.';
+    if (subtype && subtypeTips[subtype]) return subtypeTips[subtype];
+    return categoryTips[cat] || 'Tip: Review the formula used for this type of question.';
   }
 
   function _computeSessionInsight(accNum, wrongCats) {

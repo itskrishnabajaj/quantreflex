@@ -97,11 +97,11 @@ function genArea() {
 
   if (type === 0) {
     var a = diff === 'easy' ? randInt(2, 15) : (diff === 'hard' ? randInt(8, 40) : randInt(4, 25));
-    return { question: 'Area of a square with side ' + a + ' cm = ? cm²', answer: a * a, category: 'area' };
+    return { question: 'Area of a square with side ' + a + ' cm = ? cm²', answer: a * a, category: 'area', subtype: 'square' };
   } else if (type === 1) {
     var l = diff === 'easy' ? randInt(4, 18) : (diff === 'hard' ? randInt(10, 45) : randInt(6, 30));
     var b = diff === 'easy' ? randInt(3, 14) : (diff === 'hard' ? randInt(8, 35) : randInt(5, 24));
-    return { question: 'Area of a rectangle with length ' + l + ' cm and breadth ' + b + ' cm = ? cm²', answer: l * b, category: 'area' };
+    return { question: 'Area of a rectangle with length ' + l + ' cm and breadth ' + b + ' cm = ? cm²', answer: l * b, category: 'area', subtype: 'rectangle' };
   } else if (type === 2) {
     var base = diff === 'easy' ? randInt(4, 20) : (diff === 'hard' ? randInt(10, 50) : randInt(6, 30));
     var height = diff === 'easy' ? randInt(3, 16) : (diff === 'hard' ? randInt(8, 36) : randInt(5, 24));
@@ -110,14 +110,14 @@ function genArea() {
       if (base % 2 === 1) base++;
       tri = (base * height) / 2;
     }
-    return { question: 'Area of a triangle with base ' + base + ' cm and height ' + height + ' cm = ? cm²', answer: tri, category: 'area' };
+    return { question: 'Area of a triangle with base ' + base + ' cm and height ' + height + ' cm = ? cm²', answer: tri, category: 'area', subtype: 'triangle' };
   } else if (type === 3) {
     var r = diff === 'easy' ? randInt(2, 10) : (diff === 'hard' ? randInt(6, 20) : randInt(3, 14));
-    return { question: 'Area of a circle (use π = 3.14) with radius ' + r + ' cm = ?', answer: parseFloat((PI * r * r).toFixed(2)), category: 'area' };
+    return { question: 'Area of a circle (use π = 3.14) with radius ' + r + ' cm = ?', answer: parseFloat((PI * r * r).toFixed(2)), category: 'area', subtype: 'circle' };
   } else if (type === 4) {
     var pb = diff === 'easy' ? randInt(4, 18) : (diff === 'hard' ? randInt(10, 40) : randInt(6, 26));
     var ph = diff === 'easy' ? randInt(3, 14) : (diff === 'hard' ? randInt(8, 30) : randInt(5, 22));
-    return { question: 'Area of a parallelogram with base ' + pb + ' cm and height ' + ph + ' cm = ? cm²', answer: pb * ph, category: 'area' };
+    return { question: 'Area of a parallelogram with base ' + pb + ' cm and height ' + ph + ' cm = ? cm²', answer: pb * ph, category: 'area', subtype: 'parallelogram' };
   }
 
   var ta = diff === 'easy' ? randInt(4, 14) : (diff === 'hard' ? randInt(8, 26) : randInt(5, 18));
@@ -128,7 +128,7 @@ function genArea() {
     if ((ta + tb) % 2 === 1) ta++;
     trap = ((ta + tb) * th) / 2;
   }
-  return { question: 'Area of a trapezium with parallel sides ' + ta + ' cm, ' + tb + ' cm and height ' + th + ' cm = ? cm²', answer: trap, category: 'area' };
+  return { question: 'Area of a trapezium with parallel sides ' + ta + ' cm, ' + tb + ' cm and height ' + th + ' cm = ? cm²', answer: trap, category: 'area', subtype: 'trapezium' };
 }
 
 /** Volume calculations */
@@ -138,24 +138,24 @@ function genVolume() {
 
   if (type === 0) {
     var a = diff === 'easy' ? randInt(2, 12) : (diff === 'hard' ? randInt(6, 25) : randInt(3, 18));
-    return { question: 'Volume of a cube with side ' + a + ' cm = ? cm³', answer: a * a * a, category: 'volume' };
+    return { question: 'Volume of a cube with side ' + a + ' cm = ? cm³', answer: a * a * a, category: 'volume', subtype: 'cube' };
   } else if (type === 1) {
     var l = diff === 'easy' ? randInt(3, 14) : (diff === 'hard' ? randInt(8, 28) : randInt(4, 18));
     var b = diff === 'easy' ? randInt(2, 12) : (diff === 'hard' ? randInt(6, 22) : randInt(3, 16));
     var h = diff === 'easy' ? randInt(2, 10) : (diff === 'hard' ? randInt(5, 18) : randInt(3, 14));
-    return { question: 'Volume of a cuboid with dimensions ' + l + ' cm × ' + b + ' cm × ' + h + ' cm = ? cm³', answer: l * b * h, category: 'volume' };
+    return { question: 'Volume of a cuboid with dimensions ' + l + ' cm × ' + b + ' cm × ' + h + ' cm = ? cm³', answer: l * b * h, category: 'volume', subtype: 'cuboid' };
   } else if (type === 2) {
     var r = diff === 'easy' ? randInt(2, 8) : (diff === 'hard' ? randInt(5, 14) : randInt(3, 10));
     var ch = diff === 'easy' ? randInt(3, 12) : (diff === 'hard' ? randInt(6, 20) : randInt(4, 15));
-    return { question: 'Volume of a cylinder (use π = 3.14) with radius ' + r + ' cm and height ' + ch + ' cm = ?', answer: parseFloat((PI * r * r * ch).toFixed(2)), category: 'volume' };
+    return { question: 'Volume of a cylinder (use π = 3.14) with radius ' + r + ' cm and height ' + ch + ' cm = ?', answer: parseFloat((PI * r * r * ch).toFixed(2)), category: 'volume', subtype: 'cylinder' };
   } else if (type === 3) {
     var sr = diff === 'easy' ? randInt(2, 7) : (diff === 'hard' ? randInt(4, 12) : randInt(3, 9));
-    return { question: 'Volume of a sphere (use π = 3.14) with radius ' + sr + ' cm = ?', answer: parseFloat(((4 / 3) * PI * sr * sr * sr).toFixed(2)), category: 'volume' };
+    return { question: 'Volume of a sphere (use π = 3.14) with radius ' + sr + ' cm = ?', answer: parseFloat(((4 / 3) * PI * sr * sr * sr).toFixed(2)), category: 'volume', subtype: 'sphere' };
   }
 
   var cr = diff === 'easy' ? randInt(2, 8) : (diff === 'hard' ? randInt(4, 12) : randInt(3, 10));
   var coneH = diff === 'easy' ? randInt(3, 12) : (diff === 'hard' ? randInt(6, 18) : randInt(4, 14));
-  return { question: 'Volume of a cone (use π = 3.14) with radius ' + cr + ' cm and height ' + coneH + ' cm = ?', answer: parseFloat(((1 / 3) * PI * cr * cr * coneH).toFixed(2)), category: 'volume' };
+  return { question: 'Volume of a cone (use π = 3.14) with radius ' + cr + ' cm and height ' + coneH + ' cm = ?', answer: parseFloat(((1 / 3) * PI * cr * cr * coneH).toFixed(2)), category: 'volume', subtype: 'cone' };
 }
 
 /** Fractions → percentage (complete table from spec) */
@@ -260,9 +260,9 @@ function genMultiplication() {
   var biasInverse = hint && (hint.type === 'inverse' || hintLogic.indexOf('division') !== -1);
   if (biasInverse || (diff !== 'easy' && randInt(0, 3) === 0)) {
     var product = x * y;
-    return { question: product + ' ÷ ' + x + ' = ?', answer: y, category: 'multiplication' };
+    return { question: product + ' ÷ ' + x + ' = ?', answer: y, category: 'multiplication', subtype: 'division' };
   }
-  return { question: x + ' × ' + y + ' = ?', answer: x * y, category: 'multiplication' };
+  return { question: x + ' × ' + y + ' = ?', answer: x * y, category: 'multiplication', subtype: 'multiplication' };
 }
 
 /** Ratio: percentage increase/decrease expressed as ratio */
@@ -352,7 +352,8 @@ function genAverage() {
   return {
     question: 'Average of ' + nums.join(', ') + ' = ?',
     answer: avg,
-    category: 'averages'
+    category: 'averages',
+    subtype: 'average'
   };
 }
 
@@ -392,7 +393,8 @@ function genAverageMissing() {
   return {
     question: 'Average of ' + nums.join(', ') + ', x is ' + avg + '. x = ?',
     answer: missing,
-    category: 'averages'
+    category: 'averages',
+    subtype: 'average-missing'
   };
 }
 
