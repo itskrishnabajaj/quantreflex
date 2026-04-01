@@ -59,7 +59,12 @@ async function isUserPremium(uid) {
     var doc = await db.collection('users').doc(uid).get();
     if (!doc.exists) return false;
     var data = doc.data();
-    return data.isPremium === true || data.premiumUser === true || data.hasPaid === true || data.isEarlyUser === true || data.isTrial === true;
+    if (data.isPremium === true || data.premiumUser === true || data.hasPaid === true || data.isEarlyUser === true) return true;
+    if (data.isTrial === true) {
+      var trialEndMs = _toExpiryMillis(data.trialEnd);
+      return trialEndMs > 0 && trialEndMs >= Date.now();
+    }
+    return false;
   } catch (err) {
     console.error('Premium lookup failed for uid ' + uid + ':', err.message);
     throw new AIServiceError('ENTITLEMENT_ERROR', 'Unable to verify subscription status. Please try again.', true);

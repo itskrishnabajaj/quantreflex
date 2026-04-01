@@ -7,6 +7,15 @@ const app = express();
 const PORT = process.env.PORT || 5000;
 
 app.use(express.json({ limit: '16kb' }));
+
+app.use(function (req, res, next) {
+  var p = req.path.toLowerCase();
+  if (p === '/server.js' || p.startsWith('/services/') || p === '/package.json' || p === '/package-lock.json' || p.endsWith('.md') || p.startsWith('/.local/') || p.startsWith('/node_modules/') || p === '/.replit' || p === '/replit.nix') {
+    return res.status(404).end();
+  }
+  next();
+});
+
 app.use(express.static(path.join(__dirname), {
   extensions: ['html'],
   index: 'index.html'

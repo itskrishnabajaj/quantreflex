@@ -400,7 +400,21 @@ function updateAboutUserStatus() {
     ? (FirestoreSync.getAccessState() || {})
     : {};
   var message = 'Free user';
-  if (accessState.isEarlyUser === true) {
+  if (accessState.isPremiumPlus === true) {
+    var planLabel = accessState.premiumPlusPlan === 'yearly' ? 'Yearly' : 'Monthly';
+    var expiryStr = '';
+    if (accessState.premiumPlusExpiry) {
+      var expMs = typeof accessState.premiumPlusExpiry === 'number' ? accessState.premiumPlusExpiry : 0;
+      if (typeof accessState.premiumPlusExpiry === 'object' && typeof accessState.premiumPlusExpiry.toDate === 'function') {
+        try { expMs = accessState.premiumPlusExpiry.toDate().getTime(); } catch (_) {}
+      }
+      if (expMs > 0) {
+        var d = new Date(expMs);
+        expiryStr = ' · Renews ' + d.toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric' });
+      }
+    }
+    message = '✨ Premium+ (' + planLabel + ')' + expiryStr;
+  } else if (accessState.isEarlyUser === true) {
     message = '🎉 You are one of our first users! Lifetime premium unlocked.';
   } else if (accessState.hasPaid === true) {
     message = '💙 Thank you for upgrading to premium.';
@@ -666,11 +680,30 @@ function openDeleteAccountModal() {
       var db = FirebaseApp.getDb();
       var userId = FirebaseApp.getUserId();
       if (db && userId) {
-        db.collection('users').doc(userId).delete()
+        var subcollections = ['performance', 'practice', 'ai', 'usage', 'profile'];
+        var subDeletePromises = subcollections.map(function (sub) {
+          return db.collection('users').doc(userId).collection(sub).get().then(function (snap) {
+            var batch = db.batch();
+            snap.docs.forEach(function (doc) { batch.delete(doc.ref); });
+            return batch.commit();
+          }).catch(function () {});
+        });
+
+        var paymentsDeletePromise = db.collection('payments')
+          .where('uid', '==', userId).get().then(function (snap) {
+            if (snap.empty) return;
+            var batch = db.batch();
+            snap.docs.forEach(function (doc) { batch.delete(doc.ref); });
+            return batch.commit();
+          }).catch(function () {});
+
+        Promise.all(subDeletePromises.concat([paymentsDeletePromise]))
+          .then(function () {
+            return db.collection('users').doc(userId).delete();
+          })
           .then(deleteAuthAndReload)
           .catch(function (err) {
-            console.warn('Failed to delete Firestore user document:', err);
-            /* Proceed with auth deletion even if Firestore delete fails */
+            console.warn('Failed to delete Firestore user data:', err);
             deleteAuthAndReload();
           });
         return;
