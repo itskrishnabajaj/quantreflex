@@ -135,6 +135,15 @@ async function _saveUsage(uid) {
   } catch (err) {
     console.warn('Usage write failed:', err.message);
   }
+  /* Mirror to structured ai/usage subcollection (non-destructive, fire-and-forget) */
+  db.collection('users').doc(uid).collection('ai').doc('usage').set({
+    wordProblemsUsedLifetime: entry.wordProblemsUsedLifetime || 0,
+    wordProblemsUsedToday: entry.wordProblemsUsedToday || 0,
+    explanationsUsed: entry.explanationsUsed || 0,
+    updatedAt: new Date().toISOString()
+  }, { merge: true }).catch(function (err) {
+    console.warn('ai/usage mirror write failed:', err.message);
+  });
 }
 
 async function checkWordProblemQuota(uid, isPremium) {
@@ -634,4 +643,33 @@ async function generateSpeedBenchmark(params) {
   return result;
 }
 
-module.exports = { generateWordProblems, generateExplanation, generateInsights, generateStudyPlan, clearStudyPlanCache, generateQuestionPattern, generateSpeedBenchmark, verifyIdToken, isUserPremium, checkWordProblemQuota, consumeWordProblemQuota, trackExplanationUsage, trackInsightsUsage, AIServiceError };
+/**
+ * Persist a speed benchmark result under the user's ai/benchmarks subcollection.
+ * Fingerprint key: `${accuracy}_${avgTime}_${questionCount}` — prevents exact-duplicate storage.
+ * Fire-and-forget; never throws.
+ */
+async function saveBenchmark(uid, data) {
+  if (!uid || !data) return;
+  try {
+    var accuracy = typeof data.accuracy === 'number' ? data.accuracy : 0;
+    var avgTime = typeof data.avgTimeSec === 'number' ? data.avgTimeSec : 0;
+    var questionCount = typeof data.questionCount === 'number' ? data.questionCount : 0;
+    var fingerprint = accuracy + '_' + avgTime + '_' + questionCount;
+    await db.collection('users').doc(uid).collection('ai').doc('benchmarks').collection('results').doc(fingerprint).set({
+      accuracy: accuracy,
+      avgTimeSec: avgTime,
+      speedScore: data.speedScore || 0,
+      percentileBand: data.percentileBand || '',
+      questionCount: questionCount,
+      mode: data.mode || 'Drill',
+      summary: data.summary || '',
+      level: data.level || '',
+      suggestion: data.suggestion || '',
+      savedAt: admin.firestore.FieldValue.serverTimestamp()
+    }, { merge: true });
+  } catch (err) {
+    console.warn('Benchmark save failed:', err.message);
+  }
+}
+
+module.exports = { generateWordProblems, generateExplanation, generateInsights, generateStudyPlan, clearStudyPlanCache, generateQuestionPattern, generateSpeedBenchmark, saveBenchmark, verifyIdToken, isUserPremium, checkWordProblemQuota, consumeWordProblemQuota, trackExplanationUsage, trackInsightsUsage, AIServiceError };

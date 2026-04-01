@@ -5,16 +5,21 @@
  * Uses local caching for fast access and batched updates for efficiency.
  *
  * Firestore structure:
- *   users/{userId}
+ *   users/{userId}                               (root doc — source of truth)
  *     ├── profile (username, createdAt)
  *     ├── settings
  *     ├── stats (progress data)
- *     ├── quickLinks
- *     ├── customTopics
- *     ├── customFormulas
- *     └── bookmarks
+ *     ├── quickLinks, customTopics, customFormulas, bookmarks
+ *     ├── isPremium, isTrial, trialEnd, hasPaid, isEarlyUser
  *
- *   users/{userId}/practiceSessions/{sessionId}  (subcollection)
+ *   users/{userId}/practiceSessions/{sessionId}  (subcollection — drill history)
+ *
+ *   Structured subcollections (dual-written alongside root doc, read-only for now):
+ *   users/{userId}/profile/data                  (name, premium flags)
+ *   users/{userId}/performance/overall           (derived accuracy, avgTime, streaks)
+ *   users/{userId}/practice/data                 (mistakes, savedQuestions)
+ *   users/{userId}/ai/usage                      (mirrors usage/ai)
+ *   users/{userId}/ai/benchmarks/{fingerprint}   (speed benchmark results — server-written)
  */
 
 var FirestoreSync = (function () {
@@ -63,6 +68,66 @@ var FirestoreSync = (function () {
     var db = FirebaseApp.getDb();
     return db.collection('users').doc(userId);
   }
+
+  /* ---- Structured subcollection helpers (dual-write, fire-and-forget) ---- */
+
+  function _syncPerformanceSubcollection(stats) {
+    var docRef = _getUserDocRef();
+    if (!docRef || !stats) return;
+    var totalAttempted = stats.totalAttempted || 0;
+    var totalCorrect = stats.totalCorrect || 0;
+    var accuracy = totalAttempted > 0 ? Math.round((totalCorrect / totalAttempted) * 100) : 0;
+    var times = Array.isArray(stats.responseTimes) ? stats.responseTimes : [];
+    var avgTime = times.length > 0
+      ? parseFloat((times.reduce(function (a, b) { return a + b; }, 0) / times.length).toFixed(1))
+      : 0;
+    docRef.collection('performance').doc('overall').set({
+      totalAttempted: totalAttempted,
+      totalCorrect: totalCorrect,
+      accuracy: accuracy,
+      avgTime: avgTime,
+      bestStreak: stats.bestStreak || 0,
+      currentStreak: stats.currentStreak || 0,
+      dailyStreak: stats.dailyStreak || 0,
+      updatedAt: new Date().toISOString()
+    }, { merge: true }).catch(function (err) {
+      console.warn('Performance subcollection sync failed:', err);
+    });
+  }
+
+  function _syncPracticeSubcollection(stats, bookmarks) {
+    var docRef = _getUserDocRef();
+    if (!docRef) return;
+    var payload = { updatedAt: new Date().toISOString() };
+    if (stats && Array.isArray(stats.mistakes)) payload.mistakes = stats.mistakes;
+    if (Array.isArray(bookmarks)) payload.savedQuestions = bookmarks;
+    if (!payload.mistakes && !payload.savedQuestions) return;
+    docRef.collection('practice').doc('data').set(payload, { merge: true }).catch(function (err) {
+      console.warn('Practice subcollection sync failed:', err);
+    });
+  }
+
+  function _syncProfileSubcollection(profile, premiumFlags) {
+    var docRef = _getUserDocRef();
+    if (!docRef) return;
+    var payload = { updatedAt: new Date().toISOString() };
+    if (profile) {
+      if (profile.name !== undefined) payload.name = profile.name || '';
+      if (profile.username !== undefined && !payload.name) payload.name = profile.username || '';
+    }
+    if (premiumFlags) {
+      if (premiumFlags.isPremium !== undefined) payload.isPremium = !!premiumFlags.isPremium;
+      if (premiumFlags.isTrial !== undefined) payload.isTrial = !!premiumFlags.isTrial;
+      if (premiumFlags.trialEnd !== undefined) payload.trialEnd = premiumFlags.trialEnd || null;
+      if (premiumFlags.isEarlyUser !== undefined) payload.isEarlyUser = !!premiumFlags.isEarlyUser;
+      if (premiumFlags.hasPaid !== undefined) payload.hasPaid = !!premiumFlags.hasPaid;
+    }
+    docRef.collection('profile').doc('data').set(payload, { merge: true }).catch(function (err) {
+      console.warn('Profile subcollection sync failed:', err);
+    });
+  }
+
+  /* ---- End subcollection helpers ---- */
 
   /**
    * Reset the sync state when user logs out.
@@ -281,6 +346,14 @@ var FirestoreSync = (function () {
         }
         });
       });
+    }).then(function () {
+      /* Non-blocking: seed structured subcollections for new user */
+      var mc = _memoryCache || fallbackDefaults;
+      _syncProfileSubcollection(
+        { name: (mc.profile && mc.profile.name) || '', username: (mc.profile && mc.profile.username) || '' },
+        { isPremium: !!mc.isPremium, isTrial: !!mc.isTrial, trialEnd: mc.trialEnd || null, isEarlyUser: !!mc.isEarlyUser, hasPaid: !!mc.hasPaid }
+      );
+      _syncPerformanceSubcollection(mc.stats || fallbackDefaults.stats);
     }).catch(function (err) {
       console.warn('Firestore default document creation failed:', err);
       fallbackDefaults.isPremium = false;
@@ -453,6 +526,9 @@ var FirestoreSync = (function () {
    */
   function syncStats(stats) {
     queueUpdate('stats', stats);
+    _syncPerformanceSubcollection(stats);
+    var cachedBookmarks = (_memoryCache && Array.isArray(_memoryCache.bookmarks)) ? _memoryCache.bookmarks : null;
+    _syncPracticeSubcollection(stats, cachedBookmarks);
   }
 
   /**
@@ -485,6 +561,7 @@ var FirestoreSync = (function () {
    */
   function syncBookmarks(bookmarks) {
     queueUpdate('bookmarks', bookmarks);
+    _syncPracticeSubcollection(null, bookmarks);
   }
 
   /**
@@ -681,6 +758,7 @@ var FirestoreSync = (function () {
           });
         }
       }
+      _syncProfileSubcollection({ name: name }, null);
     },
     /**
      * Password intentionally stored for UX simplicity. Not a security bug.
@@ -756,6 +834,7 @@ var FirestoreSync = (function () {
       }).catch(function (err) {
         if (callback) callback(err && err.message ? err.message : 'Premium unlock failed');
       });
+      _syncProfileSubcollection(null, { isPremium: true, hasPaid: true, isTrial: false, trialEnd: null });
     }
   };
 })();

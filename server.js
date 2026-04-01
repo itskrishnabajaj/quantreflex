@@ -284,6 +284,8 @@ app.post('/api/ai/speed-benchmark', authMiddleware, rateLimitMiddleware, premium
     }
 
     var benchmark = await aiService.generateSpeedBenchmark({ accuracy: accuracy, avgTimeSec: avgTimeSec, speedScore: speedScore, percentileBand: percentileBand, questionCount: questionCount, mode: mode });
+    /* Persist benchmark to Firestore ai/benchmarks subcollection (fire-and-forget) */
+    aiService.saveBenchmark(req.userId, { accuracy: accuracy, avgTimeSec: avgTimeSec, speedScore: speedScore, percentileBand: percentileBand, questionCount: questionCount, mode: mode, summary: benchmark.summary, level: benchmark.level, suggestion: benchmark.suggestion });
     /* Return benchmark object directly: {summary, level, suggestion} */
     res.json(benchmark);
   } catch (err) {
