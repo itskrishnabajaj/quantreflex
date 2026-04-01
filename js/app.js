@@ -409,6 +409,9 @@ function _resetPracticeUiToModes() {
   if (wpSetup) wpSetup.style.display = 'none';
   _resetTimerSelection();
   _resetAdaptiveToggle();
+  if (typeof AIFeatures !== 'undefined' && typeof AIFeatures.resetWpAdaptive === 'function') {
+    AIFeatures.resetWpAdaptive();
+  }
   _resetCustomPracticeState();
   /* Remove daily limit banner if present */
   var limitBanner = document.querySelector('.daily-limit-banner');

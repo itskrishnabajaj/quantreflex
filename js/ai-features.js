@@ -414,6 +414,7 @@ var AIFeatures = (function () {
     _wpAdaptiveModeActive = false;
 
     var wpCanAdaptive = (typeof canAccessFeature === 'function') ? canAccessFeature('adaptive_training') : false;
+    var wpCurrentDiff = (typeof loadSettings === 'function') ? (loadSettings().difficulty || 'medium') : 'medium';
 
     var catHtml = '';
     for (var c = 0; c < WP_CATEGORIES.length; c++) {
@@ -442,9 +443,15 @@ var AIFeatures = (function () {
                 '<span class="toggle-slider"></span>' +
               '</label>' +
             '</div>' +
-            '<div id="wpAdaptiveActiveChip" class="adaptive-toggle-hint" style="display:none;">' +
-              '<p class="adaptive-hint-text">Adaptive Mode Active ✨ &mdash; difficulty is auto-managed based on your performance.</p>' +
+          '</div>' +
+          '<div id="wpDiffRow" class="timer-select-section">' +
+            '<div class="timer-toggle-row">' +
+              '<span class="timer-toggle-label secondary-text">Difficulty</span>' +
+              '<span class="secondary-text" id="wpDiffLabel">' + _esc(wpCurrentDiff) + '</span>' +
             '</div>' +
+          '</div>' +
+          '<div id="wpAdaptiveActiveChip" class="adaptive-toggle-hint" style="display:none;">' +
+            '<p class="adaptive-hint-text">Adaptive Mode Active ✨ &mdash; difficulty is auto-managed based on your performance.</p>' +
           '</div>' +
           '<div class="timer-select-section wp-timer-section">' +
             '<div class="timer-toggle-row">' +
@@ -483,6 +490,7 @@ var AIFeatures = (function () {
     var wpTimerSecondsInput = container.querySelector('#wpTimerSecondsInput');
     var wpAdaptiveToggle = container.querySelector('#wpAdaptiveToggle');
     var wpAdaptiveChip = container.querySelector('#wpAdaptiveActiveChip');
+    var wpDiffRow = container.querySelector('#wpDiffRow');
 
     var catBtns = container.querySelectorAll('.wp-cat-btn');
     for (var cb = 0; cb < catBtns.length; cb++) {
@@ -519,9 +527,11 @@ var AIFeatures = (function () {
             return;
           }
           _wpAdaptiveModeActive = true;
+          if (wpDiffRow) wpDiffRow.style.display = 'none';
           if (wpAdaptiveChip) wpAdaptiveChip.style.display = 'block';
         } else {
           _wpAdaptiveModeActive = false;
+          if (wpDiffRow) wpDiffRow.style.display = '';
           if (wpAdaptiveChip) wpAdaptiveChip.style.display = 'none';
         }
       });
@@ -1042,6 +1052,10 @@ var AIFeatures = (function () {
     };
   }
 
+  function resetWpAdaptive() {
+    _wpAdaptiveModeActive = false;
+  }
+
   return {
     getWordProblemQuota: getWordProblemQuota,
     consumeWordProblemQuota: consumeWordProblemQuota,
@@ -1055,6 +1069,7 @@ var AIFeatures = (function () {
     renderStudyPlanCard: renderStudyPlanCard,
     renderStudyPlanModal: _openStudyPlanModal,
     renderWordProblemsSetup: renderWordProblemsSetup,
+    resetWpAdaptive: resetWpAdaptive,
     isPremium: _isPremium,
     getCachedInsights: _getCachedCoach,
     triggerInsightsFetch: _triggerInsightsFetch,
