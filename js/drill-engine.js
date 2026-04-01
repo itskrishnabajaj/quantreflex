@@ -622,19 +622,9 @@ function createDrillEngine(container, opts) {
         navigator.share({ files: [file], title: 'QuantReflex Result' }).catch(function () {
           _shareTextFallback(accuracy, percentile);
         });
-      } else if (navigator.share) {
-        _shareTextFallback(accuracy, percentile);
       } else {
-        /* Download fallback — create an <a> and trigger download */
-        var url = URL.createObjectURL(blob);
-        var a = document.createElement('a');
-        a.href = url;
-        a.download = 'quantreflex-result.png';
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
-        setTimeout(function () { URL.revokeObjectURL(url); }, 2000);
-        if (typeof showToast === 'function') showToast('\u2705 Image saved!');
+        /* navigator.share({ files }) not supported — fall back to text/clipboard */
+        _shareTextFallback(accuracy, percentile);
       }
     }, 'image/png');
   }
