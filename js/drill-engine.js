@@ -439,6 +439,12 @@ function createDrillEngine(container, opts) {
     return 'benchmark-band-bottom';
   }
 
+  function _getPercentileUserFraction(band) {
+    if (band === 'Top 25%') return '75';
+    if (band === 'Mid 50%') return '25';
+    return '10';
+  }
+
   function finish() {
     cleanup();
     _exitDrillSession();
@@ -471,6 +477,7 @@ function createDrillEngine(container, opts) {
     var speedScore = _computeSpeedScore(accNum, avgRaw);
     var percentileBand = _getPercentileBand(speedScore);
     var percentileClass = _getPercentileClass(percentileBand);
+    var userFraction = _getPercentileUserFraction(percentileBand);
 
     /* Performance badge */
     var badgeText, badgeClass;
@@ -492,25 +499,30 @@ function createDrillEngine(container, opts) {
         '</div>' +
         '<div class="speed-benchmark-card" id="speedBenchmarkCard">' +
           '<div class="benchmark-header">' +
-            '<span class="benchmark-title">⚡ Speed Benchmark</span>' +
+            '<span class="benchmark-icon">⚡</span>' +
+            '<span class="benchmark-title">Speed Benchmark</span>' +
           '</div>' +
-          '<div class="benchmark-score-row">' +
-            '<div class="benchmark-score-block">' +
-              '<span class="benchmark-score-value">' + avg + 's</span>' +
-              '<span class="benchmark-score-label">Avg Response</span>' +
+          '<div class="benchmark-highlight ' + percentileClass + '">' +
+            '<span class="benchmark-highlight-pct">Faster than <strong>' + userFraction + '%</strong> of users</span>' +
+          '</div>' +
+          '<div class="benchmark-stats-row">' +
+            '<div class="benchmark-stat-block">' +
+              '<span class="benchmark-stat-value">' + accuracy + '%</span>' +
+              '<span class="benchmark-stat-label">Accuracy</span>' +
             '</div>' +
-            '<div class="benchmark-score-block">' +
-              '<span class="benchmark-score-value">' + speedScore + '</span>' +
-              '<span class="benchmark-score-label">Speed Score</span>' +
+            '<div class="benchmark-stat-block">' +
+              '<span class="benchmark-stat-value">' + avg + 's</span>' +
+              '<span class="benchmark-stat-label">Avg Time</span>' +
             '</div>' +
-            '<div class="benchmark-percentile-block ' + percentileClass + '">' +
-              '<span class="benchmark-percentile-value">' + percentileBand + '</span>' +
-              '<span class="benchmark-percentile-label">Percentile</span>' +
+            '<div class="benchmark-stat-block">' +
+              '<span class="benchmark-stat-value">' + speedScore + '</span>' +
+              '<span class="benchmark-stat-label">Speed Score</span>' +
             '</div>' +
           '</div>' +
           '<div class="benchmark-ai-section" id="benchmarkAiSection">' +
             '<div class="benchmark-ai-placeholder" id="benchmarkAiPlaceholder"></div>' +
           '</div>' +
+          '<button class="benchmark-cta-btn" type="button" id="benchmarkImproveBtn">Improve Speed \u2192</button>' +
         '</div>' +
         '<button class="btn accent" id="tryAgainBtn">Try Again</button>' +
         '<button class="btn" id="homeBtn">Home</button>' +
@@ -530,6 +542,12 @@ function createDrillEngine(container, opts) {
         Router.showView('home');
       }
     });
+    var improveBtn = container.querySelector('#benchmarkImproveBtn');
+    if (improveBtn) {
+      improveBtn.addEventListener('click', function () {
+        if (onFinish) { onFinish('practice'); } else { Router.showView('practice'); }
+      });
+    }
 
     /* Speed Benchmark AI summary (premium only) */
     var benchmarkPlaceholder = container.querySelector('#benchmarkAiPlaceholder');
@@ -569,7 +587,7 @@ function createDrillEngine(container, opts) {
       '<div class="benchmark-ai-result">' +
         '<span class="benchmark-level">' + _escHtml(data.level || '') + '</span>' +
         '<p class="benchmark-summary">' + _escHtml(data.summary || '') + '</p>' +
-        '<p class="benchmark-suggestion"><strong>Tip:</strong> ' + _escHtml(data.suggestion || '') + '</p>' +
+        '<p class="benchmark-suggestion"><span class="benchmark-tip-label">Tip:</span> ' + _escHtml(data.suggestion || '') + '</p>' +
       '</div>';
   }
 
