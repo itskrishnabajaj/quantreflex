@@ -2033,17 +2033,20 @@ body.dark-mode .info-quote p { color: #94a3b8; }
 /* ---- Guide Premium Tier Cards ---- */
 .guide-premium-section {
   border-radius: 1rem;
-  padding: 1.25rem 1.15rem 1rem;
+  padding: 1.4rem 1.25rem 1.2rem;
   margin-bottom: 0;
   border: 1.5px solid rgba(37,99,235,.15);
   background: linear-gradient(145deg, rgba(37,99,235,.04) 0%, rgba(255,255,255,.0) 100%);
+  box-shadow: 0 2px 12px rgba(37,99,235,.07), 0 1px 4px rgba(0,0,0,.04);
 }
 .guide-ai-tier {
   border-color: rgba(124,58,237,.18);
+  border-top: 2px solid rgba(124,58,237,.3);
   background: linear-gradient(145deg, rgba(124,58,237,.05) 0%, rgba(255,255,255,.0) 100%);
+  box-shadow: 0 4px 20px rgba(124,58,237,.10), 0 1px 4px rgba(0,0,0,.04);
 }
 .guide-premium-header {
-  margin-bottom: 1.1rem;
+  margin-bottom: 1.15rem;
 }
 .guide-tier-badge {
   display: inline-block;
@@ -2052,7 +2055,7 @@ body.dark-mode .info-quote p { color: #94a3b8; }
   letter-spacing: .07em;
   padding: .2rem .55rem;
   border-radius: 2rem;
-  margin-bottom: .6rem;
+  margin-bottom: .65rem;
   text-transform: uppercase;
 }
 .guide-tier-badge--premium {
@@ -2066,60 +2069,65 @@ body.dark-mode .info-quote p { color: #94a3b8; }
   border: 1px solid rgba(124,58,237,.2);
 }
 .guide-tier-title {
-  font-size: 1.08rem;
-  font-weight: 720;
+  font-size: 1.15rem;
+  font-weight: 730;
   color: #0f172a;
   margin: 0 0 .3rem;
   line-height: 1.3;
 }
 .guide-tier-subtitle {
-  font-size: .82rem;
+  font-size: .83rem;
   color: #64748b;
   margin: 0;
-  line-height: 1.5;
+  line-height: 1.55;
+  letter-spacing: .01em;
 }
 .guide-feature-group {
-  margin-bottom: 1rem;
-}
-.guide-feature-group:last-of-type {
+  background: rgba(248,250,252,.75);
+  border: 1px solid rgba(226,232,240,.55);
+  border-radius: .75rem;
+  padding: .8rem .9rem;
+  box-shadow: 0 1px 3px rgba(0,0,0,.03);
   margin-bottom: .75rem;
 }
 .guide-feature-group-label {
-  font-size: .68rem;
+  font-size: .72rem;
   font-weight: 800;
   color: #94a3b8;
   text-transform: uppercase;
   letter-spacing: .09em;
-  margin-bottom: .5rem;
-  padding-bottom: .35rem;
+  margin-bottom: .65rem;
+  padding-bottom: .4rem;
   border-bottom: 1px solid rgba(226,232,240,.7);
 }
 .guide-feature-row {
   display: flex;
   align-items: flex-start;
-  gap: .55rem;
-  padding: .42rem 0;
+  gap: .6rem;
+  padding: .52rem 0;
   border-bottom: 1px solid rgba(241,245,249,.8);
 }
 .guide-feature-row:last-child {
   border-bottom: none;
+  padding-bottom: 0;
 }
 .guide-feature-icon {
   font-size: .95rem;
-  line-height: 1.4;
+  line-height: 1.35;
   flex-shrink: 0;
   width: 1.3rem;
   text-align: center;
+  margin-top: .05rem;
 }
 .guide-feature-info {
   display: flex;
   flex-direction: column;
-  gap: .1rem;
+  gap: .12rem;
   min-width: 0;
 }
 .guide-feature-name {
   font-size: .86rem;
-  font-weight: 650;
+  font-weight: 660;
   color: #0f172a;
   line-height: 1.35;
 }
@@ -2129,14 +2137,14 @@ body.dark-mode .info-quote p { color: #94a3b8; }
   line-height: 1.5;
 }
 .guide-tier-footer {
-  font-size: .75rem;
-  font-weight: 600;
+  font-size: .78rem;
+  font-weight: 650;
   color: #2563eb;
   text-align: center;
-  margin-top: .85rem;
-  padding: .55rem .75rem;
+  margin-top: 1.2rem;
+  padding: .7rem 1.1rem;
   background: rgba(37,99,235,.06);
-  border-radius: .6rem;
+  border-radius: .65rem;
   border: 1px solid rgba(37,99,235,.12);
   letter-spacing: .01em;
 }
@@ -2150,10 +2158,13 @@ body.dark-mode .info-quote p { color: #94a3b8; }
 body.dark-mode .guide-premium-section {
   border-color: rgba(96,165,250,.15);
   background: linear-gradient(145deg, rgba(96,165,250,.06) 0%, rgba(30,41,59,.0) 100%);
+  box-shadow: 0 2px 12px rgba(96,165,250,.08), 0 1px 4px rgba(0,0,0,.12);
 }
 body.dark-mode .guide-ai-tier {
-  border-color: rgba(167,139,250,.15);
-  background: linear-gradient(145deg, rgba(167,139,250,.06) 0%, rgba(30,41,59,.0) 100%);
+  border-color: rgba(167,139,250,.18);
+  border-top: 2px solid rgba(167,139,250,.3);
+  background: linear-gradient(145deg, rgba(167,139,250,.07) 0%, rgba(30,41,59,.0) 100%);
+  box-shadow: 0 4px 20px rgba(167,139,250,.10), 0 1px 4px rgba(0,0,0,.15);
 }
 body.dark-mode .guide-tier-badge--premium {
   background: rgba(96,165,250,.12);
@@ -2167,6 +2178,11 @@ body.dark-mode .guide-tier-badge--ai {
 }
 body.dark-mode .guide-tier-title { color: #e2e8f0; }
 body.dark-mode .guide-tier-subtitle { color: #64748b; }
+body.dark-mode .guide-feature-group {
+  background: rgba(15,23,42,.5);
+  border-color: rgba(51,65,85,.55);
+  box-shadow: 0 1px 3px rgba(0,0,0,.12);
+}
 body.dark-mode .guide-feature-group-label { color: #475569; border-bottom-color: rgba(51,65,85,.6); }
 body.dark-mode .guide-feature-row { border-bottom-color: rgba(51,65,85,.5); }
 body.dark-mode .guide-feature-name { color: #e2e8f0; }
@@ -2186,10 +2202,13 @@ body.dark-mode .guide-tier-cta-note {
 body.theme-playful .guide-premium-section {
   border-color: rgba(79,143,247,.18);
   background: linear-gradient(145deg, rgba(79,143,247,.05) 0%, rgba(250,249,247,.0) 100%);
+  box-shadow: 0 2px 12px rgba(79,143,247,.07), 0 1px 4px rgba(0,0,0,.04);
 }
 body.theme-playful .guide-ai-tier {
   border-color: rgba(124,58,237,.15);
+  border-top: 2px solid rgba(124,58,237,.28);
   background: linear-gradient(145deg, rgba(124,58,237,.05) 0%, rgba(250,249,247,.0) 100%);
+  box-shadow: 0 4px 20px rgba(124,58,237,.09), 0 1px 4px rgba(0,0,0,.04);
 }
 body.theme-playful .guide-tier-badge--premium {
   background: rgba(79,143,247,.1);
@@ -2203,6 +2222,11 @@ body.theme-playful .guide-tier-badge--ai {
 }
 body.theme-playful .guide-tier-title { color: #1a1a2e; }
 body.theme-playful .guide-tier-subtitle { color: #5a6275; }
+body.theme-playful .guide-feature-group {
+  background: rgba(250,249,247,.8);
+  border-color: rgba(226,222,214,.6);
+  box-shadow: 0 1px 3px rgba(120,100,70,.04);
+}
 body.theme-playful .guide-feature-group-label { color: #8b8fa3; border-bottom-color: rgba(226,222,214,.7); }
 body.theme-playful .guide-feature-row { border-bottom-color: rgba(241,238,234,.8); }
 body.theme-playful .guide-feature-name { color: #1a1a2e; }
@@ -2222,10 +2246,13 @@ body.theme-playful .guide-tier-cta-note {
 body.theme-playful.dark-mode .guide-premium-section {
   border-color: rgba(88,166,255,.15);
   background: linear-gradient(145deg, rgba(88,166,255,.06) 0%, rgba(13,17,23,.0) 100%);
+  box-shadow: 0 2px 12px rgba(88,166,255,.08), 0 1px 4px rgba(0,0,0,.15);
 }
 body.theme-playful.dark-mode .guide-ai-tier {
-  border-color: rgba(167,139,250,.15);
-  background: linear-gradient(145deg, rgba(167,139,250,.06) 0%, rgba(13,17,23,.0) 100%);
+  border-color: rgba(167,139,250,.18);
+  border-top: 2px solid rgba(167,139,250,.3);
+  background: linear-gradient(145deg, rgba(167,139,250,.07) 0%, rgba(13,17,23,.0) 100%);
+  box-shadow: 0 4px 20px rgba(167,139,250,.10), 0 1px 4px rgba(0,0,0,.18);
 }
 body.theme-playful.dark-mode .guide-tier-badge--premium {
   background: rgba(88,166,255,.12);
