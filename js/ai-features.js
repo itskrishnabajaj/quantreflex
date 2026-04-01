@@ -392,7 +392,7 @@ var AIFeatures = (function () {
       }
     } catch (_) {}
     try {
-      var s = JSON.parse(localStorage.getItem('quant_reflex_settings') || '{}');
+      var s = (typeof loadSettings === 'function') ? loadSettings() : {};
       return s.difficulty || 'medium';
     } catch (_) { return 'medium'; }
   }
