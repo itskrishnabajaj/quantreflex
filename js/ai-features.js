@@ -87,7 +87,8 @@ var AIFeatures = (function () {
         } else if (xhr.status === 403) {
           try {
             var errData = JSON.parse(xhr.responseText);
-            callback(errData.error && errData.error.code === 'PREMIUM_REQUIRED' ? 'premium_required' : FRIENDLY_ERROR);
+            var code = errData.error && errData.error.code;
+            callback((code === 'PREMIUM_REQUIRED' || code === 'PREMIUM_PLUS_REQUIRED') ? 'premium_required' : FRIENDLY_ERROR);
           } catch (_) {
             callback(FRIENDLY_ERROR);
           }
@@ -744,7 +745,8 @@ var AIFeatures = (function () {
           } else if (xhr.status === 403) {
             try {
               var errData = JSON.parse(xhr.responseText);
-              callback(errData.error && errData.error.code === 'PREMIUM_REQUIRED' ? 'premium_required' : FRIENDLY_ERROR);
+              var spCode = errData.error && errData.error.code;
+              callback((spCode === 'PREMIUM_REQUIRED' || spCode === 'PREMIUM_PLUS_REQUIRED') ? 'premium_required' : FRIENDLY_ERROR);
             } catch (_e) { callback(FRIENDLY_ERROR); }
           } else if (xhr.status === 429) {
             callback('rate_limited');
