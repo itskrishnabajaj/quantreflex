@@ -955,10 +955,6 @@ document.addEventListener('DOMContentLoaded', function () {
        Router.showView safely handles unknown views by defaulting to home. */
     var currentView = Router.getCurrentView() || 'home';
     Router.showView(currentView);
-    /* Show first-login paywall for new users (runs once) */
-    if (typeof showFirstLoginPaywall === 'function') {
-      showFirstLoginPaywall();
-    }
   }
 
   /**

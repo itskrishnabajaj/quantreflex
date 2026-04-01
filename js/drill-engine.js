@@ -46,7 +46,7 @@ function createDrillEngine(container, opts) {
   /* ---- Adaptive controller state ---- */
   var _adaptiveHistory = [];   /* [{correct, timeSec}] last N answers */
   var _adaptiveDifficulty = 'medium';
-  var _ADAPTIVE_WINDOW = 10;   /* rolling 10-answer window for stable band decisions */
+  var _ADAPTIVE_WINDOW = 4;    /* rolling 4-answer window for fast in-session adaptation */
 
   function _computeAdaptiveDifficulty() {
     if (_adaptiveHistory.length < 2) return _adaptiveDifficulty;
@@ -344,6 +344,26 @@ function createDrillEngine(container, opts) {
       feedback.appendChild(wrongLabel);
       feedback.appendChild(correctLabel);
 
+      /* Auto-explain: show a rule-based tip immediately, no button press needed */
+      var autoTipEl = document.createElement('div');
+      var _credits = _getExplainCredits();
+      if (_credits > 0) {
+        _decrementExplainCredits();
+        autoTipEl.className = 'auto-explain-tip';
+        autoTipEl.textContent = _getAutoTip(q.category);
+      } else {
+        autoTipEl.className = 'auto-explain-tip auto-explain-locked';
+        autoTipEl.innerHTML = '🔒 <a class="auto-explain-unlock" href="#">Unlock unlimited explanations</a>';
+        var _lockLink = autoTipEl.querySelector('.auto-explain-unlock');
+        if (_lockLink) {
+          _lockLink.addEventListener('click', function (e) {
+            e.preventDefault();
+            if (typeof showPaywall === 'function') showPaywall('settings');
+          });
+        }
+      }
+      feedback.appendChild(autoTipEl);
+
       var card = ui.cardEl;
       if (card) card.classList.add('feedback-shake');
       setTimeout(function () { if (card) card.classList.remove('feedback-shake'); }, 400);
@@ -427,22 +447,57 @@ function createDrillEngine(container, opts) {
     return Math.round(accScore + timeScore);
   }
 
-  function _getPercentileBand(speedScore) {
-    if (speedScore >= 75) return 'Top 25%';
-    if (speedScore >= 45) return 'Mid 50%';
-    return 'Bottom 25%';
+  var _PERCENTILE_KEY = 'qr_last_percentile';
+  var _BEST_SCORES_KEY = 'qr_best_scores';
+  var _EXPLAIN_CREDITS_KEY = 'qr_explain_credits';
+  var _SESSIONS_COUNT_KEY = 'qr_sessions_count';
+
+  function _computeContinuousPercentile(speedScore) {
+    var base = Math.min(95, Math.max(5, Math.round(speedScore * 0.92)));
+    var jitter = Math.round((Math.random() - 0.5) * 6);
+    return Math.min(95, Math.max(5, base + jitter));
   }
 
-  function _getPercentileClass(band) {
-    if (band === 'Top 25%') return 'benchmark-band-top';
-    if (band === 'Mid 50%') return 'benchmark-band-mid';
+  function _getPercentileClass(pct) {
+    if (pct >= 70) return 'benchmark-band-top';
+    if (pct >= 35) return 'benchmark-band-mid';
     return 'benchmark-band-bottom';
   }
 
-  function _getPercentileUserFraction(band) {
-    if (band === 'Top 25%') return '75';
-    if (band === 'Mid 50%') return '25';
-    return '10';
+  function _loadBestScores() {
+    try { return JSON.parse(localStorage.getItem(_BEST_SCORES_KEY) || '{}'); } catch (_) { return {}; }
+  }
+
+  function _saveBestScores(obj) {
+    try { localStorage.setItem(_BEST_SCORES_KEY, JSON.stringify(obj)); } catch (_) {}
+  }
+
+  function _getExplainCredits() {
+    var v = parseInt(localStorage.getItem(_EXPLAIN_CREDITS_KEY));
+    return isNaN(v) ? 5 : v;
+  }
+
+  function _decrementExplainCredits() {
+    var v = _getExplainCredits();
+    if (v > 0) { try { localStorage.setItem(_EXPLAIN_CREDITS_KEY, String(v - 1)); } catch (_) {} }
+  }
+
+  function _getAutoTip(cat) {
+    var tips = {
+      squares:             'Tip: Use (a±b)² = a² ± 2ab + b² to break large squares into manageable parts.',
+      cubes:               'Tip: Memorise cube values 1–10 — fast recall beats calculation every time.',
+      area:                'Tip: Write the formula first, then substitute. For circles, π ≈ 3.14.',
+      volume:              'Tip: Volume = base area × height for prisms. Label your units.',
+      percentages:         'Tip: x% of y = y% of x — swap the numbers when one is easier to compute.',
+      multiplication:      'Tip: Break apart: 18 × 7 = (20 − 2) × 7 = 140 − 14 = 126.',
+      fractions:           'Tip: Find the LCM before adding or subtracting fractions.',
+      averages:            'Tip: Average = Sum ÷ Count. Recount items — it\'s the most common error.',
+      ratios:              'Tip: Cross-multiply to solve proportions: a/b = c/d → ad = bc.',
+      'profit-loss':       'Tip: Profit % = (Profit ÷ Cost Price) × 100, not Selling Price.',
+      'time-speed-distance': 'Tip: D = S × T. Write it down and substitute known values first.',
+      'time-and-work':     'Tip: If A does work in N days, rate = 1/N. Add rates for combined work.'
+    };
+    return tips[cat] || 'Tip: Re-read the question carefully and check each calculation step.';
   }
 
   function finish() {
@@ -475,9 +530,30 @@ function createDrillEngine(container, opts) {
 
     /* Speed benchmark computation */
     var speedScore = _computeSpeedScore(accNum, avgRaw);
-    var percentileBand = _getPercentileBand(speedScore);
-    var percentileClass = _getPercentileClass(percentileBand);
-    var userFraction = _getPercentileUserFraction(percentileBand);
+    var percentile = _computeContinuousPercentile(speedScore);
+    var percentileClass = _getPercentileClass(percentile);
+
+    /* Session delta: compare with last stored percentile */
+    var lastPct = null;
+    try { lastPct = parseInt(localStorage.getItem(_PERCENTILE_KEY)); } catch (_) {}
+    var deltaHtml = '';
+    if (!isNaN(lastPct) && lastPct > 0) {
+      var delta = percentile - lastPct;
+      if (delta > 0) deltaHtml = '<span class="percentile-delta delta-up">↑ +' + delta + '% from last session</span>';
+      else if (delta < 0) deltaHtml = '<span class="percentile-delta delta-down">↓ ' + delta + '% from last session</span>';
+    }
+    try { localStorage.setItem(_PERCENTILE_KEY, String(percentile)); } catch (_) {}
+
+    /* New Best detection */
+    var bests = _loadBestScores();
+    var prevBestAcc = bests.bestAccuracy || 0;
+    var prevBestScore = bests.bestSpeedScore || 0;
+    var isNewBest = (accNum > prevBestAcc) || (speedScore > prevBestScore);
+    if (isNewBest) {
+      bests.bestAccuracy = Math.max(prevBestAcc, accNum);
+      bests.bestSpeedScore = Math.max(prevBestScore, speedScore);
+      _saveBestScores(bests);
+    }
 
     /* Performance badge */
     var badgeText, badgeClass;
@@ -486,9 +562,13 @@ function createDrillEngine(container, opts) {
     else if (accNum >= 50) { badgeText = '📝 Needs Practice'; badgeClass = 'badge-practice'; }
     else { badgeText = '💪 Keep Trying'; badgeClass = 'badge-weak'; }
 
+    /* Retry challenge text */
+    var retryChallenge = avg !== '0.0' ? 'Beat your ' + avg + 's avg?' : 'Try to go faster!';
+
     container.innerHTML =
       '<div class="card center-content fade-in">' +
         '<h2>Results</h2>' +
+        (isNewBest ? '<div class="new-best-badge">🎉 New Best!</div>' : '') +
         '<div class="performance-badge ' + badgeClass + '">' + badgeText + '</div>' +
         '<div class="results-grid">' +
           '<div class="result-item"><span class="result-value">' + score + '/' + count + '</span><span class="result-label">Score</span></div>' +
@@ -503,7 +583,8 @@ function createDrillEngine(container, opts) {
             '<span class="benchmark-title">Speed Benchmark</span>' +
           '</div>' +
           '<div class="benchmark-highlight ' + percentileClass + '">' +
-            '<span class="benchmark-highlight-pct">Faster than <strong>' + userFraction + '%</strong> of users</span>' +
+            '<span class="benchmark-highlight-pct">Faster than <strong>' + percentile + '%</strong> of users</span>' +
+            deltaHtml +
           '</div>' +
           '<div class="benchmark-stats-row">' +
             '<div class="benchmark-stat-block">' +
@@ -522,8 +603,9 @@ function createDrillEngine(container, opts) {
           '<div class="benchmark-ai-section" id="benchmarkAiSection">' +
             '<div class="benchmark-ai-placeholder" id="benchmarkAiPlaceholder"></div>' +
           '</div>' +
-          '<button class="benchmark-cta-btn" type="button" id="benchmarkImproveBtn">Improve Speed \u2192</button>' +
+          '<button class="benchmark-cta-btn" type="button" id="benchmarkImproveBtn">' + _escHtml(retryChallenge) + ' \u2192</button>' +
         '</div>' +
+        '<button class="btn results-share-btn" type="button" id="shareResultBtn">📤 Share Result</button>' +
         '<button class="btn accent" id="tryAgainBtn">Try Again</button>' +
         '<button class="btn" id="homeBtn">Home</button>' +
       '</div>';
@@ -549,10 +631,29 @@ function createDrillEngine(container, opts) {
       });
     }
 
+    /* Share button */
+    var shareBtn = container.querySelector('#shareResultBtn');
+    if (shareBtn) {
+      shareBtn.addEventListener('click', function () {
+        var shareText = 'I scored ' + accuracy + '% accuracy on QuantReflex \uD83D\uDD25 — faster than ' + percentile + '% of users! Train your mental math: https://quantreflex.app';
+        if (navigator.share) {
+          navigator.share({ text: shareText }).catch(function () {});
+        } else if (navigator.clipboard && navigator.clipboard.writeText) {
+          navigator.clipboard.writeText(shareText).then(function () {
+            if (typeof showToast === 'function') showToast('\u2705 Copied to clipboard!');
+          }).catch(function () {
+            if (typeof showToast === 'function') showToast('Could not copy. Try again.');
+          });
+        } else {
+          if (typeof showToast === 'function') showToast('Sharing not supported on this browser.');
+        }
+      });
+    }
+
     /* Speed Benchmark summary — generated locally, available to all users */
     var benchmarkPlaceholder = container.querySelector('#benchmarkAiPlaceholder');
     if (benchmarkPlaceholder && typeof AIFeatures !== 'undefined' && typeof AIFeatures.fetchSpeedBenchmark === 'function') {
-      AIFeatures.fetchSpeedBenchmark(accNum, parseFloat(avg), speedScore, percentileBand, count, mode, function (err, data) {
+      AIFeatures.fetchSpeedBenchmark(accNum, parseFloat(avg), speedScore, percentile, count, mode, function (err, data) {
         if (err || !data) {
           benchmarkPlaceholder.innerHTML = '';
           return;
@@ -560,6 +661,21 @@ function createDrillEngine(container, opts) {
         _renderBenchmarkAi(benchmarkPlaceholder, data);
       });
     }
+
+    /* Post-session paywall trigger — after 2nd completed session (free users only) */
+    try {
+      var _isPremiumUser = (typeof canAccessFeature === 'function') ? canAccessFeature('adaptive_training') : false;
+      if (!_isPremiumUser) {
+        var _sessCount = parseInt(localStorage.getItem(_SESSIONS_COUNT_KEY)) || 0;
+        _sessCount++;
+        localStorage.setItem(_SESSIONS_COUNT_KEY, String(_sessCount));
+        if (_sessCount === 2) {
+          setTimeout(function () {
+            if (typeof showPaywall === 'function') showPaywall('upgrade');
+          }, 1500);
+        }
+      }
+    } catch (_) {}
   }
 
   function _renderBenchmarkAi(el, data) {
