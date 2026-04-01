@@ -1,0 +1,203 @@
+You are a senior AI systems architect, full-stack engineer, and product analyst.
+
+You are analyzing a production PWA project: "Quant Reflex Trainer".
+
+Your task is to IDENTIFY, ANALYZE, and EVALUATE ALL AI-RELATED FEATURES in the entire codebase.
+
+DO NOT modify any code.
+
+---
+
+🚨 STRICT RULES
+
+- DO NOT make any changes
+- DO NOT assume features — verify from code
+- Be precise and critical
+- Identify both USED and UNUSED AI logic
+
+---
+
+🎯 SECTION 1: IDENTIFY ALL AI USAGE POINTS
+
+Scan entire project and list ALL places where AI is used, including:
+
+- API calls (Gemini or others)
+- backend endpoints (/api/ai/*)
+- prompt generation logic
+- AI-related utilities
+- hidden or indirect usage
+
+---
+
+For EACH AI usage:
+
+Provide:
+
+- Feature name
+- File(s) involved
+- Trigger (when AI is called)
+- Input sent to AI
+- Output expected
+
+---
+
+---
+
+🎯 SECTION 2: FEATURE-WISE AI BREAKDOWN
+
+Group AI usage into features:
+
+Examples:
+
+- Word Problems
+- Mistake Explainer
+- AI Insights
+- Study Plan
+- Adaptive Training
+- Speed Benchmark
+
+---
+
+For EACH feature:
+
+Explain in detail:
+
+1. Purpose
+2. How AI is used
+3. When it is triggered
+4. What user sees
+5. Backend flow
+
+---
+
+---
+
+🎯 SECTION 3: USECASE EVALUATION (VERY IMPORTANT)
+
+For EACH AI feature:
+
+Evaluate:
+
+- Does it provide REAL user value?
+- Is AI NECESSARY here?
+
+---
+
+Classify:
+
+✔ High-value AI usage
+⚠ Replaceable by logic
+❌ Unnecessary AI usage
+
+---
+
+---
+
+🎯 SECTION 4: COST vs VALUE ANALYSIS
+
+For EACH feature:
+
+Estimate:
+
+- frequency of usage
+- API cost impact
+- user-perceived value
+
+---
+
+Identify:
+
+- high-cost low-value features ❌
+- low-cost high-value features ✅
+
+---
+
+---
+
+🎯 SECTION 5: UNUSED / FAKE AI DETECTION
+
+Identify:
+
+- AI calls that do nothing meaningful
+- AI outputs not used in logic
+- redundant prompts
+- dead AI code
+
+---
+
+---
+
+🎯 SECTION 6: OPTIMIZATION OPPORTUNITIES
+
+Suggest:
+
+- where AI should be REMOVED
+- where AI should be REPLACED with logic
+- where AI should be IMPROVED
+
+---
+
+---
+
+🎯 SECTION 7: MISSING AI OPPORTUNITIES
+
+Identify:
+
+- high-impact areas where AI is NOT used but SHOULD be
+
+---
+
+Focus on:
+
+- retention
+- learning improvement
+- personalization
+
+---
+
+---
+
+🎯 SECTION 8: FINAL AI STRATEGY SUMMARY
+
+Provide:
+
+---
+
+1. Complete list of AI features
+
+2. High-value AI features (keep & strengthen)
+
+3. Low-value AI features (optimize or remove)
+
+4. Wasteful AI usage (must remove)
+
+5. Recommended AI roadmap
+
+---
+
+---
+
+📊 OUTPUT FORMAT
+
+Structured report:
+
+1. AI Usage Map
+2. Feature Breakdown
+3. Usecase Evaluation
+4. Cost vs Value
+5. Unused AI Detection
+6. Optimization Suggestions
+7. Missing Opportunities
+8. Final Strategy
+
+---
+
+Final verdict:
+
+"AI system effectiveness: X/10
+Cost efficiency: X/10
+Optimization potential: [High/Medium/Low]"
+
+---
+
+Think like a product-focused AI architect, not just a coder.
