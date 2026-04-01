@@ -91,6 +91,8 @@ var AIFeatures = (function () {
           } catch (_) {
             callback(FRIENDLY_ERROR);
           }
+        } else if (xhr.status === 429) {
+          callback('rate_limited');
         } else {
           callback(FRIENDLY_ERROR);
         }
@@ -248,7 +250,7 @@ var AIFeatures = (function () {
       if (!body) return;
 
       if (err) {
-        body.innerHTML = '<p class="ai-error">' + FRIENDLY_ERROR + '</p>';
+        body.innerHTML = '<p class="ai-error">' + (err === 'rate_limited' ? 'Too many requests. Please wait a moment and try again.' : FRIENDLY_ERROR) + '</p>';
         return;
       }
 
@@ -292,7 +294,8 @@ var AIFeatures = (function () {
     bodyEl.innerHTML = '<div class="ai-loading"><div class="ai-spinner"></div><p>Analyzing your performance...</p></div>';
     fetchInsights(stats, function (err, insights) {
       if (err) {
-        bodyEl.innerHTML = '<p class="ai-error">Unable to generate right now. Try again later.</p>';
+        var _insightsErrMsg = err === 'rate_limited' ? 'Too many requests. Please wait a moment and try again.' : 'Unable to generate right now. Try again later.';
+        bodyEl.innerHTML = '<p class="ai-error">' + _insightsErrMsg + '</p>';
         if (btnEl) { btnEl.style.display = ''; btnEl.disabled = false; }
         return;
       }
@@ -607,6 +610,8 @@ var AIFeatures = (function () {
             errorEl.textContent = 'You\'ve reached today\'s limit of 25 AI questions. Come back tomorrow!';
           } else if (err === 'request_in_progress') {
             errorEl.textContent = 'A request is already in progress. Please wait.';
+          } else if (err === 'rate_limited') {
+            errorEl.textContent = 'Too many requests. Please wait a moment and try again.';
           } else {
             errorEl.textContent = FRIENDLY_ERROR;
           }
@@ -718,6 +723,41 @@ var AIFeatures = (function () {
     var existing = document.getElementById('aiStudyPlanModal');
     if (existing) existing.parentNode.removeChild(existing);
 
+    var _spActiveXhr = null;
+    var _spClosed = false;
+
+    function _spPost(body, callback) {
+      _getIdToken(function (token) {
+        if (_spClosed) return;
+        if (!token) { callback(FRIENDLY_ERROR); return; }
+        var xhr = new XMLHttpRequest();
+        _spActiveXhr = xhr;
+        xhr.open('POST', '/api/ai/study-plan', true);
+        xhr.setRequestHeader('Content-Type', 'application/json');
+        xhr.setRequestHeader('Authorization', 'Bearer ' + token);
+        xhr.timeout = 45000;
+        xhr.onload = function () {
+          _spActiveXhr = null;
+          if (_spClosed) return;
+          if (xhr.status === 200) {
+            try { callback(null, JSON.parse(xhr.responseText)); } catch (e) { callback(FRIENDLY_ERROR); }
+          } else if (xhr.status === 403) {
+            try {
+              var errData = JSON.parse(xhr.responseText);
+              callback(errData.error && errData.error.code === 'PREMIUM_REQUIRED' ? 'premium_required' : FRIENDLY_ERROR);
+            } catch (_e) { callback(FRIENDLY_ERROR); }
+          } else if (xhr.status === 429) {
+            callback('rate_limited');
+          } else {
+            callback(FRIENDLY_ERROR);
+          }
+        };
+        xhr.onerror = function () { _spActiveXhr = null; if (!_spClosed) callback(FRIENDLY_ERROR); };
+        xhr.ontimeout = function () { _spActiveXhr = null; if (!_spClosed) callback(FRIENDLY_ERROR); };
+        xhr.send(JSON.stringify(body));
+      });
+    }
+
     var todayStr = new Date().toISOString().slice(0, 10);
     var examOptions = '';
     for (var e = 0; e < SP_EXAMS.length; e++) {
@@ -760,6 +800,8 @@ var AIFeatures = (function () {
     document.body.appendChild(overlay);
 
     function closeModal() {
+      _spClosed = true;
+      if (_spActiveXhr) { try { _spActiveXhr.abort(); } catch (_e) {} _spActiveXhr = null; }
       _studyPlanInFlight = false;
       overlay.style.display = 'none';
       if (overlay.parentNode) overlay.parentNode.removeChild(overlay);
@@ -798,17 +840,26 @@ var AIFeatures = (function () {
             categoryStats: progress.categoryStats || {}
           };
 
-          _sendAuthenticatedRequest('POST', '/api/ai/study-plan', {
+          _spPost({
             examName: examName,
             examDate: examDate,
             dailyTimeMinutes: dailyMins,
             forceRefresh: true,
             stats: statsPayload
-          }, 45000, function (err, data) {
+          }, function (err, data) {
             _studyPlanInFlight = false;
             if (err === 'premium_required') {
               closeModal();
               if (typeof showPaywall === 'function') showPaywall('settings');
+              return;
+            }
+            if (err === 'rate_limited') {
+              regenBtn.disabled = false;
+              regenBtn.innerHTML = 'Regenerate ↺';
+              if (regenErrorEl) {
+                regenErrorEl.textContent = 'Too many requests. Please wait a moment and try again.';
+                regenErrorEl.style.display = 'block';
+              }
               return;
             }
             if (err || !data || !data.plan) {
@@ -905,12 +956,12 @@ var AIFeatures = (function () {
           categoryStats: progress.categoryStats || {}
         };
 
-        _sendAuthenticatedRequest('POST', '/api/ai/study-plan', {
+        _spPost({
           examName: examName,
           examDate: examDate,
           dailyTimeMinutes: dailyMins,
           stats: statsPayload
-        }, 45000, function (err, data) {
+        }, function (err, data) {
           _studyPlanInFlight = false;
           generateBtn.disabled = false;
           generateBtn.innerHTML = 'Generate Plan ✨';
@@ -918,6 +969,11 @@ var AIFeatures = (function () {
           if (err === 'premium_required') {
             closeModal();
             if (typeof showPaywall === 'function') showPaywall('settings');
+            return;
+          }
+          if (err === 'rate_limited') {
+            errorEl.textContent = 'Too many requests. Please wait a moment and try again.';
+            errorEl.style.display = 'block';
             return;
           }
           if (err) {
