@@ -408,6 +408,7 @@ function _resetPracticeUiToModes() {
   var wpSetup = document.getElementById('wordProblemsSetup');
   if (wpSetup) wpSetup.style.display = 'none';
   _resetTimerSelection();
+  _resetAdaptiveToggle();
   _resetCustomPracticeState();
   /* Remove daily limit banner if present */
   var limitBanner = document.querySelector('.daily-limit-banner');
@@ -1350,6 +1351,7 @@ document.addEventListener('DOMContentLoaded', function () {
           var catTitle2 = document.getElementById('categorySelectTitle');
           if (catTitle2) catTitle2.textContent = 'Custom Training';
           _resetTimerSelection();
+          _resetAdaptiveToggle();
           _resetCustomPracticeState();
           _syncCustomPracticeSelectionUi();
           return;
@@ -1366,6 +1368,7 @@ document.addEventListener('DOMContentLoaded', function () {
           var catTitle = document.getElementById('categorySelectTitle');
           if (catTitle) catTitle.textContent = 'Focus Training';
           _resetTimerSelection();
+          _resetAdaptiveToggle();
           _syncCustomPracticeSelectionUi();
         } else if (modeKey === 'review') {
           if (!canAccessFeature('review_mistakes')) {
@@ -1423,6 +1426,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
     /* Initialize timer controls */
     _initTimerControls();
+    _initAdaptiveToggle();
 
     if (customSlider) {
       customSlider.addEventListener('input', function () {
@@ -1516,12 +1520,15 @@ function startDrillFromPractice(modeKey, category, categoryLabel) {
 
   var timerCfg = _getTimerConfig();
 
+  var _canAdaptive = (typeof canAccessFeature === 'function') ? canAccessFeature('adaptive_training') : false;
+  var _useAdaptive = _adaptiveModeActive && _canAdaptive && (modeKey === 'focus' || modeKey === 'custom');
+
   var modes = {
     quick:  { count: 5,  timeLimitSec: null, perQuestionSec: null, category: null, mode: '⚡ Quick Drill' },
     reflex: { count: 10, timeLimitSec: null, perQuestionSec: 15,   category: null, mode: '🧠 Reflex Drill' },
     timed:  { count: 10, timeLimitSec: 180,  perQuestionSec: null, category: null, mode: '⏱ Timed Test' },
-    focus:  { count: 10, timeLimitSec: timerCfg.timeLimitSec, perQuestionSec: timerCfg.perQuestionSec, category: null, mode: '🎯 Focus Training' },
-    custom: { count: _customPracticeState.totalQuestions, timeLimitSec: timerCfg.timeLimitSec, perQuestionSec: timerCfg.perQuestionSec, category: null, topics: selectedTopics.slice(), mode: '📑 Custom Training' },
+    focus:  { count: 10, timeLimitSec: timerCfg.timeLimitSec, perQuestionSec: timerCfg.perQuestionSec, category: null, mode: _useAdaptive ? '🎯 Focus Training (Adaptive)' : '🎯 Focus Training', adaptive: _useAdaptive },
+    custom: { count: _customPracticeState.totalQuestions, timeLimitSec: timerCfg.timeLimitSec, perQuestionSec: timerCfg.perQuestionSec, category: null, topics: selectedTopics.slice(), mode: _useAdaptive ? '📑 Custom Training (Adaptive)' : '📑 Custom Training', adaptive: _useAdaptive },
     review: { count: 10, timeLimitSec: null, perQuestionSec: null, category: null, mode: '🔄 Review Mistakes', reviewMode: true }
   };
 
@@ -1551,6 +1558,24 @@ function startDrillFromPractice(modeKey, category, categoryLabel) {
   categorySelect.style.display = 'none';
   if (customPracticeConfig) customPracticeConfig.style.display = 'none';
   drillContainer.style.display = 'block';
+
+  /* Prefetch AI question pattern for adaptive Focus mode (fire-and-forget, non-blocking) */
+  if (_useAdaptive && config.category && typeof AIFeatures !== 'undefined' && typeof AIFeatures.prefetchQuestionPattern === 'function') {
+    try {
+      var _s = JSON.parse(localStorage.getItem('quant_reflex_settings') || '{}');
+      var _weakAreas = [];
+      try {
+        var _p = typeof loadProgress === 'function' ? loadProgress() : {};
+        var _cats = _p.categoryStats || {};
+        for (var _k in _cats) {
+          var _cd = _cats[_k];
+          if (_cd.attempted >= 5 && (_cd.correct / _cd.attempted) < 0.6) _weakAreas.push(_k);
+        }
+      } catch (_) {}
+      AIFeatures.prefetchQuestionPattern(config.category, _s.difficulty || 'medium', _weakAreas, null);
+    } catch (_) {}
+  }
+
   _startPracticeEngine(drillContainer, config);
 }
 
@@ -1578,6 +1603,7 @@ var _customPracticeActive = false;
 var _focusModeActive = false;
 var _focusSelectedCategory = null;
 var _focusSelectedCategoryLabel = null;
+var _adaptiveModeActive = false;
 var _selectedTimerOption = 'none';
 var _CUSTOM_DEFAULT_QUESTIONS = 20;
 var _CUSTOM_MIN_QUESTIONS = 1;
@@ -1614,6 +1640,14 @@ function _resetTimerSelection() {
   }
 }
 
+function _resetAdaptiveToggle() {
+  _adaptiveModeActive = false;
+  var toggle = document.getElementById('adaptiveTrainingToggle');
+  if (toggle) toggle.checked = false;
+  var hint = document.getElementById('adaptiveHint');
+  if (hint) hint.style.display = 'none';
+}
+
 function _updateTimerOptionFromUI() {
   var toggle = document.getElementById('timerToggle');
   if (!toggle || !toggle.checked) {
@@ -1625,6 +1659,29 @@ function _updateTimerOptionFromUI() {
   if (isNaN(val) || val < 5) val = 5;
   if (val > 600) val = 600;
   _selectedTimerOption = _timerPillMode + ':' + val;
+}
+
+function _initAdaptiveToggle() {
+  var toggle = document.getElementById('adaptiveTrainingToggle');
+  if (!toggle) return;
+
+  toggle.addEventListener('change', function () {
+    if (this.checked) {
+      if (typeof canAccessFeature === 'function' && !canAccessFeature('adaptive_training')) {
+        this.checked = false;
+        if (typeof showPaywall === 'function') showPaywall('adaptive_training');
+        return;
+      }
+      _adaptiveModeActive = true;
+      var hint = document.getElementById('adaptiveHint');
+      if (hint) hint.style.display = 'block';
+    } else {
+      _adaptiveModeActive = false;
+      var hint2 = document.getElementById('adaptiveHint');
+      if (hint2) hint2.style.display = 'none';
+    }
+    if (typeof SoundEngine !== 'undefined') SoundEngine.play('settingsToggle');
+  });
 }
 
 function _initTimerControls() {

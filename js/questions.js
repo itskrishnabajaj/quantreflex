@@ -22,8 +22,9 @@ function pick(arr) {
 
 var PI = 3.14;
 
-/** Get current difficulty from settings */
+/** Get current difficulty from settings (or adaptive override if set) */
 function _getDifficulty() {
+  if (window._adaptiveOverrideDifficulty) return window._adaptiveOverrideDifficulty;
   try {
     var s = JSON.parse(localStorage.getItem('quant_reflex_settings') || '{}');
     var selectedDifficulty = s.difficulty || 'medium';

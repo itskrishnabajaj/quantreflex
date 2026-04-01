@@ -41,6 +41,37 @@ function createDrillEngine(container, opts) {
   var reviewMode = opts.reviewMode || false;
   var onFinish = opts.onFinish || null;
   var preloadedQuestions = opts._preloadedQuestions || null;
+  var adaptiveMode = opts.adaptive === true;
+
+  /* ---- Adaptive controller state ---- */
+  var _adaptiveHistory = [];   /* [{correct, timeSec}] last N answers */
+  var _adaptiveDifficulty = 'medium';
+  var _ADAPTIVE_WINDOW = 5;    /* look at last 5 answers to decide band */
+
+  function _computeAdaptiveDifficulty() {
+    if (_adaptiveHistory.length < 2) return _adaptiveDifficulty;
+    var window = _adaptiveHistory.slice(-_ADAPTIVE_WINDOW);
+    var correct = 0;
+    var totalTime = 0;
+    for (var i = 0; i < window.length; i++) {
+      if (window[i].correct) correct++;
+      totalTime += window[i].timeSec;
+    }
+    var acc = correct / window.length;
+    var avgTime = totalTime / window.length;
+    if (acc > 0.8 && avgTime < 12) return 'hard';
+    if (acc >= 0.5) return 'medium';
+    return 'easy';
+  }
+
+  function _setAdaptiveOverride(diff) {
+    _adaptiveDifficulty = diff;
+    window._adaptiveOverrideDifficulty = diff;
+  }
+
+  function _clearAdaptiveOverride() {
+    window._adaptiveOverrideDifficulty = null;
+  }
 
   var questions = [];
   var current = 0;
@@ -100,6 +131,12 @@ function createDrillEngine(container, opts) {
 
   function _escHtml(s) { var d = document.createElement('div'); d.textContent = s || ''; return d.innerHTML; }
 
+  function _adaptiveDiffLabel(diff) {
+    if (diff === 'hard') return '<span class="adaptive-mode-pill adaptive-pill-hard">Hard ▲</span>';
+    if (diff === 'easy') return '<span class="adaptive-mode-pill adaptive-pill-easy">Easy ▼</span>';
+    return '<span class="adaptive-mode-pill adaptive-pill-medium">Medium ●</span>';
+  }
+
   function renderQuestion() {
     answered = false;
     var q = questions[current];
@@ -111,11 +148,12 @@ function createDrillEngine(container, opts) {
       ? (current >= reviewOriginalCount ? count : reviewOriginalCount)
       : count;
     var progressPct = displayCount > 0 ? Math.min(100, Math.round(((current) / displayCount) * 100)) : 0;
+    var adaptivePill = adaptiveMode ? _adaptiveDiffLabel(_adaptiveDifficulty) : '';
     container.innerHTML =
       '<button class="session-exit drill-exit-btn" id="drillExitBtn" aria-label="Exit session" title="Exit session">✕</button>' +
       '<div class="card center-content fade-in">' +
         '<div class="drill-question-scroll">' +
-          '<p class="drill-progress">Question ' + (current + 1) + ' / ' + displayCount + '</p>' +
+          '<p class="drill-progress">Question ' + (current + 1) + ' / ' + displayCount + (adaptivePill ? ' ' + adaptivePill : '') + '</p>' +
           '<div class="drill-progress-bar"><div class="drill-progress-fill" style="width:' + progressPct + '%"></div></div>' +
           (timeLimit ? '<p id="globalTimer" class="timer"></p>' : '') +
           (perQLimit ? '<p id="perQTimer" class="timer"></p>' : '') +
@@ -248,6 +286,11 @@ function createDrillEngine(container, opts) {
       }
     }
 
+    /* Track for adaptive controller */
+    if (adaptiveMode) {
+      _adaptiveHistory.push({ correct: correct, timeSec: elapsedRounded });
+    }
+
     if (correct) {
       score++;
       currentSessionStreak++;
@@ -359,15 +402,47 @@ function createDrillEngine(container, opts) {
     if (autoAdvanceTimer) { clearTimeout(autoAdvanceTimer); autoAdvanceTimer = null; }
     current++;
     if (current < count) {
+      /* Adaptive: recompute difficulty and generate a fresh question for next slot */
+      if (adaptiveMode && !preloadedQuestions && !reviewMode) {
+        var newDiff = _computeAdaptiveDifficulty();
+        _setAdaptiveOverride(newDiff);
+        var nextCat = category;
+        if (!nextCat && topics && topics.length) {
+          nextCat = topics[current % topics.length];
+        }
+        var fresh = generateQuestions(1, nextCat || null);
+        if (fresh && fresh.length > 0) questions[current] = fresh[0];
+        _clearAdaptiveOverride();
+      }
       renderQuestion();
     } else {
+      if (adaptiveMode) _clearAdaptiveOverride();
       finish();
     }
+  }
+
+  function _computeSpeedScore(accNum, avgTimeSec) {
+    var timeScore = Math.max(0, Math.min(40, (15 - avgTimeSec) / 15 * 40));
+    var accScore = accNum * 0.6;
+    return Math.round(accScore + timeScore);
+  }
+
+  function _getPercentileBand(speedScore) {
+    if (speedScore >= 75) return 'Top 25%';
+    if (speedScore >= 45) return 'Mid 50%';
+    return 'Bottom 25%';
+  }
+
+  function _getPercentileClass(band) {
+    if (band === 'Top 25%') return 'benchmark-band-top';
+    if (band === 'Mid 50%') return 'benchmark-band-mid';
+    return 'benchmark-band-bottom';
   }
 
   function finish() {
     cleanup();
     _exitDrillSession();
+    if (adaptiveMode) _clearAdaptiveOverride();
     SoundEngine.play('drillEnd');
     /* Haptic feedback on drill completion */
     if (typeof triggerHaptic === 'function') triggerHaptic([50, 50, 100]);
@@ -385,14 +460,20 @@ function createDrillEngine(container, opts) {
     }
 
     var totalTime = ((performance.now() - overallStart) / 1000).toFixed(1);
-    var avg = perQuestionTimes.length
-      ? (perQuestionTimes.reduce(function (a, b) { return a + b; }, 0) / perQuestionTimes.length).toFixed(1)
-      : '0';
+    var avgRaw = perQuestionTimes.length
+      ? (perQuestionTimes.reduce(function (a, b) { return a + b; }, 0) / perQuestionTimes.length)
+      : 0;
+    var avg = avgRaw.toFixed(1);
     var accuracy = ((score / count) * 100).toFixed(0);
+    var accNum = parseFloat(accuracy);
+
+    /* Speed benchmark computation */
+    var speedScore = _computeSpeedScore(accNum, avgRaw);
+    var percentileBand = _getPercentileBand(speedScore);
+    var percentileClass = _getPercentileClass(percentileBand);
 
     /* Performance badge */
     var badgeText, badgeClass;
-    var accNum = parseFloat(accuracy);
     if (accNum >= 90) { badgeText = '🏆 Excellent'; badgeClass = 'badge-excellent'; }
     else if (accNum >= 75) { badgeText = '👍 Good'; badgeClass = 'badge-good'; }
     else if (accNum >= 50) { badgeText = '📝 Needs Practice'; badgeClass = 'badge-practice'; }
@@ -408,6 +489,24 @@ function createDrillEngine(container, opts) {
           '<div class="result-item"><span class="result-value">' + avg + 's</span><span class="result-label">Avg Time</span></div>' +
           '<div class="result-item"><span class="result-value">' + bestSessionStreak + '</span><span class="result-label">Best Streak</span></div>' +
           '<div class="result-item"><span class="result-value">' + totalTime + 's</span><span class="result-label">Total Time</span></div>' +
+        '</div>' +
+        '<div class="speed-benchmark-card" id="speedBenchmarkCard">' +
+          '<div class="benchmark-header">' +
+            '<span class="benchmark-title">⚡ Speed Benchmark</span>' +
+          '</div>' +
+          '<div class="benchmark-score-row">' +
+            '<div class="benchmark-score-block">' +
+              '<span class="benchmark-score-value">' + speedScore + '</span>' +
+              '<span class="benchmark-score-label">Speed Score</span>' +
+            '</div>' +
+            '<div class="benchmark-percentile-block ' + percentileClass + '">' +
+              '<span class="benchmark-percentile-value">' + percentileBand + '</span>' +
+              '<span class="benchmark-percentile-label">Percentile</span>' +
+            '</div>' +
+          '</div>' +
+          '<div class="benchmark-ai-section" id="benchmarkAiSection">' +
+            '<div class="benchmark-ai-placeholder" id="benchmarkAiPlaceholder"></div>' +
+          '</div>' +
         '</div>' +
         '<button class="btn accent" id="tryAgainBtn">Try Again</button>' +
         '<button class="btn" id="homeBtn">Home</button>' +
@@ -427,6 +526,47 @@ function createDrillEngine(container, opts) {
         Router.showView('home');
       }
     });
+
+    /* Speed Benchmark AI summary (premium only) */
+    var benchmarkPlaceholder = container.querySelector('#benchmarkAiPlaceholder');
+    if (benchmarkPlaceholder) {
+      var canUseBenchmark = (typeof canAccessFeature === 'function') ? canAccessFeature('adaptive_training') : false;
+      if (!canUseBenchmark) {
+        benchmarkPlaceholder.innerHTML =
+          '<button class="benchmark-unlock-btn" type="button" id="benchmarkUnlockBtn">🔒 Unlock AI Analysis with Premium</button>';
+        var unlockBtn = container.querySelector('#benchmarkUnlockBtn');
+        if (unlockBtn) unlockBtn.addEventListener('click', function () { if (typeof showPaywall === 'function') showPaywall('settings'); });
+      } else if (typeof AIFeatures !== 'undefined' && typeof AIFeatures.fetchSpeedBenchmark === 'function') {
+        /* Check localStorage cache keyed by session fingerprint */
+        var sessionKey = 'qr_bench_' + accuracy + '_' + avg + '_' + count;
+        var cached = null;
+        try { cached = JSON.parse(localStorage.getItem(sessionKey) || 'null'); } catch (_) {}
+
+        if (cached && cached.summary) {
+          _renderBenchmarkAi(benchmarkPlaceholder, cached);
+        } else {
+          benchmarkPlaceholder.innerHTML = '<p class="benchmark-loading">Analyzing your performance...</p>';
+          AIFeatures.fetchSpeedBenchmark(accNum, parseFloat(avg), speedScore, percentileBand, count, mode, function (err, data) {
+            if (err || !data) {
+              benchmarkPlaceholder.innerHTML = '';
+              return;
+            }
+            try { localStorage.setItem(sessionKey, JSON.stringify(data)); } catch (_) {}
+            _renderBenchmarkAi(benchmarkPlaceholder, data);
+          });
+        }
+      }
+    }
+  }
+
+  function _renderBenchmarkAi(el, data) {
+    if (!el || !data) return;
+    el.innerHTML =
+      '<div class="benchmark-ai-result">' +
+        '<span class="benchmark-level">' + _escHtml(data.level || '') + '</span>' +
+        '<p class="benchmark-summary">' + _escHtml(data.summary || '') + '</p>' +
+        '<p class="benchmark-suggestion"><strong>Tip:</strong> ' + _escHtml(data.suggestion || '') + '</p>' +
+      '</div>';
   }
 
   /* ---- global timer (for timed tests) ---- */
@@ -469,6 +609,7 @@ function createDrillEngine(container, opts) {
     if (overallTimer) { clearInterval(overallTimer); overallTimer = null; }
     if (perQTimer) { clearInterval(perQTimer); perQTimer = null; }
     if (autoAdvanceTimer) { clearTimeout(autoAdvanceTimer); autoAdvanceTimer = null; }
+    if (adaptiveMode) _clearAdaptiveOverride();
   }
 
   /* ---- begin drill ---- */
@@ -524,6 +665,14 @@ function createDrillEngine(container, opts) {
     /* Begin Firestore write batching during drill */
     if (typeof FirestoreSync !== 'undefined') {
       FirestoreSync.beginDrillBatch();
+    }
+
+    /* Set initial adaptive difficulty based on session settings */
+    if (adaptiveMode) {
+      try {
+        var _s = JSON.parse(localStorage.getItem('quant_reflex_settings') || '{}');
+        _setAdaptiveOverride(_s.difficulty || 'medium');
+      } catch (_) { _setAdaptiveOverride('medium'); }
     }
 
     if (preloadedQuestions && preloadedQuestions.length > 0) {

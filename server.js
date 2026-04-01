@@ -245,6 +245,49 @@ app.post('/api/ai/study-plan', authMiddleware, rateLimitMiddleware, premiumGate(
   }
 });
 
+app.post('/api/ai/question-pattern', authMiddleware, rateLimitMiddleware, premiumGate('adaptive_training'), async function (req, res) {
+  try {
+    var body = req.body;
+    var topic = typeof body.topic === 'string' ? body.topic.trim() : '';
+    var difficulty = typeof body.difficulty === 'string' ? body.difficulty.trim() : 'medium';
+    var weakAreas = Array.isArray(body.weakAreas) ? body.weakAreas.slice(0, 10).map(function (s) { return String(s).substring(0, 50); }) : [];
+
+    if (!topic || VALID_CATEGORIES.indexOf(topic) === -1) {
+      return res.status(400).json({ error: { code: 'BAD_REQUEST', message: 'Invalid or missing topic.', retryable: false } });
+    }
+    var validDifficulties = ['easy', 'medium', 'hard'];
+    if (validDifficulties.indexOf(difficulty) === -1) difficulty = 'medium';
+
+    var pattern = await aiService.generateQuestionPattern({ topic: topic, difficulty: difficulty, weakAreas: weakAreas });
+    res.json({ pattern: pattern });
+  } catch (err) {
+    console.error('Question pattern error:', err.message);
+    res.status(500).json({ error: formatError(err) });
+  }
+});
+
+app.post('/api/ai/speed-benchmark', authMiddleware, rateLimitMiddleware, premiumGate('adaptive_training'), async function (req, res) {
+  try {
+    var body = req.body;
+    var accuracy = parseFloat(body.accuracy) || 0;
+    var avgTimeSec = parseFloat(body.avgTimeSec) || 0;
+    var speedScore = parseInt(body.speedScore) || 0;
+    var percentileBand = typeof body.percentileBand === 'string' ? body.percentileBand : 'Mid 50%';
+    var questionCount = parseInt(body.questionCount) || 0;
+    var mode = typeof body.mode === 'string' ? body.mode.substring(0, 80) : 'Drill';
+
+    if (accuracy < 0 || accuracy > 100 || avgTimeSec < 0 || questionCount < 1) {
+      return res.status(400).json({ error: { code: 'BAD_REQUEST', message: 'Invalid session data.', retryable: false } });
+    }
+
+    var benchmark = await aiService.generateSpeedBenchmark({ accuracy: accuracy, avgTimeSec: avgTimeSec, speedScore: speedScore, percentileBand: percentileBand, questionCount: questionCount, mode: mode });
+    res.json({ benchmark: benchmark });
+  } catch (err) {
+    console.error('Speed benchmark error:', err.message);
+    res.status(500).json({ error: formatError(err) });
+  }
+});
+
 app.get('/{*splat}', function (req, res) {
   res.sendFile(path.join(__dirname, 'index.html'));
 });

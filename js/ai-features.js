@@ -924,12 +924,47 @@ var AIFeatures = (function () {
     });
   }
 
+  var _benchmarkInFlight = false;
+
+  function fetchSpeedBenchmark(accuracy, avgTimeSec, speedScore, percentileBand, questionCount, mode, callback) {
+    if (_benchmarkInFlight) { callback('request_in_progress'); return; }
+    _benchmarkInFlight = true;
+
+    _sendAuthenticatedRequest('POST', '/api/ai/speed-benchmark',
+      { accuracy: accuracy, avgTimeSec: avgTimeSec, speedScore: speedScore, percentileBand: percentileBand, questionCount: questionCount, mode: mode }, 20000,
+      function (err, data) {
+        _benchmarkInFlight = false;
+        if (err) { callback(err); return; }
+        callback(null, data.benchmark);
+      });
+  }
+
+  var _patternInFlight = {};
+
+  function prefetchQuestionPattern(topic, difficulty, weakAreas, callback) {
+    var key = topic + '_' + difficulty;
+    if (_patternInFlight[key]) { if (callback) callback('request_in_progress'); return; }
+    _patternInFlight[key] = true;
+
+    _sendAuthenticatedRequest('POST', '/api/ai/question-pattern',
+      { topic: topic, difficulty: difficulty, weakAreas: weakAreas || [] }, 15000,
+      function (err, data) {
+        _patternInFlight[key] = false;
+        if (err || !data) { if (callback) callback(err); return; }
+        /* Store pattern in session window for questions.js _getAdaptiveHint() */
+        window._sessionAdaptivePattern = data.pattern;
+        if (callback) callback(null, data.pattern);
+      });
+  }
+
   return {
     getWordProblemQuota: getWordProblemQuota,
     consumeWordProblemQuota: consumeWordProblemQuota,
     fetchWordProblems: fetchWordProblems,
     fetchExplanation: fetchExplanation,
     fetchInsights: fetchInsights,
+    fetchSpeedBenchmark: fetchSpeedBenchmark,
+    prefetchQuestionPattern: prefetchQuestionPattern,
     showExplanationModal: showExplanationModal,
     renderAICoachCard: renderAICoachCard,
     renderStudyPlanCard: renderStudyPlanCard,

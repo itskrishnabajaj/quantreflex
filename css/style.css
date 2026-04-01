@@ -491,6 +491,147 @@ body.dark-mode .drill-exit-btn:active {
 .badge-practice  { background: #fef9c3; color: #a16207; }
 .badge-weak      { background: #fee2e2; color: #dc2626; }
 
+/* ---- Adaptive Mode Pill (in drill progress line) ---- */
+.adaptive-mode-pill {
+  display: inline-flex;
+  align-items: center;
+  padding: .15rem .55rem;
+  border-radius: 999px;
+  font-size: .72rem;
+  font-weight: 700;
+  vertical-align: middle;
+  letter-spacing: .02em;
+}
+.adaptive-pill-hard   { background: #ede9fe; color: #7c3aed; }
+.adaptive-pill-medium { background: #dbeafe; color: #1d4ed8; }
+.adaptive-pill-easy   { background: #dcfce7; color: #15803d; }
+
+/* ---- Adaptive Toggle Hint ---- */
+.adaptive-toggle-section { margin-top: .75rem; }
+.adaptive-toggle-hint { margin-top: .6rem; }
+.adaptive-hint-text {
+  font-size: .8rem;
+  color: #7c3aed;
+  font-style: italic;
+  text-align: center;
+}
+body.dark-mode .adaptive-hint-text { color: #c4b5fd; }
+
+/* ---- Speed Benchmark Card ---- */
+.speed-benchmark-card {
+  width: 100%;
+  background: linear-gradient(135deg, #f5f3ff 0%, #ede9fe 100%);
+  border: 1px solid #ddd6fe;
+  border-radius: 1rem;
+  padding: 1rem;
+  margin: .5rem 0;
+}
+body.dark-mode .speed-benchmark-card {
+  background: linear-gradient(135deg, #1e1b4b 0%, #312e81 100%);
+  border-color: #4c1d95;
+}
+.benchmark-header {
+  margin-bottom: .75rem;
+}
+.benchmark-title {
+  font-size: .95rem;
+  font-weight: 700;
+  color: #5b21b6;
+}
+body.dark-mode .benchmark-title { color: #c4b5fd; }
+.benchmark-score-row {
+  display: flex;
+  gap: .75rem;
+  margin-bottom: .75rem;
+}
+.benchmark-score-block,
+.benchmark-percentile-block {
+  flex: 1;
+  background: rgba(255,255,255,.65);
+  border-radius: .75rem;
+  padding: .75rem;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+body.dark-mode .benchmark-score-block,
+body.dark-mode .benchmark-percentile-block { background: rgba(0,0,0,.3); }
+.benchmark-score-value {
+  font-size: 1.8rem;
+  font-weight: 800;
+  color: #7c3aed;
+}
+body.dark-mode .benchmark-score-value { color: #a78bfa; }
+.benchmark-score-label {
+  font-size: .75rem;
+  color: #64748b;
+  margin-top: .15rem;
+}
+.benchmark-percentile-value {
+  font-size: 1rem;
+  font-weight: 800;
+}
+.benchmark-percentile-label {
+  font-size: .75rem;
+  color: #64748b;
+  margin-top: .15rem;
+}
+.benchmark-band-top    .benchmark-percentile-value { color: #15803d; }
+.benchmark-band-mid    .benchmark-percentile-value { color: #1d4ed8; }
+.benchmark-band-bottom .benchmark-percentile-value { color: #dc2626; }
+.benchmark-ai-section { margin-top: .25rem; }
+.benchmark-loading {
+  font-size: .82rem;
+  color: #7c3aed;
+  text-align: center;
+  animation: pulse-opacity 1.2s ease-in-out infinite;
+}
+@keyframes pulse-opacity {
+  0%, 100% { opacity: 1; }
+  50%       { opacity: .4; }
+}
+.benchmark-ai-result { display: flex; flex-direction: column; gap: .45rem; }
+.benchmark-level {
+  display: inline-block;
+  background: #7c3aed;
+  color: #fff;
+  border-radius: 999px;
+  padding: .2rem .7rem;
+  font-size: .8rem;
+  font-weight: 700;
+  align-self: flex-start;
+}
+.benchmark-summary {
+  font-size: .85rem;
+  color: #374151;
+  line-height: 1.5;
+}
+body.dark-mode .benchmark-summary { color: #e2e8f0; }
+.benchmark-suggestion {
+  font-size: .82rem;
+  color: #5b21b6;
+  line-height: 1.4;
+}
+body.dark-mode .benchmark-suggestion { color: #c4b5fd; }
+.benchmark-unlock-btn {
+  width: 100%;
+  padding: .6rem 1rem;
+  background: rgba(124,58,237,.1);
+  border: 1px dashed #7c3aed;
+  border-radius: .6rem;
+  color: #7c3aed;
+  font-size: .83rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background .15s;
+}
+.benchmark-unlock-btn:hover { background: rgba(124,58,237,.18); }
+body.dark-mode .benchmark-unlock-btn {
+  background: rgba(124,58,237,.2);
+  border-color: #a78bfa;
+  color: #c4b5fd;
+}
+
 /* ---- Daily Goal ---- */
 .goal-card { position: relative; overflow: hidden; }
 .goal-progress-bar {

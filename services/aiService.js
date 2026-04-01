@@ -551,4 +551,82 @@ async function clearStudyPlanCache(userId, examDate) {
   }
 }
 
-module.exports = { generateWordProblems, generateExplanation, generateInsights, generateStudyPlan, clearStudyPlanCache, verifyIdToken, isUserPremium, checkWordProblemQuota, consumeWordProblemQuota, trackExplanationUsage, trackInsightsUsage, AIServiceError };
+var PATTERN_TTL_DAYS = 30;
+
+async function generateQuestionPattern(params) {
+  var m = getModel();
+  if (!m) throw new AIServiceError('SERVICE_UNAVAILABLE', 'AI service unavailable', true);
+
+  var topic = params.topic;
+  var difficulty = params.difficulty;
+  var weakAreas = Array.isArray(params.weakAreas) ? params.weakAreas : [];
+
+  var cacheId = topic + '_' + difficulty;
+  try {
+    var cached = await db.collection('aiPatterns').doc(cacheId).get();
+    if (cached.exists) {
+      var data = cached.data();
+      var ageMs = Date.now() - (data.createdAt ? data.createdAt.toMillis() : 0);
+      if (ageMs < PATTERN_TTL_DAYS * 24 * 60 * 60 * 1000) {
+        return { pattern: data.pattern, type: data.type, subTypes: data.subTypes };
+      }
+    }
+  } catch (cacheErr) {
+    console.warn('Pattern cache read failed:', cacheErr.message);
+  }
+
+  var topicLabel = CATEGORY_LABELS[topic] || topic;
+  var weakStr = weakAreas.length > 0 ? weakAreas.join(', ') : 'none identified';
+
+  var prompt = 'You are an expert quantitative aptitude coach.\n\nGenerate a question pattern guide for:\n- Topic: ' + topicLabel + '\n- Difficulty: ' + difficulty + '\n- User weak areas: ' + weakStr + '\n\nReturn ONLY a valid JSON object:\n{\n  "pattern": "2-3 sentence description of the optimal question pattern and mental approach for this difficulty level",\n  "type": "one of: direct, inverse, multi-step, application, estimation",\n  "subTypes": ["specific sub-type 1", "specific sub-type 2", "specific sub-type 3"]\n}\n\nFor ' + difficulty + ' difficulty on ' + topicLabel + ':\n- easy: focus on straightforward recall and direct computation\n- medium: include inverse operations and two-step problems\n- hard: multi-step problems, application to word problems, estimation under pressure\n\nReturn ONLY the JSON object, no markdown, no explanation.';
+
+  var result = await _callAndParse(m, prompt, function (parsed) {
+    if (!parsed || typeof parsed.pattern !== 'string') return null;
+    if (typeof parsed.type !== 'string') return null;
+    if (!Array.isArray(parsed.subTypes)) return null;
+    return { pattern: parsed.pattern, type: parsed.type, subTypes: parsed.subTypes.slice(0, 5).map(String) };
+  });
+
+  if (!result) throw new AIServiceError('INVALID_RESPONSE', 'Invalid pattern format after retries', true);
+
+  try {
+    await db.collection('aiPatterns').doc(cacheId).set({
+      topic: topic,
+      difficulty: difficulty,
+      pattern: result.pattern,
+      type: result.type,
+      subTypes: result.subTypes,
+      createdAt: admin.firestore.FieldValue.serverTimestamp()
+    });
+  } catch (writeErr) {
+    console.warn('Pattern cache write failed:', writeErr.message);
+  }
+
+  return result;
+}
+
+async function generateSpeedBenchmark(params) {
+  var m = getModel();
+  if (!m) throw new AIServiceError('SERVICE_UNAVAILABLE', 'AI service unavailable', true);
+
+  var accuracy = params.accuracy;
+  var avgTimeSec = params.avgTimeSec;
+  var speedScore = params.speedScore;
+  var percentileBand = params.percentileBand;
+  var questionCount = params.questionCount;
+  var mode = params.mode || 'Drill';
+
+  var prompt = 'You are a mental math coach analyzing a student\'s training session.\n\nSession results:\n- Mode: ' + mode + '\n- Questions answered: ' + questionCount + '\n- Accuracy: ' + accuracy + '%\n- Average time per question: ' + avgTimeSec + 's\n- Speed score (0-100): ' + speedScore + '\n- Percentile band: ' + percentileBand + '\n\nProvide a brief, motivating performance summary.\n\nReturn ONLY a valid JSON object:\n{\n  "summary": "2-3 sentences analyzing speed and accuracy, referencing the actual numbers",\n  "level": "one of: Blazing Fast, Quick Thinker, Steady Pacer, Needs Speed Work",\n  "suggestion": "One specific, actionable tip to improve speed-accuracy balance"\n}\n\nReturn ONLY the JSON object, no markdown, no explanation.';
+
+  var result = await _callAndParse(m, prompt, function (parsed) {
+    if (!parsed || typeof parsed.summary !== 'string') return null;
+    if (typeof parsed.level !== 'string') return null;
+    if (typeof parsed.suggestion !== 'string') return null;
+    return { summary: parsed.summary, level: parsed.level, suggestion: parsed.suggestion };
+  });
+
+  if (!result) throw new AIServiceError('INVALID_RESPONSE', 'Invalid benchmark format after retries', true);
+  return result;
+}
+
+module.exports = { generateWordProblems, generateExplanation, generateInsights, generateStudyPlan, clearStudyPlanCache, generateQuestionPattern, generateSpeedBenchmark, verifyIdToken, isUserPremium, checkWordProblemQuota, consumeWordProblemQuota, trackExplanationUsage, trackInsightsUsage, AIServiceError };

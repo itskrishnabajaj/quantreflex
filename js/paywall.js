@@ -18,7 +18,9 @@ var _LOCKED_FEATURES = {
   focus_timer: true,
   table_modal: true,
   ai_explain: true,
-  ai_coach: true
+  ai_coach: true,
+  ai_study_plan: true,
+  adaptive_training: true
 };
 var PAYWALL_DEBOUNCE_MS = 280;
 var PAYMENT_TIMEOUT_MS = 120000;
@@ -123,6 +125,11 @@ function _getPaywallCopy(featureType) {
       title: 'Focus Timer Pro',
       subtitle: 'Add timed pressure to your Focus Training sessions.',
       bullets: ['Per-question or total session timer', 'Custom seconds control', 'Build exam-speed reflexes']
+    },
+    adaptive_training: {
+      title: 'Adaptive Training Pro',
+      subtitle: 'Let AI adjust question difficulty in real time based on your performance.',
+      bullets: ['Auto-scales Easy → Medium → Hard', 'Speed Benchmark with percentile rank', 'AI performance analysis post-session']
     },
     table_modal: {
       title: 'Full-Screen Tables Pro',
