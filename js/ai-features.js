@@ -1044,15 +1044,18 @@ var AIFeatures = (function () {
 
   function fetchSpeedBenchmark(accuracy, avgTimeSec, speedScore, percentileBand, questionCount, mode, callback) {
     try {
-      var result = _generateLocalBenchmark(accuracy, avgTimeSec, speedScore);
+      var result = _generateLocalBenchmark(accuracy, avgTimeSec, speedScore, percentileBand);
       callback(null, result);
     } catch (e) {
       callback('benchmark_error');
     }
   }
 
-  function _generateLocalBenchmark(accuracy, avgTimeSec, speedScore) {
+  function _generateLocalBenchmark(accuracy, avgTimeSec, speedScore, percentileBand) {
     var level, summary, suggestion;
+    var accNum = parseFloat(accuracy) || 0;
+    var timeNum = parseFloat(avgTimeSec) || 0;
+    var band = typeof percentileBand === 'string' ? percentileBand : '';
 
     if (speedScore >= 85) {
       level = 'Blazing Fast';
@@ -1064,17 +1067,16 @@ var AIFeatures = (function () {
       level = 'Needs Speed Work';
     }
 
-    var accNum = parseFloat(accuracy) || 0;
-    var timeNum = parseFloat(avgTimeSec) || 0;
+    var bandPhrase = band ? ' (' + band + ')' : '';
 
     if (speedScore >= 85) {
-      summary = 'Outstanding session! You nailed ' + accNum.toFixed(0) + '% accuracy at ' + timeNum.toFixed(1) + 's per question — that\'s top-tier reflex performance.';
+      summary = 'Outstanding session! You nailed ' + accNum.toFixed(0) + '% accuracy at ' + timeNum.toFixed(1) + 's per question' + bandPhrase + ' — that\'s top-tier reflex performance.';
     } else if (speedScore >= 65) {
-      summary = 'Strong work — ' + accNum.toFixed(0) + '% accuracy with an average of ' + timeNum.toFixed(1) + 's per question. Your speed and precision are well balanced.';
+      summary = 'Strong work — ' + accNum.toFixed(0) + '% accuracy with an average of ' + timeNum.toFixed(1) + 's per question' + bandPhrase + '. Your speed and precision are well balanced.';
     } else if (speedScore >= 40) {
-      summary = 'Solid effort with ' + accNum.toFixed(0) + '% accuracy. At ' + timeNum.toFixed(1) + 's per question you\'re building a reliable base — keep pushing the pace.';
+      summary = 'Solid effort with ' + accNum.toFixed(0) + '% accuracy at ' + timeNum.toFixed(1) + 's per question' + bandPhrase + '. Keep pushing the pace to climb the rankings.';
     } else {
-      summary = 'You answered at ' + accNum.toFixed(0) + '% accuracy and ' + timeNum.toFixed(1) + 's per question. Focus on core formulas first, then chip away at your response time.';
+      summary = 'You answered at ' + accNum.toFixed(0) + '% accuracy and ' + timeNum.toFixed(1) + 's per question' + bandPhrase + '. Focus on core formulas first, then chip away at your response time.';
     }
 
     if (accNum < 60) {
