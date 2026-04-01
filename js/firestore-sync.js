@@ -708,6 +708,16 @@ var FirestoreSync = (function () {
     if (Object.keys(_pendingUpdates).length > 0) {
       _flushUpdates();
     }
+    /* Flush subcollections once at drill end using latest cached stats.
+       This guarantees performance/overall and practice/data are updated
+       even though per-answer calls are gated by _drillActive. */
+    if (_memoryCache && _memoryCache.stats) {
+      _syncPerformanceSubcollection(_memoryCache.stats);
+      _syncPracticeSubcollection(
+        _memoryCache.stats,
+        Array.isArray(_memoryCache.bookmarks) ? _memoryCache.bookmarks : null
+      );
+    }
   }
 
   /* Flush pending updates when the page is closing */
