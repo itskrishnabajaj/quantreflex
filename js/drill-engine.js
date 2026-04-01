@@ -610,6 +610,8 @@ function createDrillEngine(container, opts) {
     if (perQTimer) { clearInterval(perQTimer); perQTimer = null; }
     if (autoAdvanceTimer) { clearTimeout(autoAdvanceTimer); autoAdvanceTimer = null; }
     if (adaptiveMode) _clearAdaptiveOverride();
+    /* Clear session pattern so non-adaptive sessions don't inherit stale hints */
+    window._sessionAdaptivePattern = null;
   }
 
   /* ---- begin drill ---- */

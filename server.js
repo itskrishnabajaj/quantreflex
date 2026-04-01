@@ -259,7 +259,8 @@ app.post('/api/ai/question-pattern', authMiddleware, rateLimitMiddleware, premiu
     if (validDifficulties.indexOf(difficulty) === -1) difficulty = 'medium';
 
     var pattern = await aiService.generateQuestionPattern({ topic: topic, difficulty: difficulty, weakAreas: weakAreas });
-    res.json({ pattern: pattern });
+    /* Return pattern object directly: {pattern, type, logic} */
+    res.json(pattern);
   } catch (err) {
     console.error('Question pattern error:', err.message);
     res.status(500).json({ error: formatError(err) });
@@ -281,7 +282,8 @@ app.post('/api/ai/speed-benchmark', authMiddleware, rateLimitMiddleware, premium
     }
 
     var benchmark = await aiService.generateSpeedBenchmark({ accuracy: accuracy, avgTimeSec: avgTimeSec, speedScore: speedScore, percentileBand: percentileBand, questionCount: questionCount, mode: mode });
-    res.json({ benchmark: benchmark });
+    /* Return benchmark object directly: {summary, level, suggestion} */
+    res.json(benchmark);
   } catch (err) {
     console.error('Speed benchmark error:', err.message);
     res.status(500).json({ error: formatError(err) });

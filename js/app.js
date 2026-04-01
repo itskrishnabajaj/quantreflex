@@ -1559,9 +1559,20 @@ function startDrillFromPractice(modeKey, category, categoryLabel) {
   if (customPracticeConfig) customPracticeConfig.style.display = 'none';
   drillContainer.style.display = 'block';
 
-  /* Prefetch AI question pattern for adaptive sessions (fire-and-forget, non-blocking).
-   * Works for both Focus mode (config.category) and Custom mode (config.topics array).
-   * Picks the first topic when multiple are selected (pattern guidance is per-topic). */
+  /* Always clear stale session pattern at session boundary so non-adaptive sessions
+   * cannot be influenced by a prior adaptive run's AI hints. */
+  window._sessionAdaptivePattern = null;
+
+  /* Prefetch AI question pattern for adaptive sessions.
+   * Works for both Focus mode (config.category) and Custom mode (config.topics[0]).
+   * Waits up to 2.5s for pattern arrival before starting engine (with immediate fallback). */
+  var _didStartEngine = false;
+  function _doStartEngine() {
+    if (_didStartEngine) return;
+    _didStartEngine = true;
+    _startPracticeEngine(drillContainer, config);
+  }
+
   if (_useAdaptive && typeof AIFeatures !== 'undefined' && typeof AIFeatures.prefetchQuestionPattern === 'function') {
     var _prefetchTopic = config.category || (Array.isArray(config.topics) && config.topics.length > 0 ? config.topics[0] : null);
     if (_prefetchTopic) {
@@ -1576,12 +1587,20 @@ function startDrillFromPractice(modeKey, category, categoryLabel) {
             if (_cd.attempted >= 5 && (_cd.correct / _cd.attempted) < 0.6) _weakAreas.push(_k);
           }
         } catch (_) {}
-        AIFeatures.prefetchQuestionPattern(_prefetchTopic, _s.difficulty || 'medium', _weakAreas, null);
-      } catch (_) {}
+        /* Start engine once pattern arrives; fall back after 2.5s regardless */
+        var _patternTimeout = setTimeout(_doStartEngine, 2500);
+        AIFeatures.prefetchQuestionPattern(_prefetchTopic, _s.difficulty || 'medium', _weakAreas, function () {
+          clearTimeout(_patternTimeout);
+          _doStartEngine();
+        });
+      } catch (_) {
+        _doStartEngine();
+      }
+      return; /* Engine will be started asynchronously above */
     }
   }
 
-  _startPracticeEngine(drillContainer, config);
+  _doStartEngine();
 }
 
 function _startPracticeEngine(drillContainer, config) {
@@ -1651,6 +1670,9 @@ function _resetAdaptiveToggle() {
   if (toggle) toggle.checked = false;
   var hint = document.getElementById('adaptiveHint');
   if (hint) hint.style.display = 'none';
+  /* Restore difficulty selector in case adaptive had disabled it */
+  var diffSel = document.getElementById('difficultySelect');
+  if (diffSel) { diffSel.disabled = false; diffSel.title = ''; diffSel.style.opacity = ''; }
 }
 
 function _updateTimerOptionFromUI() {
@@ -1698,10 +1720,16 @@ function _initAdaptiveToggle() {
       _adaptiveModeActive = true;
       var hint = document.getElementById('adaptiveHint');
       if (hint) hint.style.display = 'block';
+      /* Disable manual difficulty selector while adaptive is active */
+      var diffSel = document.getElementById('difficultySelect');
+      if (diffSel) { diffSel.disabled = true; diffSel.title = 'Difficulty is auto-managed by Adaptive Training'; diffSel.style.opacity = '0.45'; }
     } else {
       _adaptiveModeActive = false;
       var hint2 = document.getElementById('adaptiveHint');
       if (hint2) hint2.style.display = 'none';
+      /* Restore manual difficulty selector */
+      var diffSel2 = document.getElementById('difficultySelect');
+      if (diffSel2) { diffSel2.disabled = false; diffSel2.title = ''; diffSel2.style.opacity = ''; }
     }
     if (typeof SoundEngine !== 'undefined') SoundEngine.play('settingsToggle');
   });

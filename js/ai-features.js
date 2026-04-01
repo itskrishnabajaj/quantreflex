@@ -935,7 +935,8 @@ var AIFeatures = (function () {
       function (err, data) {
         _benchmarkInFlight = false;
         if (err) { callback(err); return; }
-        callback(null, data.benchmark);
+        /* Response is {summary, level, suggestion} directly */
+        callback(null, data);
       });
   }
 
@@ -951,9 +952,9 @@ var AIFeatures = (function () {
       function (err, data) {
         _patternInFlight[key] = false;
         if (err || !data) { if (callback) callback(err); return; }
-        /* Store pattern in session window for questions.js _getAdaptiveHint() */
-        window._sessionAdaptivePattern = data.pattern;
-        if (callback) callback(null, data.pattern);
+        /* Response is {pattern, type, logic} directly — store for questions.js _getAdaptiveHint() */
+        window._sessionAdaptivePattern = data;
+        if (callback) callback(null, data);
       });
   }
 
