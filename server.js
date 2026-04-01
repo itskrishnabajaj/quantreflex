@@ -301,6 +301,9 @@ app.post('/api/subscriptions/verify', authMiddleware, async function (req, res) 
     res.json({ success: true, expiry: expiry, plan: trustedPlan });
   } catch (err) {
     console.error('Verify subscription error:', err.message);
+    if (err instanceof aiService.AIServiceError && err.code === 'PAYMENT_REPLAY') {
+      return res.status(409).json({ error: { code: 'PAYMENT_REPLAY', message: err.message, retryable: false } });
+    }
     res.status(500).json({ error: { code: 'INTERNAL_ERROR', message: 'Could not activate subscription. Please contact support.', retryable: false } });
   }
 });

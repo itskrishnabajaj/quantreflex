@@ -90,14 +90,34 @@ async function isUserPremiumPlus(uid) {
 async function unlockPremiumPlus(uid, plan, paymentId) {
   var days = plan === 'yearly' ? 365 : 30;
   var expiry = Date.now() + days * 24 * 60 * 60 * 1000;
-  var payload = {
-    isPremiumPlus: true,
-    premiumPlusPlan: plan,
-    premiumPlusExpiry: expiry,
-    premiumPlusStatus: 'active'
-  };
-  if (paymentId) payload.lastPremiumPlusPaymentId = String(paymentId);
-  await db.collection('users').doc(uid).set(payload, { merge: true });
+
+  var paymentRef = db.collection('payments').doc(String(paymentId));
+  var userRef = db.collection('users').doc(uid);
+
+  await db.runTransaction(async function (tx) {
+    var paymentDoc = await tx.get(paymentRef);
+    if (paymentDoc.exists) {
+      var existing = paymentDoc.data();
+      if (existing.uid !== uid) {
+        throw new AIServiceError('PAYMENT_REPLAY', 'Payment already used by another account.', false);
+      }
+      return;
+    }
+    tx.create(paymentRef, {
+      uid: uid,
+      plan: plan,
+      expiry: expiry,
+      claimedAt: Date.now()
+    });
+    tx.set(userRef, {
+      isPremiumPlus: true,
+      premiumPlusPlan: plan,
+      premiumPlusExpiry: expiry,
+      premiumPlusStatus: 'active',
+      lastPremiumPlusPaymentId: String(paymentId)
+    }, { merge: true });
+  });
+
   return expiry;
 }
 
