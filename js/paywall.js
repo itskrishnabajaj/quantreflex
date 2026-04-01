@@ -97,7 +97,7 @@ function canAccessCustomMode(user) {
 function _getPaywallCopy(featureType) {
   var map = {
     custom_training: {
-      accent: '🎯 You tried to start a custom session — a Premium feature.'
+      accent: '🎯 You tried to start a custom session. This is a Premium feature.'
     },
     review_mistakes: {
       accent: '📋 Reviewing your mistakes is a Premium feature.'
@@ -118,7 +118,7 @@ function _getPaywallCopy(featureType) {
       accent: '⏱ Focus Timer is a Premium feature.'
     },
     adaptive_training: {
-      accent: '🤖 Adaptive Training adjusts difficulty in real time — Premium only.'
+      accent: '🤖 Adaptive Training adjusts difficulty in real time. Premium only.'
     },
     table_modal: {
       accent: '📋 Full-screen table view is a Premium feature.'
@@ -311,10 +311,10 @@ function showPaywall(featureType) {
       (copy.accent ? '<p class="paywall-context-accent">' + copy.accent + '</p>' : '') +
 
       '<ul class="paywall-benefits">' +
-        '<li><span class="paywall-benefit-icon">⚡</span><span>Build calculation speed for exam pressure</span></li>' +
-        '<li><span class="paywall-benefit-icon">🎯</span><span>Target weak areas and fix recurring mistakes</span></li>' +
-        '<li><span class="paywall-benefit-icon">📈</span><span>Track your improvement with detailed insights</span></li>' +
-        '<li><span class="paywall-benefit-icon">🧠</span><span>Adaptive training that grows with your skill</span></li>' +
+        '<li><span class="paywall-benefit-icon">⚡</span><span>Train your brain for speed</span></li>' +
+        '<li><span class="paywall-benefit-icon">🎯</span><span>Improve weak areas faster</span></li>' +
+        '<li><span class="paywall-benefit-icon">📈</span><span>Build accuracy and consistency</span></li>' +
+        '<li><span class="paywall-benefit-icon">🧠</span><span>Learn from mistakes instantly</span></li>' +
       '</ul>' +
 
       '<div class="paywall-plans">' +
@@ -361,14 +361,16 @@ function showPaywall(featureType) {
         '<tbody>' +
           '<tr><td>Practice drills</td><td>✓</td><td class="paywall-compare-highlight">✓</td><td>✓</td></tr>' +
           '<tr><td>Custom training</td><td>✗</td><td class="paywall-compare-highlight">✓</td><td>✓</td></tr>' +
+          '<tr><td>Review mistakes</td><td>✗</td><td class="paywall-compare-highlight">✓</td><td>✓</td></tr>' +
           '<tr><td>Adaptive training</td><td>✗</td><td class="paywall-compare-highlight">✓</td><td>✓</td></tr>' +
+          '<tr><td>Speed benchmark</td><td>✗</td><td class="paywall-compare-highlight">✓</td><td>✓</td></tr>' +
           '<tr><td>AI features</td><td>✗</td><td class="paywall-compare-highlight">✗</td><td>✓</td></tr>' +
         '</tbody>' +
       '</table>' +
 
       '<div class="paywall-social-proof">' +
         '<p class="paywall-trust">⭐ Used by CAT, GMAT &amp; CET aspirants daily</p>' +
-        '<p class="paywall-urgency">🔥 Lifetime pricing — only while it lasts</p>' +
+        '<p class="paywall-urgency">🔥 Lifetime pricing · only while it lasts</p>' +
       '</div>' +
 
       '<div class="paywall-sticky-footer">' +
@@ -407,7 +409,7 @@ function showPaywall(featureType) {
   var plusBtn = overlay.querySelector('.paywall-plus-btn');
   if (plusBtn) {
     plusBtn.addEventListener('click', function () {
-      showToast('Premium+ coming soon — contact us to express interest.');
+      showToast('Premium+ coming soon. Contact us to express interest.');
     });
   }
 
