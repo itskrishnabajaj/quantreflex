@@ -352,13 +352,28 @@ var FirestoreSync = (function () {
         });
       });
     }).then(function () {
-      /* Non-blocking: seed structured subcollections for new user */
+      /* Non-blocking: eagerly seed all structured subcollections for new user */
       var mc = _memoryCache || fallbackDefaults;
+      var seedDocRef = _getUserDocRef();
       _syncProfileSubcollection(
         { name: (mc.profile && mc.profile.name) || '', username: (mc.profile && mc.profile.username) || '' },
         { isPremium: !!mc.isPremium, isTrial: !!mc.isTrial, trialEnd: mc.trialEnd || null, isEarlyUser: !!mc.isEarlyUser, hasPaid: !!mc.hasPaid }
       );
       _syncPerformanceSubcollection(mc.stats || fallbackDefaults.stats);
+      /* Eagerly create practice/data and ai/usage so all subcollections exist from day 0 */
+      if (seedDocRef) {
+        seedDocRef.collection('practice').doc('data').set({
+          mistakes: [],
+          savedQuestions: [],
+          updatedAt: new Date().toISOString()
+        }, { merge: true }).catch(function (err) { console.warn('Practice seed failed:', err); });
+        seedDocRef.collection('ai').doc('usage').set({
+          wordProblemsUsedLifetime: 0,
+          wordProblemsUsedToday: 0,
+          explanationsUsed: 0,
+          updatedAt: new Date().toISOString()
+        }, { merge: true }).catch(function (err) { console.warn('AI usage seed failed:', err); });
+      }
     }).catch(function (err) {
       console.warn('Firestore default document creation failed:', err);
       fallbackDefaults.isPremium = false;
