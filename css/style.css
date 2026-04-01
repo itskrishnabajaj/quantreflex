@@ -1678,6 +1678,8 @@ body.paywall-open {
   padding: .9rem .8rem;
   text-align: left;
   position: relative;
+  cursor: pointer;
+  transition: box-shadow .15s, border-color .15s, transform .12s;
 }
 
 .paywall-plan-premium {
@@ -2076,11 +2078,6 @@ body.dark-mode .stats-insights-locked-cta {
 }
 
 /* Paywall plan card interactive selection state */
-.paywall-plan {
-  cursor: pointer;
-  transition: box-shadow .15s, border-color .15s, transform .12s;
-}
-
 .paywall-plan-premium:not(.paywall-plan-deselected) {
   box-shadow: 0 4px 22px rgba(37,99,235,.45);
   transform: translateY(-1px);

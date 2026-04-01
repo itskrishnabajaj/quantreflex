@@ -44,7 +44,7 @@ var AIFeatures = (function () {
     }
     if (typeof FirestoreSync !== 'undefined' && typeof FirestoreSync.getAccessState === 'function') {
       var state = FirestoreSync.getAccessState();
-      if (state && (state.isPremium === true || state.hasPaid === true || state.isEarlyUser === true || state.isTrial === true)) return true;
+      if (state && state.isPremiumPlus === true) return true;
     }
     return false;
   }

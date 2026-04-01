@@ -68,7 +68,12 @@ async function authMiddleware(req, res, next) {
 
   req.userId = decoded.uid;
   try {
-    req.userPremium = await aiService.isUserPremium(decoded.uid);
+    var entitlement = await Promise.all([
+      aiService.isUserPremium(decoded.uid),
+      aiService.isUserPremiumPlus(decoded.uid)
+    ]);
+    req.userPremium = entitlement[0];
+    req.userPremiumPlus = entitlement[1];
   } catch (entitlementErr) {
     return res.status(503).json({ error: formatError(entitlementErr) });
   }
@@ -86,6 +91,17 @@ function premiumGate(featureKey) {
   };
 }
 
+function premiumPlusGate(featureKey) {
+  return function (req, res, next) {
+    if (!req.userPremiumPlus) {
+      return res.status(403).json({
+        error: { code: 'PREMIUM_PLUS_REQUIRED', message: 'This feature requires a Premium+ subscription.', retryable: false }
+      });
+    }
+    next();
+  };
+}
+
 function formatError(err) {
   if (err instanceof aiService.AIServiceError) {
     return { code: err.code, message: err.message, retryable: err.retryable };
@@ -93,11 +109,11 @@ function formatError(err) {
   return { code: 'INTERNAL_ERROR', message: 'An unexpected error occurred. Try again later.', retryable: true };
 }
 
-app.post('/api/ai/word-problems', authMiddleware, rateLimitMiddleware, async function (req, res) {
+app.post('/api/ai/word-problems', authMiddleware, rateLimitMiddleware, premiumPlusGate('ai_word_problems'), async function (req, res) {
   try {
-    var remaining = await aiService.checkWordProblemQuota(req.userId, req.userPremium);
+    var remaining = await aiService.checkWordProblemQuota(req.userId, req.userPremiumPlus);
     if (remaining <= 0) {
-      var msg = req.userPremium ? 'Daily word problem limit reached. Come back tomorrow.' : 'Free word problem limit reached. Upgrade to Premium for more.';
+      var msg = req.userPremiumPlus ? 'Daily word problem limit reached. Come back tomorrow.' : 'Free word problem limit reached. Upgrade to Premium+ for more.';
       return res.status(429).json({ error: { code: 'QUOTA_EXCEEDED', message: msg, retryable: false } });
     }
     var body = req.body;
@@ -117,7 +133,7 @@ app.post('/api/ai/word-problems', authMiddleware, rateLimitMiddleware, async fun
     var clampedCount = Math.min(Math.max(parseInt(count) || 5, 1), 25);
     clampedCount = Math.min(clampedCount, remaining);
     var questions = await aiService.generateWordProblems(category, difficulty, clampedCount);
-    await aiService.consumeWordProblemQuota(req.userId, req.userPremium, questions.length);
+    await aiService.consumeWordProblemQuota(req.userId, req.userPremiumPlus, questions.length);
     res.json({ questions: questions, remaining: remaining - questions.length });
   } catch (err) {
     console.error('Word problems error:', err.message);
@@ -125,7 +141,7 @@ app.post('/api/ai/word-problems', authMiddleware, rateLimitMiddleware, async fun
   }
 });
 
-app.post('/api/ai/explain', authMiddleware, rateLimitMiddleware, premiumGate('ai_explain'), async function (req, res) {
+app.post('/api/ai/explain', authMiddleware, rateLimitMiddleware, premiumPlusGate('ai_explain'), async function (req, res) {
   try {
     var body = req.body;
     var question = typeof body.question === 'string' ? body.question.substring(0, MAX_QUESTION_INPUT_LENGTH) : '';
@@ -144,7 +160,7 @@ app.post('/api/ai/explain', authMiddleware, rateLimitMiddleware, premiumGate('ai
   }
 });
 
-app.post('/api/ai/insights', authMiddleware, rateLimitMiddleware, premiumGate('ai_coach'), async function (req, res) {
+app.post('/api/ai/insights', authMiddleware, rateLimitMiddleware, premiumPlusGate('ai_coach'), async function (req, res) {
   try {
     var rawStats = req.body.stats;
     if (!rawStats) {
@@ -179,7 +195,7 @@ app.post('/api/ai/insights', authMiddleware, rateLimitMiddleware, premiumGate('a
   }
 });
 
-app.post('/api/ai/study-plan', authMiddleware, rateLimitMiddleware, premiumGate('ai_study_plan'), async function (req, res) {
+app.post('/api/ai/study-plan', authMiddleware, rateLimitMiddleware, premiumPlusGate('ai_study_plan'), async function (req, res) {
   try {
     var body = req.body;
     var examName = typeof body.examName === 'string' ? body.examName.trim().substring(0, 100) : '';

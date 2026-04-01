@@ -61,16 +61,21 @@ function _resetPaymentGuards(enableButton) {
   if (enableButton && _paywallUpgradeBtn) _paywallUpgradeBtn.disabled = false;
 }
 
+var _AI_FEATURES = { ai_explain: true, ai_coach: true, ai_study_plan: true };
+
 function _getAccessUserState() {
   if (typeof FirestoreSync !== 'undefined' && typeof FirestoreSync.getAccessState === 'function') {
     var state = FirestoreSync.getAccessState();
     if (state) return state;
   }
-  return { isPremium: false, isTrial: false, hasPaid: false, isEarlyUser: false, trialEnd: null };
+  return { isPremium: false, isPremiumPlus: false, isTrial: false, hasPaid: false, isEarlyUser: false, trialEnd: null };
 }
 
 function canAccess(feature, user) {
   var normalizedUser = user || _getAccessUserState();
+  if (_AI_FEATURES[feature]) {
+    return !!(normalizedUser && normalizedUser.isPremiumPlus === true);
+  }
   if (normalizedUser && normalizedUser.isPremium === true) return true;
   if (normalizedUser && normalizedUser.hasPaid === true) return true;
   if (normalizedUser && normalizedUser.isEarlyUser === true) return true;
@@ -226,7 +231,7 @@ function openPayment(userId) {
     }
     var options = {
       key: RAZORPAY_LIVE_KEY,
-      amount: 6900,
+      amount: 7900,
       currency: 'INR',
       name: 'QuantReflex',
       description: 'Lifetime Premium Access',

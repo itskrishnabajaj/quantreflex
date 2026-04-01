@@ -66,6 +66,18 @@ async function isUserPremium(uid) {
   }
 }
 
+async function isUserPremiumPlus(uid) {
+  try {
+    var doc = await db.collection('users').doc(uid).get();
+    if (!doc.exists) return false;
+    var data = doc.data();
+    return data.isPremiumPlus === true;
+  } catch (err) {
+    console.error('PremiumPlus lookup failed for uid ' + uid + ':', err.message);
+    throw new AIServiceError('ENTITLEMENT_ERROR', 'Unable to verify subscription status. Please try again.', true);
+  }
+}
+
 var WP_FREE_LIMIT = 5;
 var WP_PREMIUM_DAILY = 25;
 var MAX_QUESTION_LENGTH = 300;
@@ -551,4 +563,4 @@ async function clearStudyPlanCache(userId, examDate) {
   }
 }
 
-module.exports = { generateWordProblems, generateExplanation, generateInsights, generateStudyPlan, clearStudyPlanCache, verifyIdToken, isUserPremium, checkWordProblemQuota, consumeWordProblemQuota, trackExplanationUsage, trackInsightsUsage, AIServiceError };
+module.exports = { generateWordProblems, generateExplanation, generateInsights, generateStudyPlan, clearStudyPlanCache, verifyIdToken, isUserPremium, isUserPremiumPlus, checkWordProblemQuota, consumeWordProblemQuota, trackExplanationUsage, trackInsightsUsage, AIServiceError };
