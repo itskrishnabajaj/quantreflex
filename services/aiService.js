@@ -491,7 +491,9 @@ async function generateStudyPlan(params) {
       var data = cached.data();
       var createdMs = data.createdAt ? data.createdAt.toMillis() : 0;
       var ageMs = Date.now() - createdMs;
-      if (ageMs < STUDY_PLAN_TTL_DAYS * 24 * 60 * 60 * 1000) {
+      var examNameMatch = data.examName === examName;
+      var dailyTimeMatch = data.dailyTimeMinutes === dailyTimeMinutes;
+      if (ageMs < STUDY_PLAN_TTL_DAYS * 24 * 60 * 60 * 1000 && examNameMatch && dailyTimeMatch) {
         return { strategy: data.strategy, weeklyPlan: data.weeklyPlan, dailyStructure: data.dailyStructure, tip: data.tip };
       }
     }
@@ -524,6 +526,7 @@ async function generateStudyPlan(params) {
       userId: userId,
       examName: examName,
       examDate: examDate,
+      dailyTimeMinutes: dailyTimeMinutes,
       strategy: result.strategy,
       weeklyPlan: result.weeklyPlan,
       dailyStructure: result.dailyStructure,
