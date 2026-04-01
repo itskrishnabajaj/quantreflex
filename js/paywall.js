@@ -404,11 +404,16 @@ function openPremiumPlusPayment(plan, userId) {
 
 function showPaywall(featureType) {
   var user = _getAccessUserState();
-  if (user && user.isPremium === true) return;
-  if (user && (user.hasPaid === true || user.isEarlyUser === true)) return;
-  if (user && user.isTrial === true) {
-    var te = _toMillis(user.trialEnd);
-    if (te > 0 && Date.now() <= te) return;
+  var isAiFeature = !!_AI_FEATURES[featureType];
+  if (!isAiFeature) {
+    if (user && user.isPremium === true) return;
+    if (user && (user.hasPaid === true || user.isEarlyUser === true)) return;
+    if (user && user.isTrial === true) {
+      var te = _toMillis(user.trialEnd);
+      if (te > 0 && Date.now() <= te) return;
+    }
+  } else {
+    if (user && user.isPremiumPlus === true) return;
   }
   var now = Date.now();
   if (now - _paywallLastOpenAt < PAYWALL_DEBOUNCE_MS) return;

@@ -285,13 +285,9 @@ app.post('/api/subscriptions/verify', authMiddleware, async function (req, res) 
     var orderId = typeof body.orderId === 'string' ? body.orderId.trim() : '';
     var paymentId = typeof body.paymentId === 'string' ? body.paymentId.trim() : '';
     var signature = typeof body.signature === 'string' ? body.signature.trim() : '';
-    var plan = body.plan;
 
     if (!orderId || !paymentId || !signature) {
       return res.status(400).json({ error: { code: 'BAD_REQUEST', message: 'Missing required fields: orderId, paymentId, signature.', retryable: false } });
-    }
-    if (plan !== 'monthly' && plan !== 'yearly') {
-      return res.status(400).json({ error: { code: 'BAD_REQUEST', message: 'Invalid plan.', retryable: false } });
     }
 
     var valid = paymentService.verifyRazorpaySignature(orderId, paymentId, signature);
@@ -299,8 +295,10 @@ app.post('/api/subscriptions/verify', authMiddleware, async function (req, res) 
       return res.status(400).json({ error: { code: 'SIGNATURE_INVALID', message: 'Payment verification failed. Please contact support.', retryable: false } });
     }
 
-    var expiry = await aiService.unlockPremiumPlus(req.userId, plan, paymentId);
-    res.json({ success: true, expiry: expiry, plan: plan });
+    var trustedPlan = await paymentService.fetchOrderPlan(orderId);
+
+    var expiry = await aiService.unlockPremiumPlus(req.userId, trustedPlan, paymentId);
+    res.json({ success: true, expiry: expiry, plan: trustedPlan });
   } catch (err) {
     console.error('Verify subscription error:', err.message);
     res.status(500).json({ error: { code: 'INTERNAL_ERROR', message: 'Could not activate subscription. Please contact support.', retryable: false } });

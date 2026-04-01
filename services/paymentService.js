@@ -44,6 +44,20 @@ async function createPremiumPlusOrder(plan) {
   };
 }
 
+async function fetchOrderPlan(orderId) {
+  var rzp = _getRazorpay();
+  var order = await rzp.orders.fetch(orderId);
+  var plan = order && order.notes && order.notes.plan;
+  if (plan !== 'monthly' && plan !== 'yearly') {
+    throw new Error('Order plan mismatch or missing: ' + plan);
+  }
+  var expectedAmount = PLAN_AMOUNTS[plan];
+  if (order.amount !== expectedAmount) {
+    throw new Error('Order amount mismatch for plan ' + plan + ': got ' + order.amount + ' expected ' + expectedAmount);
+  }
+  return plan;
+}
+
 function verifyRazorpaySignature(orderId, paymentId, signature) {
   if (!RAZORPAY_KEY_SECRET) return false;
   if (!orderId || !paymentId || !signature) return false;
@@ -62,4 +76,4 @@ function verifyRazorpaySignature(orderId, paymentId, signature) {
   }
 }
 
-module.exports = { createPremiumPlusOrder, verifyRazorpaySignature };
+module.exports = { createPremiumPlusOrder, fetchOrderPlan, verifyRazorpaySignature };
