@@ -520,7 +520,7 @@ body.dark-mode .adaptive-hint-text { color: #c4b5fd; }
 
 /* ---- Speed Benchmark (premium redesign) ---- */
 @keyframes sb-slide-up {
-  from { opacity: 0; transform: translateY(8px); }
+  from { opacity: 0; transform: translateY(4px); }
   to   { opacity: 1; transform: translateY(0); }
 }
 .speed-benchmark-card {
@@ -612,7 +612,7 @@ body.dark-mode .benchmark-stat-value { color: #a78bfa; }
   line-height: 1.2;
 }
 body.dark-mode .benchmark-stat-label { color: #94a3b8; }
-.benchmark-ai-section { margin-top: -4px; }
+.benchmark-ai-section { margin-top: -4px; min-height: 2.5rem; }
 .benchmark-loading {
   font-size: .82rem;
   color: #7c3aed;
