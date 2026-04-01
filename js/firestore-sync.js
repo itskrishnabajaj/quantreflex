@@ -126,6 +126,8 @@ var FirestoreSync = (function () {
       if (premiumFlags.trialEnd !== undefined) payload.trialEnd = premiumFlags.trialEnd || null;
       if (premiumFlags.isEarlyUser !== undefined) payload.isEarlyUser = !!premiumFlags.isEarlyUser;
       if (premiumFlags.hasPaid !== undefined) payload.hasPaid = !!premiumFlags.hasPaid;
+      if (premiumFlags.isPremiumPlus !== undefined) payload.isPremiumPlus = !!premiumFlags.isPremiumPlus;
+      if (premiumFlags.premiumPlusPlan !== undefined) payload.premiumPlusPlan = premiumFlags.premiumPlusPlan || null;
     }
     docRef.collection('profile').doc('data').set(payload, { merge: true }).catch(function (err) {
       console.warn('Profile subcollection sync failed:', err);
@@ -848,7 +850,8 @@ var FirestoreSync = (function () {
       }
       if (_memoryCache.isPremiumPlus === true) {
         var ppExpiry = _memoryCache.premiumPlusExpiry;
-        if (ppExpiry && typeof ppExpiry === 'number' && ppExpiry < now) {
+        var ppExpiryMs = _toMillis(ppExpiry);
+        if (ppExpiryMs > 0 && ppExpiryMs < now) {
           _memoryCache.isPremiumPlus = false;
           _memoryCache.premiumPlusStatus = 'expired';
           var ppDocRef = _getUserDocRef();

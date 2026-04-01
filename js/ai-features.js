@@ -318,7 +318,7 @@ var AIFeatures = (function () {
       var unlockBtn = container.querySelector('.ai-coach-unlock-btn');
       if (unlockBtn) {
         unlockBtn.addEventListener('click', function () {
-          if (typeof showPaywall === 'function') showPaywall('settings');
+          if (typeof showPaywall === 'function') showPaywall('ai_coach');
         });
       }
       return;
@@ -570,7 +570,7 @@ var AIFeatures = (function () {
       startBtn.disabled = true;
       startBtn.textContent = quota.type === 'lifetime' ? '🔒 Free limit reached' : 'Daily limit reached';
       if (quota.type === 'lifetime') {
-        errorEl.textContent = 'Upgrade to Premium for 25 AI questions per day.';
+        errorEl.textContent = 'Upgrade to Premium+ for 25 AI questions per day.';
         errorEl.style.display = 'block';
       }
     }
@@ -605,8 +605,8 @@ var AIFeatures = (function () {
           startBtn.disabled = false;
           startBtn.textContent = 'Generate Word Problems';
           if (err === 'free_limit_reached') {
-            errorEl.textContent = 'You\'ve used all 5 free AI questions. Upgrade to Premium for more.';
-            if (typeof showPaywall === 'function') showPaywall('settings');
+            errorEl.textContent = 'You\'ve used all 5 free AI questions. Upgrade to Premium+ for more.';
+            if (typeof showPaywall === 'function') showPaywall('ai_explain');
           } else if (err === 'daily_limit_reached') {
             errorEl.textContent = 'You\'ve reached today\'s limit of 25 AI questions. Come back tomorrow!';
           } else if (err === 'request_in_progress') {
@@ -852,7 +852,7 @@ var AIFeatures = (function () {
             _studyPlanInFlight = false;
             if (err === 'premium_required') {
               closeModal();
-              if (typeof showPaywall === 'function') showPaywall('settings');
+              if (typeof showPaywall === 'function') showPaywall('ai_study_plan');
               return;
             }
             if (err === 'rate_limited') {
@@ -970,7 +970,7 @@ var AIFeatures = (function () {
 
           if (err === 'premium_required') {
             closeModal();
-            if (typeof showPaywall === 'function') showPaywall('settings');
+            if (typeof showPaywall === 'function') showPaywall('ai_study_plan');
             return;
           }
           if (err === 'rate_limited') {
@@ -1027,7 +1027,7 @@ var AIFeatures = (function () {
           '<button class="btn accent sp-unlock-btn" type="button">🔒 Unlock with Premium</button>' +
         '</div>';
       container.querySelector('.sp-unlock-btn').addEventListener('click', function () {
-        if (typeof showPaywall === 'function') showPaywall('settings');
+        if (typeof showPaywall === 'function') showPaywall('ai_study_plan');
       });
       return;
     }
