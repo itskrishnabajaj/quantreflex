@@ -5003,32 +5003,6 @@ body.dark-mode .ai-tip-section {
   width: 100%;
 }
 
-.drill-explain-btn {
-  display: inline-block;
-  background: none;
-  border: 1px solid #8b5cf6;
-  color: #8b5cf6;
-  font-size: .8rem;
-  font-weight: 600;
-  padding: .3rem .75rem;
-  border-radius: .5rem;
-  cursor: pointer;
-  margin-top: .35rem;
-  transition: background .15s ease, color .15s ease;
-}
-.drill-explain-btn:active {
-  background: #8b5cf6;
-  color: #fff;
-}
-body.dark-mode .drill-explain-btn {
-  border-color: #a78bfa;
-  color: #a78bfa;
-}
-body.dark-mode .drill-explain-btn:active {
-  background: #a78bfa;
-  color: #1e1b4b;
-}
-
 .ai-stats-body {
   min-height: 3rem;
 }
@@ -5075,13 +5049,30 @@ body.dark-mode .wrong-answer-header {
 body.dark-mode .wrong-answer-correct {
   color: #e2e8f0;
 }
-.wrong-answer-card .drill-explain-btn {
-  margin-top: .5rem;
-  padding: .45rem 1.1rem;
+.drill-explain-btn {
+  display: inline-block;
+  margin-top: .6rem;
+  padding: .5rem 1.25rem;
   font-size: .85rem;
+  font-weight: 600;
+  border: 1.5px solid #8b5cf6;
   border-radius: .5rem;
-  border-width: 1.5px;
-  box-shadow: none;
+  background: none;
+  color: #8b5cf6;
+  cursor: pointer;
+  transition: background .15s ease, color .15s ease;
+}
+.drill-explain-btn:active {
+  background: #8b5cf6;
+  color: #fff;
+}
+body.dark-mode .drill-explain-btn {
+  border-color: #a78bfa;
+  color: #a78bfa;
+}
+body.dark-mode .drill-explain-btn:active {
+  background: #a78bfa;
+  color: #1e1b4b;
 }
 
 /* Task 14: Reduced motion for view transitions */

@@ -318,7 +318,7 @@ function createDrillEngine(container, opts) {
         }
         AIFeatures.showExplanationModal(q.question, expected, q.category);
       });
-      feedback.appendChild(explainBtn);
+      feedback.parentNode.insertBefore(explainBtn, feedback.nextSibling);
     }
 
     var actionsDiv = container.querySelector('.drill-actions');
