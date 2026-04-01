@@ -844,17 +844,34 @@ function createDrillEngine(container, opts) {
       });
     }
 
-    /* Post-session paywall trigger — after 2nd completed session (free users only) */
+    /* Post-session soft upgrade prompt — shown after 2nd session and every 5th after (free users only) */
     try {
       var _isPremiumUser = (typeof canAccessFeature === 'function') ? canAccessFeature('adaptive_training') : false;
       if (!_isPremiumUser) {
         var _sessCount = parseInt(localStorage.getItem(_SESSIONS_COUNT_KEY)) || 0;
         _sessCount++;
         localStorage.setItem(_SESSIONS_COUNT_KEY, String(_sessCount));
-        if (_sessCount === 2) {
+        var _shouldPrompt = (_sessCount === 2) || (_sessCount > 2 && (_sessCount - 2) % 5 === 0);
+        if (_shouldPrompt) {
           setTimeout(function () {
-            if (typeof showPaywall === 'function') showPaywall('upgrade');
-          }, 1500);
+            var _resultsCard = container.querySelector('.card');
+            if (!_resultsCard) return;
+            var _existing = container.querySelector('.session-upgrade-banner');
+            if (_existing) return;
+            var _banner = document.createElement('div');
+            _banner.className = 'session-upgrade-banner';
+            _banner.innerHTML =
+              '<span class="session-upgrade-text">Enjoying the app? Unlock all features.</span>' +
+              '<button class="session-upgrade-btn" type="button">Upgrade</button>' +
+              '<button class="session-upgrade-dismiss" type="button" aria-label="Dismiss">×</button>';
+            _banner.querySelector('.session-upgrade-btn').addEventListener('click', function () {
+              if (typeof showPaywall === 'function') showPaywall('upgrade');
+            });
+            _banner.querySelector('.session-upgrade-dismiss').addEventListener('click', function () {
+              if (_banner.parentNode) _banner.parentNode.removeChild(_banner);
+            });
+            _resultsCard.appendChild(_banner);
+          }, 900);
         }
       }
     } catch (_) {}

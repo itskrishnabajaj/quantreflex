@@ -92,56 +92,37 @@ function canAccessCustomMode(user) {
 function _getPaywallCopy(featureType) {
   var map = {
     custom_training: {
-      title: 'Custom Training Pro',
-      subtitle: 'Build laser-focused sessions by choosing exact topics and question count.',
-      bullets: ['Target weak areas faster', 'Practice exactly what matters', 'Train with personalized sets']
+      accent: '🎯 You tried to start a custom session — a Premium feature.'
     },
     review_mistakes: {
-      title: 'Review Mistakes Pro',
-      subtitle: 'Turn wrong answers into strengths with dedicated correction practice.',
-      bullets: ['Fix recurring mistakes', 'Boost retention', 'Improve exam-day accuracy']
+      accent: '📋 Reviewing your mistakes is a Premium feature.'
     },
     add_formula: {
-      title: 'Formula Vault Pro',
-      subtitle: 'Save your own formulas and shortcuts so your Learn vault matches your prep.',
-      bullets: ['Build personal notes', 'Store shortcut tricks', 'Revise smarter daily']
+      accent: '📝 Saving your own formulas is a Premium feature.'
     },
     add_topic: {
-      title: 'Custom Topics Pro',
-      subtitle: 'Create topic buckets tailored to your syllabus and revision strategy.',
-      bullets: ['Organize by your exam plan', 'Keep formulas grouped', 'Scale your study system']
+      accent: '📂 Creating custom topics is a Premium feature.'
     },
     stats: {
-      title: 'Analytics Pro',
-      subtitle: 'Unlock deeper insights to train with precision and consistency.',
-      bullets: ['Find strongest and weakest areas', 'Track trend direction', 'Optimize daily practice']
+      accent: '📊 Deep analytics are available in Premium.'
     },
     settings: {
-      title: 'Power Settings Pro',
-      subtitle: 'Unlock advanced training controls for faster, tougher prep.',
-      bullets: ['Hard mode challenge', 'Skip controls', 'Premium themes and goals']
+      accent: '⚙️ This setting is unlocked in Premium.'
     },
     focus_timer: {
-      title: 'Focus Timer Pro',
-      subtitle: 'Add timed pressure to your Focus Training sessions.',
-      bullets: ['Per-question or total session timer', 'Custom seconds control', 'Build exam-speed reflexes']
+      accent: '⏱ Focus Timer is a Premium feature.'
     },
     adaptive_training: {
-      title: 'Adaptive Training Pro',
-      subtitle: 'Let AI adjust question difficulty in real time based on your performance.',
-      bullets: ['Auto-scales Easy → Medium → Hard', 'Speed Benchmark with percentile rank', 'AI performance analysis post-session']
+      accent: '🤖 Adaptive Training adjusts difficulty in real time — Premium only.'
     },
     table_modal: {
-      title: 'Full-Screen Tables Pro',
-      subtitle: 'Open any multiplication table in a full-screen modal for easy reading.',
-      bullets: ['Distraction-free view', 'Larger text for studying', 'Quick triple-tap access']
+      accent: '📋 Full-screen table view is a Premium feature.'
+    },
+    upgrade: {
+      accent: '🔥 You\'re on a roll! Unlock everything to keep the momentum going.'
     }
   };
-  return map[featureType] || {
-    title: 'Upgrade to Premium',
-    subtitle: 'Get lifetime access to all advanced QuantReflex features.',
-    bullets: ['One-time payment', 'Instant unlock', 'Future premium updates included']
-  };
+  return map[featureType] || {};
 }
 
 function _closePaywallModal() {
@@ -315,19 +296,81 @@ function showPaywall(featureType) {
   overlay.innerHTML =
     '<div class="paywall-card">' +
       '<button class="paywall-close" type="button" aria-label="Close">×</button>' +
-      '<div class="paywall-hero-icon">🧠</div>' +
-      '<p class="paywall-badge">Premium</p>' +
-      '<h2>Train your brain like a top performer</h2>' +
-      '<p class="paywall-subtitle">' + copy.subtitle + '</p>' +
+
+      '<div class="paywall-header">' +
+        '<div class="paywall-hero-icon">🧠</div>' +
+        '<h2 class="paywall-title">Unlock Your Full Potential</h2>' +
+        '<p class="paywall-tagline">Train faster. Improve accuracy. Perform better.</p>' +
+      '</div>' +
+
+      (copy.accent ? '<p class="paywall-context-accent">' + copy.accent + '</p>' : '') +
+
       '<ul class="paywall-benefits">' +
-        '<li>' + copy.bullets[0] + '</li>' +
-        '<li>' + copy.bullets[1] + '</li>' +
-        '<li>' + copy.bullets[2] + '</li>' +
-        '<li>All future premium features included</li>' +
+        '<li><span class="paywall-benefit-icon">⚡</span><span>Build calculation speed for exam pressure</span></li>' +
+        '<li><span class="paywall-benefit-icon">🎯</span><span>Target weak areas and fix recurring mistakes</span></li>' +
+        '<li><span class="paywall-benefit-icon">📈</span><span>Track your improvement with detailed insights</span></li>' +
+        '<li><span class="paywall-benefit-icon">🧠</span><span>Adaptive training that grows with your skill</span></li>' +
       '</ul>' +
-      '<button class="btn accent paywall-upgrade" type="button">Unlock Lifetime Premium · ₹69</button>' +
-      '<p class="paywall-footnote">One-time payment · No subscription · Instant access</p>' +
+
+      '<div class="paywall-plans">' +
+        '<div class="paywall-plan paywall-plan-premium">' +
+          '<div class="paywall-plan-badge">Most Popular</div>' +
+          '<div class="paywall-plan-name">Premium</div>' +
+          '<div class="paywall-plan-price">₹79 <span class="paywall-plan-period">Lifetime</span></div>' +
+          '<ul class="paywall-plan-features">' +
+            '<li>✓ All training modes unlocked</li>' +
+            '<li>✓ Custom practice sessions</li>' +
+            '<li>✓ Mistake review & retry</li>' +
+            '<li>✓ Adaptive difficulty</li>' +
+            '<li>✓ Hard mode & power settings</li>' +
+            '<li>✓ Speed benchmark & analytics</li>' +
+            '<li>✓ All future updates included</li>' +
+          '</ul>' +
+          '<button class="btn accent paywall-upgrade" type="button">Unlock Premium · ₹79</button>' +
+          '<p class="paywall-plan-note">One-time payment · No subscription</p>' +
+        '</div>' +
+
+        '<div class="paywall-plan paywall-plan-plus">' +
+          '<div class="paywall-plan-name">Premium+</div>' +
+          '<div class="paywall-plan-price">₹49<span class="paywall-plan-period">/mo</span></div>' +
+          '<div class="paywall-plan-or">or ₹499/yr</div>' +
+          '<ul class="paywall-plan-features">' +
+            '<li>✓ Everything in Premium</li>' +
+            '<li>✓ AI mistake explanations</li>' +
+            '<li>✓ AI coach insights</li>' +
+            '<li>✓ Study plan generator</li>' +
+            '<li>✓ AI word problem trainer</li>' +
+          '</ul>' +
+          '<button class="btn paywall-plus-btn" type="button">Coming Soon</button>' +
+          '<p class="paywall-plan-note">Notify me when available</p>' +
+        '</div>' +
+      '</div>' +
+
+      '<table class="paywall-compare">' +
+        '<thead><tr>' +
+          '<th>Feature</th>' +
+          '<th>Free</th>' +
+          '<th class="paywall-compare-highlight">Premium</th>' +
+          '<th>Premium+</th>' +
+        '</tr></thead>' +
+        '<tbody>' +
+          '<tr><td>Practice drills</td><td>✓</td><td class="paywall-compare-highlight">✓</td><td>✓</td></tr>' +
+          '<tr><td>Custom training</td><td>✗</td><td class="paywall-compare-highlight">✓</td><td>✓</td></tr>' +
+          '<tr><td>Mistake review</td><td>✗</td><td class="paywall-compare-highlight">✓</td><td>✓</td></tr>' +
+          '<tr><td>Adaptive training</td><td>✗</td><td class="paywall-compare-highlight">✓</td><td>✓</td></tr>' +
+          '<tr><td>Analytics & insights</td><td>✗</td><td class="paywall-compare-highlight">✓</td><td>✓</td></tr>' +
+          '<tr><td>AI features</td><td>✗</td><td class="paywall-compare-highlight">✗</td><td>✓</td></tr>' +
+        '</tbody>' +
+      '</table>' +
+
+      '<div class="paywall-social-proof">' +
+        '<p class="paywall-trust">⭐ Used by CAT, GMAT &amp; CET aspirants daily</p>' +
+        '<p class="paywall-urgency">🔥 Lifetime pricing — only while it lasts</p>' +
+      '</div>' +
+
+      '<button class="paywall-free-continue" type="button">Continue with Free</button>' +
     '</div>';
+
   overlay.addEventListener('click', function (e) {
     if (e.target === overlay) _closePaywallModal();
   });
@@ -340,19 +383,32 @@ function showPaywall(featureType) {
 
   var closeBtn = overlay.querySelector('.paywall-close');
   if (closeBtn) closeBtn.addEventListener('click', _closePaywallModal);
+
   var upgradeBtn = overlay.querySelector('.paywall-upgrade');
   if (upgradeBtn) {
     _paywallUpgradeBtn = upgradeBtn;
     upgradeBtn.addEventListener('click', function () {
       if (!userId) {
-        var now = Date.now();
-        if (now - _paywallGuestPromptAt < 1000) return;
-        _paywallGuestPromptAt = now;
+        var _now = Date.now();
+        if (_now - _paywallGuestPromptAt < 1000) return;
+        _paywallGuestPromptAt = _now;
         showToast('Please login to continue payment.');
         return;
       }
       openPayment(userId);
     });
+  }
+
+  var plusBtn = overlay.querySelector('.paywall-plus-btn');
+  if (plusBtn) {
+    plusBtn.addEventListener('click', function () {
+      showToast('Premium+ is coming soon! We\'ll notify you when it launches.');
+    });
+  }
+
+  var freeBtn = overlay.querySelector('.paywall-free-continue');
+  if (freeBtn) {
+    freeBtn.addEventListener('click', _closePaywallModal);
   }
 }
 

@@ -918,12 +918,6 @@ document.addEventListener('DOMContentLoaded', function () {
       Onboarding.show(function () {
         _revealMainApp();
         Router.showView('learn');
-        if (!window._premiumPopupShownThisSession) {
-          window._premiumPopupShownThisSession = true;
-          setTimeout(function () {
-            if (typeof showPaywall === 'function') showPaywall('settings');
-          }, 800);
-        }
       });
     } else {
       _revealMainApp();

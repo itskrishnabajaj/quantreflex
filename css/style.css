@@ -1576,21 +1576,25 @@ body.paywall-open {
 }
 
 .paywall-card {
-  width: min(430px, 100%);
+  width: min(520px, 100%);
   background: #f8fafc;
-  border-radius: 1rem;
-  padding: 1.25rem 1.1rem 1rem;
-  box-shadow: 0 24px 60px rgba(2, 8, 23, .38);
+  border-radius: 1.25rem;
+  padding: 1.5rem 1.25rem 1.25rem;
+  box-shadow: 0 24px 60px rgba(2, 8, 23, .42);
   text-align: center;
   transform-origin: center;
   animation: paywallScaleIn .3s cubic-bezier(.16,1,.3,1);
   position: relative;
+  max-height: 92vh;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
 }
 
 .paywall-close {
-  position: absolute;
-  top: .55rem;
-  right: .55rem;
+  position: sticky;
+  top: 0;
+  float: right;
+  margin: -.5rem -.5rem .25rem .5rem;
   width: 2rem;
   height: 2rem;
   border: none;
@@ -1600,8 +1604,296 @@ body.paywall-open {
   font-size: 1.3rem;
   line-height: 1;
   cursor: pointer;
+  z-index: 2;
+  flex-shrink: 0;
 }
 
+/* --- Paywall Header --- */
+.paywall-header {
+  margin-bottom: .75rem;
+  clear: both;
+}
+
+.paywall-title {
+  margin: .25rem 0 .3rem;
+  font-size: 1.4rem;
+  font-weight: 800;
+  color: #0f172a;
+  line-height: 1.25;
+}
+
+.paywall-tagline {
+  margin: 0 0 .1rem;
+  color: #475569;
+  font-size: .95rem;
+}
+
+.paywall-context-accent {
+  display: inline-block;
+  background: #eff6ff;
+  color: #1d4ed8;
+  border-radius: .6rem;
+  padding: .35rem .8rem;
+  font-size: .82rem;
+  font-weight: 600;
+  margin-bottom: .85rem;
+}
+
+/* --- Benefits --- */
+.paywall-benefits {
+  margin: 0 0 1rem;
+  padding: 0;
+  list-style: none;
+  text-align: left;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: .45rem .6rem;
+}
+
+.paywall-benefits li {
+  display: flex;
+  align-items: flex-start;
+  gap: .4rem;
+  color: #1e293b;
+  font-size: .88rem;
+  line-height: 1.35;
+}
+
+.paywall-benefit-icon {
+  font-size: 1rem;
+  flex-shrink: 0;
+  margin-top: .05rem;
+}
+
+/* --- Pricing Plans --- */
+.paywall-plans {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: .75rem;
+  margin-bottom: 1rem;
+}
+
+.paywall-plan {
+  border-radius: 1rem;
+  padding: .9rem .8rem;
+  text-align: left;
+  position: relative;
+}
+
+.paywall-plan-premium {
+  background: linear-gradient(145deg, #1d4ed8, #2563eb);
+  color: #fff;
+  box-shadow: 0 4px 18px rgba(37,99,235,.38);
+}
+
+.paywall-plan-plus {
+  background: #fff;
+  border: 1.5px solid #e2e8f0;
+  color: #0f172a;
+}
+
+.paywall-plan-badge {
+  display: inline-block;
+  font-size: .68rem;
+  font-weight: 800;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+  background: #fbbf24;
+  color: #78350f;
+  padding: .15rem .55rem;
+  border-radius: .5rem;
+  margin-bottom: .45rem;
+}
+
+.paywall-plan-name {
+  font-size: .78rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: .06em;
+  opacity: .8;
+  margin-bottom: .15rem;
+}
+
+.paywall-plan-price {
+  font-size: 1.55rem;
+  font-weight: 900;
+  margin-bottom: .1rem;
+  line-height: 1.1;
+}
+
+.paywall-plan-period {
+  font-size: .8rem;
+  font-weight: 500;
+  opacity: .75;
+  vertical-align: middle;
+}
+
+.paywall-plan-or {
+  font-size: .78rem;
+  opacity: .65;
+  margin-bottom: .5rem;
+}
+
+.paywall-plan-features {
+  list-style: none;
+  padding: 0;
+  margin: .5rem 0 .75rem;
+  font-size: .82rem;
+  line-height: 1.5;
+}
+
+.paywall-plan-premium .paywall-plan-features {
+  color: rgba(255,255,255,.9);
+}
+
+.paywall-plan-plus .paywall-plan-features {
+  color: #334155;
+}
+
+.paywall-plan-features li {
+  margin-bottom: .1rem;
+}
+
+.paywall-upgrade {
+  width: 100%;
+  background: #fff;
+  color: #1d4ed8;
+  font-weight: 800;
+  border: none;
+}
+
+.paywall-upgrade:hover {
+  background: #f0f9ff;
+}
+
+.paywall-plus-btn {
+  width: 100%;
+  background: #f1f5f9;
+  color: #64748b;
+  font-size: .85rem;
+}
+
+.paywall-plan-note {
+  font-size: .72rem;
+  opacity: .65;
+  margin: .35rem 0 0;
+  text-align: center;
+}
+
+.paywall-plan-premium .paywall-plan-note {
+  color: rgba(255,255,255,.7);
+}
+
+/* --- Comparison Table --- */
+.paywall-compare {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: .8rem;
+  margin-bottom: .9rem;
+  text-align: center;
+}
+
+.paywall-compare th {
+  padding: .4rem .3rem;
+  font-size: .72rem;
+  text-transform: uppercase;
+  letter-spacing: .05em;
+  color: #64748b;
+  border-bottom: 1.5px solid #e2e8f0;
+  font-weight: 700;
+}
+
+.paywall-compare th:first-child,
+.paywall-compare td:first-child {
+  text-align: left;
+  padding-left: .15rem;
+}
+
+.paywall-compare td {
+  padding: .3rem .3rem;
+  color: #475569;
+  border-bottom: 1px solid #f1f5f9;
+}
+
+.paywall-compare-highlight {
+  background: rgba(37,99,235,.06);
+  color: #1d4ed8 !important;
+  font-weight: 700;
+}
+
+/* --- Social Proof --- */
+.paywall-social-proof {
+  margin-bottom: .75rem;
+}
+
+.paywall-trust,
+.paywall-urgency {
+  margin: 0 0 .2rem;
+  font-size: .82rem;
+  color: #475569;
+}
+
+/* --- Free Continue --- */
+.paywall-free-continue {
+  background: none;
+  border: none;
+  color: #94a3b8;
+  font-size: .82rem;
+  cursor: pointer;
+  padding: .3rem .5rem;
+  text-decoration: underline;
+  text-underline-offset: .15em;
+  margin-top: .15rem;
+}
+
+.paywall-free-continue:hover {
+  color: #64748b;
+}
+
+/* --- Session Upgrade Banner (non-blocking) --- */
+.session-upgrade-banner {
+  display: flex;
+  align-items: center;
+  gap: .6rem;
+  background: linear-gradient(135deg, #eff6ff, #dbeafe);
+  border: 1px solid #bfdbfe;
+  border-radius: .75rem;
+  padding: .65rem .85rem;
+  margin-top: 1rem;
+  font-size: .88rem;
+  flex-wrap: wrap;
+}
+
+.session-upgrade-text {
+  flex: 1;
+  color: #1e3a8a;
+  font-weight: 500;
+  min-width: 0;
+}
+
+.session-upgrade-btn {
+  background: #2563eb;
+  color: #fff;
+  border: none;
+  border-radius: .5rem;
+  padding: .35rem .85rem;
+  font-size: .82rem;
+  font-weight: 700;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.session-upgrade-dismiss {
+  background: none;
+  border: none;
+  color: #64748b;
+  font-size: 1.1rem;
+  cursor: pointer;
+  padding: 0 .1rem;
+  line-height: 1;
+}
+
+/* legacy selectors kept for compatibility */
 .paywall-badge {
   margin: 0 auto .3rem;
   display: inline-block;
@@ -1613,43 +1905,6 @@ body.paywall-open {
   background: linear-gradient(135deg, #2563eb, #7c3aed);
   padding: .2rem .7rem;
   border-radius: 1rem;
-}
-
-.paywall-card h2 {
-  margin: 0 0 .55rem;
-  font-size: 1.34rem;
-}
-
-.paywall-subtitle {
-  margin: 0 0 .8rem;
-  color: #475569;
-}
-
-.paywall-benefits {
-  margin: 0 0 1rem;
-  padding: 0;
-  list-style: none;
-  text-align: left;
-}
-
-.paywall-benefits li {
-  margin: 0 0 .42rem;
-  padding-left: 1.15rem;
-  position: relative;
-  color: #1e293b;
-}
-
-.paywall-benefits li::before {
-  content: '✓';
-  position: absolute;
-  left: 0;
-  top: 0;
-  color: #16a34a;
-  font-weight: 700;
-}
-
-.paywall-upgrade {
-  width: 100%;
 }
 
 .paywall-footnote {
@@ -1736,10 +1991,43 @@ body.dark-mode .paywall-close {
   background: rgba(148, 163, 184, .2);
   color: #e2e8f0;
 }
-body.dark-mode .paywall-badge { color: #93c5fd; }
-body.dark-mode .paywall-subtitle,
-body.dark-mode .paywall-footnote { color: #94a3b8; }
+body.dark-mode .paywall-title { color: #f1f5f9; }
+body.dark-mode .paywall-tagline { color: #94a3b8; }
+body.dark-mode .paywall-context-accent {
+  background: rgba(37,99,235,.18);
+  color: #93c5fd;
+}
 body.dark-mode .paywall-benefits li { color: #e2e8f0; }
+body.dark-mode .paywall-plan-plus {
+  background: #1e293b;
+  border-color: #334155;
+  color: #f1f5f9;
+}
+body.dark-mode .paywall-plan-plus .paywall-plan-features { color: #94a3b8; }
+body.dark-mode .paywall-compare th {
+  color: #94a3b8;
+  border-bottom-color: #334155;
+}
+body.dark-mode .paywall-compare td {
+  color: #94a3b8;
+  border-bottom-color: #1e293b;
+}
+body.dark-mode .paywall-compare-highlight {
+  background: rgba(37,99,235,.15);
+  color: #93c5fd !important;
+}
+body.dark-mode .paywall-trust,
+body.dark-mode .paywall-urgency { color: #94a3b8; }
+body.dark-mode .paywall-free-continue { color: #64748b; }
+body.dark-mode .paywall-free-continue:hover { color: #94a3b8; }
+body.dark-mode .paywall-footnote { color: #94a3b8; }
+body.dark-mode .paywall-badge { color: #93c5fd; }
+body.dark-mode .session-upgrade-banner {
+  background: linear-gradient(135deg, #1e3a8a22, #1d4ed820);
+  border-color: #334155;
+}
+body.dark-mode .session-upgrade-text { color: #93c5fd; }
+body.dark-mode .session-upgrade-dismiss { color: #94a3b8; }
 body.dark-mode .stat-card-locked,
 body.dark-mode .category-locked-card {
   background: rgba(30, 41, 59, .8);
