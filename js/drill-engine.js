@@ -511,13 +511,17 @@ function createDrillEngine(container, opts) {
     return tips[cat] || 'Tip: Re-read the question carefully and check each calculation step.';
   }
 
-  function _computeSessionInsight(accNum, times, wrongCats, _unused, mode) {
+  function _computeSessionInsight(accNum, wrongCats) {
     /* Load 7-day rolling average from progress localStorage for comparison */
     var rollingAvg = null;
     try {
       var _prog = JSON.parse(localStorage.getItem('quant_reflex_progress') || '{}');
       var _hist = _prog.dailyHistory || {};
-      var _histDates = Object.keys(_hist).sort().slice(-7);
+      /* Sort by timestamp — Date.toDateString() keys are NOT lexicographically
+         chronological (e.g. "Mon Apr 1 2026"), so parse them before slicing. */
+      var _histDates = Object.keys(_hist).sort(function (a, b) {
+        return new Date(a).getTime() - new Date(b).getTime();
+      }).slice(-7);
       var _histCorrect = 0, _histAttempted = 0;
       for (var _hd = 0; _hd < _histDates.length; _hd++) {
         var _he = _hist[_histDates[_hd]];
@@ -629,7 +633,7 @@ function createDrillEngine(container, opts) {
     var retryChallenge = avg !== '0.0' ? 'Beat your ' + avg + 's avg?' : 'Try to go faster!';
 
     /* Rule-based post-session insight (always visible, no AI call) */
-    var _insightText = _computeSessionInsight(accNum, perQuestionTimes, sessionWrongCategories, null, mode);
+    var _insightText = _computeSessionInsight(accNum, sessionWrongCategories);
 
     container.innerHTML =
       '<div class="card center-content fade-in">' +

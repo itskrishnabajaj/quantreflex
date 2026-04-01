@@ -2030,7 +2030,12 @@ function renderStatsView() {
   /* Section 4b — 7-Day Accuracy Sparkline */
   var sparklineEl = document.getElementById('statsSparkline');
   if (sparklineEl) {
-    var _allDates = Object.keys(history).sort();
+    /* Sort keys by actual date timestamp to ensure chronological order,
+       since Date.toDateString() keys (e.g. "Mon Apr 1 2026") are NOT
+       lexicographically sortable — parse them to timestamps first. */
+    var _allDates = Object.keys(history).sort(function (a, b) {
+      return new Date(a).getTime() - new Date(b).getTime();
+    });
     var _last7 = _allDates.slice(-7);
     if (_last7.length < 2) {
       sparklineEl.innerHTML = '<p class="secondary-text sparkline-empty">Practice for 2+ days to see your accuracy trend.</p>';
@@ -2042,7 +2047,6 @@ function renderStatsView() {
         var e = history[d];
         return e && e.attempted > 0 ? Math.round((e.correct / e.attempted) * 100) : 0;
       });
-      var _max = Math.max.apply(null, _values) || 1;
       var _bars = '';
       for (var _i = 0; _i < _last7.length; _i++) {
         var _pct = _values[_i];
@@ -2050,7 +2054,8 @@ function renderStatsView() {
         var _x = _i * (_barW + _barGap);
         var _y = _chartH - _barH;
         var _barColor = _pct >= 80 ? '#16a34a' : _pct >= 60 ? '#2563eb' : '#ef4444';
-        var _dayLabel = _last7[_i].split(' ').slice(0, 2).join(' ');
+        var _d = new Date(_last7[_i]);
+        var _dayLabel = _d.toLocaleDateString(undefined, { weekday: 'short', month: 'numeric', day: 'numeric' });
         _bars +=
           '<rect x="' + _x + '" y="' + _y + '" width="' + _barW + '" height="' + _barH + '" rx="4" fill="' + _barColor + '" opacity="0.85"/>' +
           '<text x="' + (_x + _barW / 2) + '" y="' + (_y - 3) + '" text-anchor="middle" class="sparkline-val">' + _pct + '%</text>' +
