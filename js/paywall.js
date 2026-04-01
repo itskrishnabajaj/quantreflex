@@ -125,6 +125,15 @@ function _getPaywallCopy(featureType) {
     table_modal: {
       accent: '📋 Full-screen table view is a Premium feature.'
     },
+    ai_explain: {
+      accent: '🧠 AI-powered explanations require Premium+.'
+    },
+    ai_coach: {
+      accent: '🤖 AI Coach insights require Premium+.'
+    },
+    ai_study_plan: {
+      accent: '📅 AI Study Plan generator requires Premium+.'
+    },
     upgrade: {
       accent: '🔥 You\'re on a roll! Unlock everything to keep the momentum going.'
     }

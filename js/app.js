@@ -2100,10 +2100,10 @@ function renderStatsView() {
   if (aiInsightsContainer && typeof AIFeatures !== 'undefined') {
     if (!AIFeatures.isPremium()) {
       aiInsightsContainer.innerHTML =
-        '<p class="secondary-text">🔒 AI-powered insights are a Premium feature.</p>' +
-        '<button class="btn accent ai-coach-unlock-btn" type="button" style="margin-top:.5rem;max-width:240px;">Unlock with Premium</button>';
+        '<p class="secondary-text">🔒 AI-powered insights are a Premium+ feature.</p>' +
+        '<button class="btn accent ai-coach-unlock-btn" type="button" style="margin-top:.5rem;max-width:240px;">Unlock with Premium+</button>';
       var aiUnlockBtn = aiInsightsContainer.querySelector('.ai-coach-unlock-btn');
-      if (aiUnlockBtn) aiUnlockBtn.addEventListener('click', function () { showPaywall('settings'); });
+      if (aiUnlockBtn) aiUnlockBtn.addEventListener('click', function () { showPaywall('ai_coach'); });
     } else if (p.totalAttempted >= 5) {
       var _statsCachedInsights = AIFeatures.getCachedInsights();
       if (_statsCachedInsights) {

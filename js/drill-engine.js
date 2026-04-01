@@ -368,7 +368,7 @@ function createDrillEngine(container, opts) {
           if (_lockLink) {
             _lockLink.addEventListener('click', function (e) {
               e.preventDefault();
-              if (typeof showPaywall === 'function') showPaywall('settings');
+              if (typeof showPaywall === 'function') showPaywall('ai_explain');
             });
           }
         }
@@ -387,7 +387,7 @@ function createDrillEngine(container, opts) {
       explainBtn.textContent = _canExplain ? '🧠 Explain' : '🧠 Explain 🔒';
       explainBtn.addEventListener('click', function () {
         if (typeof canAccessFeature === 'function' && !canAccessFeature('ai_explain')) {
-          if (typeof showPaywall === 'function') showPaywall('settings');
+          if (typeof showPaywall === 'function') showPaywall('ai_explain');
           return;
         }
         AIFeatures.showExplanationModal(q.question, expected, q.category);
