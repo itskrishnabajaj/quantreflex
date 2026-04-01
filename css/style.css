@@ -2266,6 +2266,11 @@ body.theme-playful.dark-mode .guide-tier-badge--ai {
 }
 body.theme-playful.dark-mode .guide-tier-title { color: #e6edf3; }
 body.theme-playful.dark-mode .guide-tier-subtitle { color: #484f58; }
+body.theme-playful.dark-mode .guide-feature-group {
+  background: rgba(13,17,23,.5);
+  border-color: rgba(79,143,247,.1);
+  box-shadow: 0 1px 3px rgba(0,0,0,.18);
+}
 body.theme-playful.dark-mode .guide-feature-group-label { color: #484f58; border-bottom-color: rgba(79,143,247,.1); }
 body.theme-playful.dark-mode .guide-feature-row { border-bottom-color: rgba(79,143,247,.08); }
 body.theme-playful.dark-mode .guide-feature-name { color: #e6edf3; }
