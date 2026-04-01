@@ -5240,18 +5240,27 @@ body.dark-mode .drill-explain-btn:active {
 .sp-tip-section .sp-section-body {
   color: #78350f;
 }
+.sp-result-actions {
+  display: flex;
+  gap: .6rem;
+  margin-top: .75rem;
+  flex-wrap: wrap;
+}
+.sp-edit-inputs-btn,
 .sp-regenerate-btn {
-  max-width: 180px;
+  max-width: 160px;
   min-height: 40px;
-  padding: .55rem 1rem;
-  font-size: .85rem;
+  padding: .5rem .9rem;
+  font-size: .83rem;
   font-weight: 600;
   background: #f1f5f9;
   color: #475569;
   border-radius: .65rem;
   border: 1.5px solid #e2e8f0;
-  margin-top: .5rem;
+  margin-top: 0;
+  flex: 1 1 auto;
 }
+.sp-edit-inputs-btn:hover,
 .sp-regenerate-btn:hover { background: #e2e8f0; }
 body.dark-mode .sp-card { border-left-color: #60a5fa; }
 body.dark-mode .sp-select,
@@ -5280,6 +5289,7 @@ body.dark-mode .sp-tip-section {
 }
 body.dark-mode .sp-tip-section .sp-section-title { color: #fcd34d; }
 body.dark-mode .sp-tip-section .sp-section-body { color: #fde68a; }
+body.dark-mode .sp-edit-inputs-btn,
 body.dark-mode .sp-regenerate-btn {
   background: #1e293b;
   color: #94a3b8;

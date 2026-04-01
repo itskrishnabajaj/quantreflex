@@ -615,7 +615,7 @@ var AIFeatures = (function () {
     } catch (_) { return null; }
   }
 
-  function _renderStudyPlanResult(bodyEl, plan, examName, examDate, daysRemaining) {
+  function _buildResultHTML(plan, examName, examDate, daysRemaining) {
     var weekHtml = '';
     if (plan.weeklyPlan && plan.weeklyPlan.length > 0) {
       for (var i = 0; i < plan.weeklyPlan.length; i++) {
@@ -623,7 +623,7 @@ var AIFeatures = (function () {
       }
     }
     var daysLabel = daysRemaining === 1 ? '1 day' : daysRemaining + ' days';
-    bodyEl.innerHTML =
+    return '<div class="sp-result" id="spResult">' +
       '<div class="sp-meta">' +
         '<span class="sp-exam-badge">' + _esc(examName) + '</span>' +
         '<span class="sp-days-badge">' + _esc(daysLabel) + ' left</span>' +
@@ -644,17 +644,16 @@ var AIFeatures = (function () {
         '<h4 class="sp-section-title">💡 Pro Tip</h4>' +
         '<p class="sp-section-body">' + _esc(plan.tip) + '</p>' +
       '</div>' +
-      '<button class="btn sp-regenerate-btn" type="button" data-sp-exam-date="' + _esc(examDate) + '">Regenerate Plan</button>';
+      '<div class="sp-result-actions">' +
+        '<button class="btn sp-edit-inputs-btn" type="button">✏️ Edit Inputs</button>' +
+        '<button class="btn sp-regenerate-btn" type="button">Regenerate ↺</button>' +
+      '</div>' +
+    '</div>';
   }
 
   function _openStudyPlanModal(containerId) {
     var existing = document.getElementById('aiStudyPlanModal');
     if (existing) existing.parentNode.removeChild(existing);
-
-    var overlay = document.createElement('div');
-    overlay.id = 'aiStudyPlanModal';
-    overlay.className = 'modal-overlay sp-modal-overlay';
-    overlay.style.display = 'flex';
 
     var todayStr = new Date().toISOString().slice(0, 10);
     var examOptions = '';
@@ -662,29 +661,34 @@ var AIFeatures = (function () {
       examOptions += '<option value="' + SP_EXAMS[e] + '">' + SP_EXAMS[e] + '</option>';
     }
 
+    var formHTML =
+      '<div class="sp-form" id="spForm">' +
+        '<div class="sp-field">' +
+          '<label class="sp-label" for="spExamSelect">Target Exam</label>' +
+          '<select id="spExamSelect" class="sp-select">' + examOptions + '</select>' +
+          '<input id="spExamCustom" class="sp-input" type="text" placeholder="Or type exam name..." maxlength="80" style="display:none;margin-top:.5rem;" />' +
+        '</div>' +
+        '<div class="sp-field">' +
+          '<label class="sp-label" for="spExamDate">Exam Date</label>' +
+          '<input id="spExamDate" class="sp-input" type="date" min="' + todayStr + '" />' +
+        '</div>' +
+        '<div class="sp-field">' +
+          '<label class="sp-label" for="spDailyTime">Daily Study Time: <strong id="spDailyTimeVal">60</strong> min</label>' +
+          '<input id="spDailyTime" type="range" min="15" max="180" step="15" value="60" class="sp-range" />' +
+          '<div class="sp-range-labels"><span>15 min</span><span>3 hrs</span></div>' +
+        '</div>' +
+        '<div class="sp-error" id="spError" style="display:none;"></div>' +
+        '<button class="btn accent sp-generate-btn" id="spGenerateBtn" type="button">Generate Plan ✨</button>' +
+      '</div>';
+
+    var overlay = document.createElement('div');
+    overlay.id = 'aiStudyPlanModal';
+    overlay.className = 'modal-overlay sp-modal-overlay';
+    overlay.style.display = 'flex';
     overlay.innerHTML =
       '<div class="modal-content sp-modal">' +
         '<h3 class="modal-title">📅 Your Study Plan</h3>' +
-        '<div class="sp-modal-body" id="spModalBody">' +
-          '<div class="sp-form" id="spForm">' +
-            '<div class="sp-field">' +
-              '<label class="sp-label" for="spExamSelect">Target Exam</label>' +
-              '<select id="spExamSelect" class="sp-select">' + examOptions + '</select>' +
-              '<input id="spExamCustom" class="sp-input" type="text" placeholder="Or type exam name..." maxlength="80" style="display:none;margin-top:.5rem;" />' +
-            '</div>' +
-            '<div class="sp-field">' +
-              '<label class="sp-label" for="spExamDate">Exam Date</label>' +
-              '<input id="spExamDate" class="sp-input" type="date" min="' + todayStr + '" />' +
-            '</div>' +
-            '<div class="sp-field">' +
-              '<label class="sp-label" for="spDailyTime">Daily Study Time: <strong id="spDailyTimeVal">60</strong> min</label>' +
-              '<input id="spDailyTime" type="range" min="15" max="180" step="15" value="60" class="sp-range" />' +
-              '<div class="sp-range-labels"><span>15 min</span><span>3 hrs</span></div>' +
-            '</div>' +
-            '<div class="sp-error" id="spError" style="display:none;"></div>' +
-            '<button class="btn accent sp-generate-btn" id="spGenerateBtn" type="button">Generate Plan ✨</button>' +
-          '</div>' +
-        '</div>' +
+        '<div class="sp-modal-body" id="spModalBody">' + formHTML + '</div>' +
         '<div class="modal-actions">' +
           '<button class="btn modal-cancel sp-close-btn">Close</button>' +
         '</div>' +
@@ -698,172 +702,184 @@ var AIFeatures = (function () {
       if (overlay.parentNode) overlay.parentNode.removeChild(overlay);
     }
 
+    function showForm() {
+      var bodyEl = overlay.querySelector('#spModalBody');
+      bodyEl.innerHTML = formHTML;
+      _bindFormHandlers(bodyEl);
+    }
+
+    function showResult(plan, examName, examDate, dailyMins) {
+      var examMs = new Date(examDate).getTime();
+      var daysRemaining = Math.max(1, Math.ceil((examMs - Date.now()) / (1000 * 60 * 60 * 24)));
+      var bodyEl = overlay.querySelector('#spModalBody');
+      bodyEl.innerHTML = _buildResultHTML(plan, examName, examDate, daysRemaining);
+
+      var editBtn = bodyEl.querySelector('.sp-edit-inputs-btn');
+      if (editBtn) editBtn.addEventListener('click', showForm);
+
+      var regenBtn = bodyEl.querySelector('.sp-regenerate-btn');
+      if (regenBtn) {
+        regenBtn.addEventListener('click', function () {
+          if (_studyPlanInFlight) return;
+          _studyPlanInFlight = true;
+          regenBtn.disabled = true;
+          regenBtn.innerHTML = '<div class="ai-spinner-inline"></div>';
+          _clearStudyPlanCache(examDate);
+
+          var progress = typeof loadProgress === 'function' ? loadProgress() : {};
+          var statsPayload = {
+            totalAttempted: progress.totalAttempted || 0,
+            totalCorrect: progress.totalCorrect || 0,
+            categoryStats: progress.categoryStats || {}
+          };
+
+          _sendAuthenticatedRequest('POST', '/api/ai/study-plan', {
+            examName: examName,
+            examDate: examDate,
+            dailyTimeMinutes: dailyMins,
+            forceRefresh: true,
+            stats: statsPayload
+          }, 45000, function (err, data) {
+            _studyPlanInFlight = false;
+            if (err || !data || !data.plan) {
+              regenBtn.disabled = false;
+              regenBtn.innerHTML = 'Regenerate ↺';
+              return;
+            }
+            _setStudyPlanCache(examDate, examName, dailyMins, data.plan);
+            showResult(data.plan, examName, examDate, dailyMins);
+          });
+        });
+      }
+    }
+
+    function _bindFormHandlers(formContainer) {
+      var examSelect = formContainer.querySelector('#spExamSelect');
+      var examCustom = formContainer.querySelector('#spExamCustom');
+      var examDateInput = formContainer.querySelector('#spExamDate');
+      var dailyTimeInput = formContainer.querySelector('#spDailyTime');
+      var dailyTimeVal = formContainer.querySelector('#spDailyTimeVal');
+      var generateBtn = formContainer.querySelector('#spGenerateBtn');
+      var errorEl = formContainer.querySelector('#spError');
+
+      examSelect.addEventListener('change', function () {
+        if (this.value === 'Other') {
+          examCustom.style.display = 'block';
+          examCustom.focus();
+        } else {
+          examCustom.style.display = 'none';
+          examCustom.value = '';
+        }
+      });
+
+      dailyTimeInput.addEventListener('input', function () {
+        dailyTimeVal.textContent = this.value;
+      });
+
+      generateBtn.addEventListener('click', function () {
+        if (_studyPlanInFlight) return;
+
+        var examName = examSelect.value === 'Other'
+          ? examCustom.value.trim()
+          : examSelect.value;
+        var examDate = examDateInput.value;
+        var dailyMins = parseInt(dailyTimeInput.value, 10);
+
+        errorEl.style.display = 'none';
+
+        if (!examName) {
+          errorEl.textContent = 'Please enter an exam name.';
+          errorEl.style.display = 'block';
+          if (examSelect.value === 'Other') examCustom.focus();
+          return;
+        }
+        if (!examDate) {
+          errorEl.textContent = 'Please select your exam date.';
+          errorEl.style.display = 'block';
+          examDateInput.focus();
+          return;
+        }
+        var examMs = new Date(examDate).getTime();
+        var daysRemaining = Math.ceil((examMs - Date.now()) / (1000 * 60 * 60 * 24));
+        if (daysRemaining < 1) {
+          errorEl.textContent = 'Exam date must be in the future.';
+          errorEl.style.display = 'block';
+          examDateInput.focus();
+          return;
+        }
+        if (!dailyMins || dailyMins < 15) {
+          errorEl.textContent = 'Please set a daily study time of at least 15 minutes.';
+          errorEl.style.display = 'block';
+          return;
+        }
+
+        var cached = _getStudyPlanCache(examDate);
+        if (cached && cached.examName === examName && cached.dailyTimeMinutes === dailyMins && cached.plan) {
+          showResult(cached.plan, examName, examDate, dailyMins);
+          return;
+        }
+
+        _studyPlanInFlight = true;
+        generateBtn.disabled = true;
+        generateBtn.innerHTML = '<div class="ai-spinner-inline"></div> Generating...';
+
+        var progress = typeof loadProgress === 'function' ? loadProgress() : {};
+        var statsPayload = {
+          totalAttempted: progress.totalAttempted || 0,
+          totalCorrect: progress.totalCorrect || 0,
+          categoryStats: progress.categoryStats || {}
+        };
+
+        _sendAuthenticatedRequest('POST', '/api/ai/study-plan', {
+          examName: examName,
+          examDate: examDate,
+          dailyTimeMinutes: dailyMins,
+          stats: statsPayload
+        }, 45000, function (err, data) {
+          _studyPlanInFlight = false;
+          generateBtn.disabled = false;
+          generateBtn.innerHTML = 'Generate Plan ✨';
+
+          if (err === 'premium_required') {
+            closeModal();
+            if (typeof showPaywall === 'function') showPaywall('settings');
+            return;
+          }
+          if (err) {
+            errorEl.textContent = 'Unable to generate plan right now. Please try again.';
+            errorEl.style.display = 'block';
+            return;
+          }
+          if (!data || !data.plan) {
+            errorEl.textContent = 'Received an invalid response. Please try again.';
+            errorEl.style.display = 'block';
+            return;
+          }
+          _setStudyPlanCache(examDate, examName, dailyMins, data.plan);
+          showResult(data.plan, examName, examDate, dailyMins);
+          if (typeof AIFeatures !== 'undefined' && containerId) {
+            var cont = document.getElementById(containerId);
+            if (cont) renderStudyPlanCard(containerId);
+          }
+        });
+      });
+    }
+
     overlay.querySelector('.sp-close-btn').addEventListener('click', closeModal);
     overlay.addEventListener('click', function (e) {
       if (e.target === overlay) closeModal();
     });
 
-    var examSelect = overlay.querySelector('#spExamSelect');
-    var examCustom = overlay.querySelector('#spExamCustom');
-    var examDateInput = overlay.querySelector('#spExamDate');
-    var dailyTimeInput = overlay.querySelector('#spDailyTime');
-    var dailyTimeVal = overlay.querySelector('#spDailyTimeVal');
-    var generateBtn = overlay.querySelector('#spGenerateBtn');
-    var errorEl = overlay.querySelector('#spError');
-    var bodyEl = overlay.querySelector('#spModalBody');
+    var initialForm = overlay.querySelector('#spForm');
+    _bindFormHandlers(initialForm);
 
     var lastUsed = _getLastUsed();
     if (lastUsed && lastUsed.examDate && lastUsed.examName && lastUsed.dailyTimeMinutes) {
       var lastCached = _getStudyPlanCache(lastUsed.examDate);
       if (lastCached && lastCached.examName === lastUsed.examName && lastCached.dailyTimeMinutes === lastUsed.dailyTimeMinutes && lastCached.plan) {
-        var lastExamMs = new Date(lastUsed.examDate).getTime();
-        var lastDaysRemaining = Math.max(1, Math.ceil((lastExamMs - Date.now()) / (1000 * 60 * 60 * 24)));
-        _renderStudyPlanResult(bodyEl, lastCached.plan, lastCached.examName, lastUsed.examDate, lastDaysRemaining);
-        _bindRegenerateBtn(bodyEl, containerId, lastUsed.examDate, lastCached.examName, lastUsed.dailyTimeMinutes, lastDaysRemaining);
+        showResult(lastCached.plan, lastCached.examName, lastUsed.examDate, lastUsed.dailyTimeMinutes);
       }
     }
-
-    examSelect.addEventListener('change', function () {
-      if (this.value === 'Other') {
-        examCustom.style.display = 'block';
-        examCustom.focus();
-      } else {
-        examCustom.style.display = 'none';
-        examCustom.value = '';
-      }
-    });
-
-    dailyTimeInput.addEventListener('input', function () {
-      dailyTimeVal.textContent = this.value;
-    });
-
-    generateBtn.addEventListener('click', function () {
-      if (_studyPlanInFlight) return;
-
-      var examName = examSelect.value === 'Other'
-        ? examCustom.value.trim()
-        : examSelect.value;
-      var examDate = examDateInput.value;
-      var dailyMins = parseInt(dailyTimeInput.value, 10);
-
-      errorEl.style.display = 'none';
-
-      if (!examName) {
-        errorEl.textContent = 'Please enter an exam name.';
-        errorEl.style.display = 'block';
-        if (examSelect.value === 'Other') examCustom.focus();
-        return;
-      }
-      if (!examDate) {
-        errorEl.textContent = 'Please select your exam date.';
-        errorEl.style.display = 'block';
-        examDateInput.focus();
-        return;
-      }
-      var examMs = new Date(examDate).getTime();
-      var nowMs = Date.now();
-      var daysRemaining = Math.ceil((examMs - nowMs) / (1000 * 60 * 60 * 24));
-      if (daysRemaining < 1) {
-        errorEl.textContent = 'Exam date must be in the future.';
-        errorEl.style.display = 'block';
-        examDateInput.focus();
-        return;
-      }
-      if (!dailyMins || dailyMins < 15) {
-        errorEl.textContent = 'Please set a daily study time of at least 15 minutes.';
-        errorEl.style.display = 'block';
-        return;
-      }
-
-      var cached = _getStudyPlanCache(examDate);
-      if (cached && cached.examName === examName && cached.dailyTimeMinutes === dailyMins && cached.plan) {
-        _renderStudyPlanResult(bodyEl, cached.plan, examName, examDate, daysRemaining);
-        _bindRegenerateBtn(bodyEl, containerId, examDate, examName, dailyMins, daysRemaining);
-        return;
-      }
-
-      _studyPlanInFlight = true;
-      generateBtn.disabled = true;
-      generateBtn.innerHTML = '<div class="ai-spinner-inline"></div> Generating...';
-
-      var progress = typeof loadProgress === 'function' ? loadProgress() : {};
-      var statsPayload = {
-        totalAttempted: progress.totalAttempted || 0,
-        totalCorrect: progress.totalCorrect || 0,
-        categoryStats: progress.categoryStats || {}
-      };
-
-      _sendAuthenticatedRequest('POST', '/api/ai/study-plan', {
-        examName: examName,
-        examDate: examDate,
-        dailyTimeMinutes: dailyMins,
-        stats: statsPayload
-      }, 45000, function (err, data) {
-        _studyPlanInFlight = false;
-        generateBtn.disabled = false;
-        generateBtn.innerHTML = 'Generate Plan ✨';
-
-        if (err === 'premium_required') {
-          closeModal();
-          if (typeof showPaywall === 'function') showPaywall('settings');
-          return;
-        }
-        if (err) {
-          errorEl.textContent = 'Unable to generate plan right now. Please try again.';
-          errorEl.style.display = 'block';
-          return;
-        }
-        if (!data || !data.plan) {
-          errorEl.textContent = 'Received an invalid response. Please try again.';
-          errorEl.style.display = 'block';
-          return;
-        }
-        _setStudyPlanCache(examDate, examName, dailyMins, data.plan);
-        _renderStudyPlanResult(bodyEl, data.plan, examName, examDate, daysRemaining);
-        _bindRegenerateBtn(bodyEl, containerId, examDate, examName, dailyMins, daysRemaining);
-        if (typeof AIFeatures !== 'undefined' && containerId) {
-          var cont = document.getElementById(containerId);
-          if (cont) renderStudyPlanCard(containerId);
-        }
-      });
-    });
-  }
-
-  function _bindRegenerateBtn(bodyEl, containerId, examDate, examName, dailyMins, daysRemaining) {
-    var regenBtn = bodyEl.querySelector('.sp-regenerate-btn');
-    if (!regenBtn) return;
-    regenBtn.addEventListener('click', function () {
-      if (_studyPlanInFlight) return;
-      _studyPlanInFlight = true;
-      regenBtn.disabled = true;
-      regenBtn.innerHTML = '<div class="ai-spinner-inline"></div> Regenerating...';
-      _clearStudyPlanCache(examDate);
-
-      var progress = typeof loadProgress === 'function' ? loadProgress() : {};
-      var statsPayload = {
-        totalAttempted: progress.totalAttempted || 0,
-        totalCorrect: progress.totalCorrect || 0,
-        categoryStats: progress.categoryStats || {}
-      };
-
-      _sendAuthenticatedRequest('POST', '/api/ai/study-plan', {
-        examName: examName,
-        examDate: examDate,
-        dailyTimeMinutes: dailyMins,
-        forceRefresh: true,
-        stats: statsPayload
-      }, 45000, function (err, data) {
-        _studyPlanInFlight = false;
-        if (err || !data || !data.plan) {
-          regenBtn.disabled = false;
-          regenBtn.innerHTML = 'Regenerate Plan';
-          return;
-        }
-        _setStudyPlanCache(examDate, examName, dailyMins, data.plan);
-        _renderStudyPlanResult(bodyEl, data.plan, examName, examDate, daysRemaining);
-        _bindRegenerateBtn(bodyEl, containerId, examDate, examName, dailyMins, daysRemaining);
-      });
-    });
   }
 
   function renderStudyPlanCard(containerId) {
