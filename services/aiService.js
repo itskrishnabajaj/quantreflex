@@ -468,4 +468,82 @@ function _shuffleInPlace(arr) {
   }
 }
 
-module.exports = { generateWordProblems, generateExplanation, generateInsights, verifyIdToken, isUserPremium, checkWordProblemQuota, consumeWordProblemQuota, trackExplanationUsage, trackInsightsUsage, AIServiceError };
+var STUDY_PLAN_TTL_DAYS = 7;
+
+async function generateStudyPlan(params) {
+  var m = getModel();
+  if (!m) throw new AIServiceError('SERVICE_UNAVAILABLE', 'AI service unavailable', true);
+
+  var examName = params.examName;
+  var examDate = params.examDate;
+  var daysRemaining = params.daysRemaining;
+  var dailyTimeMinutes = params.dailyTimeMinutes;
+  var weakTopics = params.weakTopics || [];
+  var accuracy = params.accuracy || '0';
+  var userId = params.userId;
+
+  var cacheRef = db.collection('aiStudyPlans');
+  var cacheDocId = userId + '_' + examDate.replace(/[^a-z0-9]/gi, '-');
+
+  try {
+    var cached = await cacheRef.doc(cacheDocId).get();
+    if (cached.exists) {
+      var data = cached.data();
+      var createdMs = data.createdAt ? data.createdAt.toMillis() : 0;
+      var ageMs = Date.now() - createdMs;
+      if (ageMs < STUDY_PLAN_TTL_DAYS * 24 * 60 * 60 * 1000) {
+        return { strategy: data.strategy, weeklyPlan: data.weeklyPlan, dailyStructure: data.dailyStructure, tip: data.tip };
+      }
+    }
+  } catch (cacheErr) {
+    console.warn('Study plan cache read failed:', cacheErr.message);
+  }
+
+  var weakStr = weakTopics.length > 0 ? weakTopics.join(', ') : 'None identified yet';
+  var timeLabel = daysRemaining <= 7 ? 'critical — less than a week' : daysRemaining <= 30 ? 'short — under a month' : daysRemaining <= 60 ? 'moderate — 1-2 months' : 'comfortable — more than 2 months';
+
+  var prompt = 'You are an expert quantitative aptitude coach for competitive exams like CAT, GMAT, CET, and placements.\n\nUser details:\n- Exam: ' + examName + '\n- Days remaining: ' + daysRemaining + ' (' + timeLabel + ')\n- Daily time available: ' + dailyTimeMinutes + ' minutes\n- Weak topics: ' + weakStr + '\n- Current accuracy: ' + accuracy + '%\n\nCreate a SMART and REALISTIC quant study plan.\n\nRequirements:\n- Focus ONLY on quant preparation\n- Prioritize weak areas specifically\n- Keep plan achievable within the given daily time\n- Break into weekly phases proportional to days remaining\n- Use specific topic names (not vague advice)\n- Keep it practical, not theoretical\n- For short timelines (< 14 days), focus on high-impact topics only\n- Reference actual numbers where helpful\n\nReturn ONLY a valid JSON object with exactly these fields:\n{\n  "strategy": "Overall 2-3 sentence approach, referencing the timeline and accuracy",\n  "weeklyPlan": ["Week 1: ...", "Week 2: ...", ...],\n  "dailyStructure": "How to split ' + dailyTimeMinutes + ' minutes per day effectively",\n  "tip": "One powerful, specific improvement tip for this exam"\n}\n\nThe weeklyPlan array must have at least 1 entry and at most 8 entries.\nReturn ONLY the JSON object, no markdown, no explanation, no code fences.';
+
+  var result = await _callAndParse(m, prompt, function (parsed) {
+    if (!parsed || typeof parsed.strategy !== 'string') return null;
+    if (!Array.isArray(parsed.weeklyPlan) || parsed.weeklyPlan.length < 1) return null;
+    if (typeof parsed.dailyStructure !== 'string') return null;
+    if (typeof parsed.tip !== 'string') return null;
+    return {
+      strategy: parsed.strategy,
+      weeklyPlan: parsed.weeklyPlan.filter(function (s) { return typeof s === 'string'; }),
+      dailyStructure: parsed.dailyStructure,
+      tip: parsed.tip
+    };
+  });
+
+  if (!result) throw new AIServiceError('INVALID_RESPONSE', 'Invalid study plan format after retries', true);
+
+  try {
+    await cacheRef.doc(cacheDocId).set({
+      userId: userId,
+      examName: examName,
+      examDate: examDate,
+      strategy: result.strategy,
+      weeklyPlan: result.weeklyPlan,
+      dailyStructure: result.dailyStructure,
+      tip: result.tip,
+      createdAt: admin.firestore.FieldValue.serverTimestamp()
+    });
+  } catch (writeErr) {
+    console.warn('Study plan cache write failed:', writeErr.message);
+  }
+
+  return result;
+}
+
+async function clearStudyPlanCache(userId, examDate) {
+  try {
+    var cacheDocId = userId + '_' + examDate.replace(/[^a-z0-9]/gi, '-');
+    await db.collection('aiStudyPlans').doc(cacheDocId).delete();
+  } catch (err) {
+    console.warn('Study plan cache clear failed:', err.message);
+  }
+}
+
+module.exports = { generateWordProblems, generateExplanation, generateInsights, generateStudyPlan, clearStudyPlanCache, verifyIdToken, isUserPremium, checkWordProblemQuota, consumeWordProblemQuota, trackExplanationUsage, trackInsightsUsage, AIServiceError };

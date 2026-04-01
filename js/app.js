@@ -1238,6 +1238,11 @@ document.addEventListener('DOMContentLoaded', function () {
     if (typeof AIFeatures !== 'undefined') {
       AIFeatures.renderAICoachCard('aiCoachContainer', p);
     }
+
+    /* Render AI Study Plan card */
+    if (typeof AIFeatures !== 'undefined' && typeof AIFeatures.renderStudyPlanCard === 'function') {
+      AIFeatures.renderStudyPlanCard('aiStudyPlanContainer');
+    }
   });
 
   /* ---- HOME VIEW: warmup handler ---- */

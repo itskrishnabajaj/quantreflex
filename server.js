@@ -177,6 +177,74 @@ app.post('/api/ai/insights', authMiddleware, rateLimitMiddleware, premiumGate('a
   }
 });
 
+app.post('/api/ai/study-plan', authMiddleware, rateLimitMiddleware, premiumGate('ai_study_plan'), async function (req, res) {
+  try {
+    var body = req.body;
+    var examName = typeof body.examName === 'string' ? body.examName.trim().substring(0, 100) : '';
+    var examDate = typeof body.examDate === 'string' ? body.examDate.trim() : '';
+    var dailyTimeMinutes = parseInt(body.dailyTimeMinutes) || 0;
+    var forceRefresh = body.forceRefresh === true;
+
+    if (!examName) {
+      return res.status(400).json({ error: { code: 'BAD_REQUEST', message: 'Exam name is required.', retryable: false } });
+    }
+    if (!examDate || !/^\d{4}-\d{2}-\d{2}$/.test(examDate)) {
+      return res.status(400).json({ error: { code: 'BAD_REQUEST', message: 'A valid exam date (YYYY-MM-DD) is required.', retryable: false } });
+    }
+
+    var examMs = new Date(examDate).getTime();
+    var nowMs = Date.now();
+    var daysRemaining = Math.ceil((examMs - nowMs) / (1000 * 60 * 60 * 24));
+    if (daysRemaining < 1) {
+      return res.status(400).json({ error: { code: 'BAD_REQUEST', message: 'Exam date must be in the future.', retryable: false } });
+    }
+
+    if (dailyTimeMinutes < 15 || dailyTimeMinutes > 480) {
+      return res.status(400).json({ error: { code: 'BAD_REQUEST', message: 'Daily time must be between 15 and 480 minutes.', retryable: false } });
+    }
+
+    var rawStats = body.stats || {};
+    var totalAttempted = parseInt(rawStats.totalAttempted) || 0;
+    var totalCorrect = parseInt(rawStats.totalCorrect) || 0;
+    var accuracy = totalAttempted > 0 ? ((totalCorrect / totalAttempted) * 100).toFixed(1) : '0';
+
+    var weakTopics = [];
+    if (rawStats.categoryStats && typeof rawStats.categoryStats === 'object') {
+      var catKeys = Object.keys(rawStats.categoryStats).slice(0, 20);
+      catKeys.forEach(function (key) {
+        var d = rawStats.categoryStats[key];
+        if (d && typeof d === 'object') {
+          var attempted = parseInt(d.attempted) || 0;
+          var correct = parseInt(d.correct) || 0;
+          if (attempted >= 5) {
+            var catAcc = (correct / attempted) * 100;
+            if (catAcc < 60) weakTopics.push(String(key).substring(0, 50));
+          }
+        }
+      });
+    }
+
+    if (forceRefresh) {
+      await aiService.clearStudyPlanCache(req.userId, examDate);
+    }
+
+    var plan = await aiService.generateStudyPlan({
+      examName: examName,
+      examDate: examDate,
+      daysRemaining: daysRemaining,
+      dailyTimeMinutes: dailyTimeMinutes,
+      weakTopics: weakTopics,
+      accuracy: accuracy,
+      userId: req.userId
+    });
+
+    res.json({ plan: plan });
+  } catch (err) {
+    console.error('Study plan error:', err.message);
+    res.status(500).json({ error: formatError(err) });
+  }
+});
+
 app.get('/{*splat}', function (req, res) {
   res.sendFile(path.join(__dirname, 'index.html'));
 });
