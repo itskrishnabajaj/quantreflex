@@ -627,6 +627,21 @@ var FirestoreSync = (function () {
       if (_memoryCache) _memoryCache.stats = resetStats;
       if (docRef) {
         docRef.set({ stats: resetStats }, { merge: true }).then(function () {
+          /* Also reset structured subcollections so they stay consistent */
+          var uid = docRef.id;
+          var db = docRef.firestore;
+          db.collection('users').doc(uid).collection('performance').doc('overall').set({
+            totalAttempted: 0, totalCorrect: 0,
+            bestStreak: 0, currentStreak: 0,
+            dailyStreak: 0, bestDailyStreak: 0,
+            drillSessions: 0, timedTestSessions: 0,
+            categoryStats: {}, responseTimes: [],
+            updatedAt: new Date().toISOString()
+          }, { merge: true }).catch(function () {});
+          db.collection('users').doc(uid).collection('practice').doc('data').set({
+            mistakes: [], savedQuestions: [],
+            updatedAt: new Date().toISOString()
+          }, { merge: true }).catch(function () {});
           if (callback) callback(null);
         }).catch(function (err) {
           if (callback) callback(err.message);
@@ -697,6 +712,21 @@ var FirestoreSync = (function () {
       if (existingProfile) _memoryCache.profile = existingProfile;
       if (docRef) {
         docRef.set(resetAll, { merge: true }).then(function () {
+          /* Also reset structured subcollections so they stay consistent */
+          var uid = docRef.id;
+          var db = docRef.firestore;
+          db.collection('users').doc(uid).collection('performance').doc('overall').set({
+            totalAttempted: 0, totalCorrect: 0,
+            bestStreak: 0, currentStreak: 0,
+            dailyStreak: 0, bestDailyStreak: 0,
+            drillSessions: 0, timedTestSessions: 0,
+            categoryStats: {}, responseTimes: [],
+            updatedAt: new Date().toISOString()
+          }, { merge: true }).catch(function () {});
+          db.collection('users').doc(uid).collection('practice').doc('data').set({
+            mistakes: [], savedQuestions: [],
+            updatedAt: new Date().toISOString()
+          }, { merge: true }).catch(function () {});
           if (callback) callback(null);
         }).catch(function (err) {
           if (callback) callback(err.message);

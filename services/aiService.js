@@ -131,7 +131,7 @@ async function _saveUsage(uid) {
   var entry = usageCache[uid];
   if (!entry) return;
   try {
-    await db.collection('users').doc(uid).collection('usage').doc('ai').set(entry);
+    await db.collection('users').doc(uid).collection('usage').doc('ai').set(entry, { merge: true });
   } catch (err) {
     console.warn('Usage write failed:', err.message);
   }
@@ -152,9 +152,9 @@ async function checkWordProblemQuota(uid, isPremium) {
   if (isPremium) {
     var lastDate = entry.wordProblemsLastDate ? new Date(entry.wordProblemsLastDate).toDateString() : null;
     if (lastDate !== today) { entry.wordProblemsUsedToday = 0; }
-    return WP_PREMIUM_DAILY - entry.wordProblemsUsedToday;
+    return Math.max(0, WP_PREMIUM_DAILY - entry.wordProblemsUsedToday);
   }
-  return WP_FREE_LIMIT - entry.wordProblemsUsedLifetime;
+  return Math.max(0, WP_FREE_LIMIT - entry.wordProblemsUsedLifetime);
 }
 
 async function consumeWordProblemQuota(uid, isPremium, count) {

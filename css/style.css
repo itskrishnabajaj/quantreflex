@@ -582,6 +582,9 @@ body.dark-mode .benchmark-highlight-pct { color: #e2e8f0; }
 .benchmark-band-top    .benchmark-highlight-pct strong { color: #15803d; }
 .benchmark-band-mid    .benchmark-highlight-pct strong { color: #2563eb; }
 .benchmark-band-bottom .benchmark-highlight-pct strong { color: #dc2626; }
+body.dark-mode .benchmark-band-top    .benchmark-highlight-pct strong { color: #4ade80; }
+body.dark-mode .benchmark-band-mid    .benchmark-highlight-pct strong { color: #60a5fa; }
+body.dark-mode .benchmark-band-bottom .benchmark-highlight-pct strong { color: #f87171; }
 .benchmark-stats-row {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
