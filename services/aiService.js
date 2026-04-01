@@ -184,9 +184,6 @@ async function trackInsightsUsage(uid) {
 }
 
 async function generateWordProblems(category, difficulty, count) {
-  var m = getModel();
-  if (!m) throw new AIServiceError('SERVICE_UNAVAILABLE', 'AI service unavailable', true);
-
   var cacheRef = db.collection('wordProblems');
   try {
     var cached = await cacheRef
@@ -212,6 +209,9 @@ async function generateWordProblems(category, difficulty, count) {
   } catch (cacheErr) {
     console.warn('Firestore cache read failed, generating fresh:', cacheErr.message);
   }
+
+  var m = getModel();
+  if (!m) throw new AIServiceError('SERVICE_UNAVAILABLE', 'AI service unavailable', true);
 
   var catLabel = CATEGORY_LABELS[category] || category;
   var diffDesc = {
@@ -283,9 +283,6 @@ async function generateWordProblems(category, difficulty, count) {
 }
 
 async function generateExplanation(question, answer, category) {
-  var m = getModel();
-  if (!m) throw new AIServiceError('SERVICE_UNAVAILABLE', 'AI service unavailable', true);
-
   var questionHash = _hashString(question + ':' + answer);
   var cacheRef = db.collection('explanations');
 
@@ -293,12 +290,15 @@ async function generateExplanation(question, answer, category) {
     var cached = await cacheRef.doc(questionHash).get();
     if (cached.exists) {
       var data = cached.data();
-      await cacheRef.doc(questionHash).update({ usageCount: (data.usageCount || 0) + 1 });
+      cacheRef.doc(questionHash).update({ usageCount: (data.usageCount || 0) + 1 }).catch(function () {});
       return { concept: data.concept, steps: data.steps, mistake: data.mistake, tip: data.tip };
     }
   } catch (cacheErr) {
     console.warn('Firestore explain cache read failed:', cacheErr.message);
   }
+
+  var m = getModel();
+  if (!m) throw new AIServiceError('SERVICE_UNAVAILABLE', 'AI service unavailable', true);
 
   var catLabel = CATEGORY_LABELS[category] || category || 'General Math';
 
@@ -344,9 +344,6 @@ async function generateExplanation(question, answer, category) {
 }
 
 async function generateInsights(stats, userId) {
-  var m = getModel();
-  if (!m) throw new AIServiceError('SERVICE_UNAVAILABLE', 'AI service unavailable', true);
-
   var today = new Date();
   var dateKey = today.getFullYear() + '-' + (today.getMonth() + 1) + '-' + today.getDate();
   var cacheDocId = userId + '_' + dateKey;
@@ -361,6 +358,9 @@ async function generateInsights(stats, userId) {
   } catch (cacheErr) {
     console.warn('Firestore insights cache read failed:', cacheErr.message);
   }
+
+  var m = getModel();
+  if (!m) throw new AIServiceError('SERVICE_UNAVAILABLE', 'AI service unavailable', true);
 
   var accuracy = stats.totalAttempted > 0
     ? ((stats.totalCorrect / stats.totalAttempted) * 100).toFixed(1)
@@ -471,9 +471,6 @@ function _shuffleInPlace(arr) {
 var STUDY_PLAN_TTL_DAYS = 7;
 
 async function generateStudyPlan(params) {
-  var m = getModel();
-  if (!m) throw new AIServiceError('SERVICE_UNAVAILABLE', 'AI service unavailable', true);
-
   var examName = params.examName;
   var examDate = params.examDate;
   var daysRemaining = params.daysRemaining;
@@ -500,6 +497,9 @@ async function generateStudyPlan(params) {
   } catch (cacheErr) {
     console.warn('Study plan cache read failed:', cacheErr.message);
   }
+
+  var m = getModel();
+  if (!m) throw new AIServiceError('SERVICE_UNAVAILABLE', 'AI service unavailable', true);
 
   var weakStr = weakTopics.length > 0 ? weakTopics.join(', ') : 'None identified yet';
   var timeLabel = daysRemaining <= 7 ? 'critical — less than a week' : daysRemaining <= 30 ? 'short — under a month' : daysRemaining <= 60 ? 'moderate — 1-2 months' : 'comfortable — more than 2 months';

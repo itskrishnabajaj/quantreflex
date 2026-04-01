@@ -21,26 +21,28 @@ var RATE_LIMIT_PREMIUM = 30;
 
 setInterval(function () {
   var now = Date.now();
-  for (var ip in rateLimitStore) {
-    if (now - rateLimitStore[ip].windowStart > RATE_WINDOW_MS * 5) {
-      delete rateLimitStore[ip];
+  for (var key in rateLimitStore) {
+    if (now - rateLimitStore[key].windowStart > RATE_WINDOW_MS * 5) {
+      delete rateLimitStore[key];
     }
   }
 }, 5 * 60 * 1000);
 
 function rateLimitMiddleware(req, res, next) {
-  var ip = req.ip || req.connection.remoteAddress || 'unknown';
+  /* Key by authenticated userId (set by authMiddleware which runs first).
+     Fall back to IP only if userId is somehow absent. */
+  var key = req.userId || req.ip || req.connection.remoteAddress || 'unknown';
   var now = Date.now();
   var isPremium = req.userPremium === true;
   var limit = isPremium ? RATE_LIMIT_PREMIUM : RATE_LIMIT_FREE;
 
-  if (!rateLimitStore[ip] || now - rateLimitStore[ip].windowStart > RATE_WINDOW_MS) {
-    rateLimitStore[ip] = { count: 1, windowStart: now };
+  if (!rateLimitStore[key] || now - rateLimitStore[key].windowStart > RATE_WINDOW_MS) {
+    rateLimitStore[key] = { count: 1, windowStart: now };
   } else {
-    rateLimitStore[ip].count++;
+    rateLimitStore[key].count++;
   }
 
-  if (rateLimitStore[ip].count > limit) {
+  if (rateLimitStore[key].count > limit) {
     return res.status(429).json({
       error: { code: 'RATE_LIMITED', message: 'Too many requests. Please wait before trying again.', retryable: true }
     });
