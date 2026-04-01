@@ -655,9 +655,9 @@ async function saveBenchmark(uid, data) {
     var avgTime = typeof data.avgTimeSec === 'number' ? data.avgTimeSec : 0;
     var questionCount = typeof data.questionCount === 'number' ? data.questionCount : 0;
     var fingerprint = accuracy + '_' + avgTime + '_' + questionCount;
-    await db.collection('users').doc(uid).collection('ai').doc('benchmarks').collection('results').doc(fingerprint).set({
+    await db.collection('users').doc(uid).collection('ai').doc('benchmarks').collection('sessions').doc(fingerprint).set({
       accuracy: accuracy,
-      avgTimeSec: avgTime,
+      avgTime: avgTime,
       speedScore: data.speedScore || 0,
       percentileBand: data.percentileBand || '',
       questionCount: questionCount,
@@ -665,7 +665,7 @@ async function saveBenchmark(uid, data) {
       summary: data.summary || '',
       level: data.level || '',
       suggestion: data.suggestion || '',
-      savedAt: admin.firestore.FieldValue.serverTimestamp()
+      timestamp: admin.firestore.FieldValue.serverTimestamp()
     }, { merge: true });
   } catch (err) {
     console.warn('Benchmark save failed:', err.message);

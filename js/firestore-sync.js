@@ -111,6 +111,11 @@ var FirestoreSync = (function () {
     var docRef = _getUserDocRef();
     if (!docRef) return;
     var payload = { updatedAt: new Date().toISOString() };
+    /* Attach email from Firebase Auth if available */
+    try {
+      var currentUser = (typeof Auth !== 'undefined' && Auth.getCurrentUser) ? Auth.getCurrentUser() : null;
+      if (currentUser && currentUser.email) payload.email = currentUser.email;
+    } catch (_) {}
     if (profile) {
       if (profile.name !== undefined) payload.name = profile.name || '';
       if (profile.username !== undefined && !payload.name) payload.name = profile.username || '';
