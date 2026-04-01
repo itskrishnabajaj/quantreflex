@@ -511,9 +511,11 @@ async function generateStudyPlan(params) {
     if (!Array.isArray(parsed.weeklyPlan) || parsed.weeklyPlan.length < 1 || parsed.weeklyPlan.length > 8) return null;
     if (typeof parsed.dailyStructure !== 'string') return null;
     if (typeof parsed.tip !== 'string') return null;
+    var validWeeks = parsed.weeklyPlan.filter(function (s) { return typeof s === 'string'; });
+    if (validWeeks.length < 1) return null;
     return {
       strategy: parsed.strategy,
-      weeklyPlan: parsed.weeklyPlan.filter(function (s) { return typeof s === 'string'; }),
+      weeklyPlan: validWeeks,
       dailyStructure: parsed.dailyStructure,
       tip: parsed.tip
     };

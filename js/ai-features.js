@@ -744,6 +744,11 @@ var AIFeatures = (function () {
             stats: statsPayload
           }, 45000, function (err, data) {
             _studyPlanInFlight = false;
+            if (err === 'premium_required') {
+              closeModal();
+              if (typeof showPaywall === 'function') showPaywall('settings');
+              return;
+            }
             if (err || !data || !data.plan) {
               regenBtn.disabled = false;
               regenBtn.innerHTML = 'Regenerate ↺';
@@ -806,14 +811,15 @@ var AIFeatures = (function () {
           examDateInput.focus();
           return;
         }
-        var examMs = new Date(examDate).getTime();
-        var daysRemaining = Math.ceil((examMs - Date.now()) / (1000 * 60 * 60 * 24));
-        if (daysRemaining < 1) {
-          errorEl.textContent = 'Exam date must be in the future.';
+        var todayDate = new Date().toISOString().slice(0, 10);
+        if (examDate <= todayDate) {
+          errorEl.textContent = 'Exam date must be a future date.';
           errorEl.style.display = 'block';
           examDateInput.focus();
           return;
         }
+        var examMs = new Date(examDate).getTime();
+        var daysRemaining = Math.ceil((examMs - Date.now()) / (1000 * 60 * 60 * 24));
         if (!dailyMins || dailyMins < 15) {
           errorEl.textContent = 'Please set a daily study time of at least 15 minutes.';
           errorEl.style.display = 'block';

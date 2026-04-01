@@ -192,12 +192,12 @@ app.post('/api/ai/study-plan', authMiddleware, rateLimitMiddleware, premiumGate(
       return res.status(400).json({ error: { code: 'BAD_REQUEST', message: 'A valid exam date (YYYY-MM-DD) is required.', retryable: false } });
     }
 
-    var examMs = new Date(examDate).getTime();
-    var nowMs = Date.now();
-    var daysRemaining = Math.ceil((examMs - nowMs) / (1000 * 60 * 60 * 24));
-    if (daysRemaining < 1) {
-      return res.status(400).json({ error: { code: 'BAD_REQUEST', message: 'Exam date must be in the future.', retryable: false } });
+    var todayStr = new Date().toISOString().slice(0, 10);
+    if (examDate <= todayStr) {
+      return res.status(400).json({ error: { code: 'BAD_REQUEST', message: 'Exam date must be a future date.', retryable: false } });
     }
+    var examMs = new Date(examDate).getTime();
+    var daysRemaining = Math.ceil((examMs - Date.now()) / (1000 * 60 * 60 * 24));
 
     if (dailyTimeMinutes < 15 || dailyTimeMinutes > 180) {
       return res.status(400).json({ error: { code: 'BAD_REQUEST', message: 'Daily time must be between 15 and 180 minutes.', retryable: false } });
