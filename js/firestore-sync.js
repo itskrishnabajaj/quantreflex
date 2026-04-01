@@ -531,9 +531,14 @@ var FirestoreSync = (function () {
    */
   function syncStats(stats) {
     queueUpdate('stats', stats);
-    _syncPerformanceSubcollection(stats);
-    var cachedBookmarks = (_memoryCache && Array.isArray(_memoryCache.bookmarks)) ? _memoryCache.bookmarks : null;
-    _syncPracticeSubcollection(stats, cachedBookmarks);
+    /* Skip subcollection writes during active drill sessions to avoid per-answer write amplification.
+       The drill-end flush (endDrillMode → _flushPendingUpdates → syncStats) runs with _drillActive=false,
+       so subcollections are always updated once at session end. */
+    if (!_drillActive) {
+      _syncPerformanceSubcollection(stats);
+      var cachedBookmarks = (_memoryCache && Array.isArray(_memoryCache.bookmarks)) ? _memoryCache.bookmarks : null;
+      _syncPracticeSubcollection(stats, cachedBookmarks);
+    }
   }
 
   /**
