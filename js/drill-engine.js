@@ -529,6 +529,131 @@ function createDrillEngine(container, opts) {
     return categoryTips[cat] || 'Tip: Review the formula used for this type of question.';
   }
 
+  /* ---- Share as image (Canvas-based PNG card) ---- */
+  function _shareAsImage(accuracy, avg, percentile) {
+    var W = 600, H = 340;
+    var canvas = document.createElement('canvas');
+    canvas.width = W;
+    canvas.height = H;
+    var ctx = canvas.getContext('2d');
+    if (!ctx) {
+      /* Canvas not supported — fall back to text share */
+      _shareTextFallback(accuracy, percentile);
+      return;
+    }
+
+    /* Background */
+    ctx.fillStyle = '#0f172a';
+    ctx.fillRect(0, 0, W, H);
+
+    /* Card */
+    var cx = 20, cy = 20, cw = W - 40, ch = H - 40, r = 20;
+    ctx.beginPath();
+    ctx.moveTo(cx + r, cy);
+    ctx.lineTo(cx + cw - r, cy);
+    ctx.quadraticCurveTo(cx + cw, cy, cx + cw, cy + r);
+    ctx.lineTo(cx + cw, cy + ch - r);
+    ctx.quadraticCurveTo(cx + cw, cy + ch, cx + cw - r, cy + ch);
+    ctx.lineTo(cx + r, cy + ch);
+    ctx.quadraticCurveTo(cx, cy + ch, cx, cy + ch - r);
+    ctx.lineTo(cx, cy + r);
+    ctx.quadraticCurveTo(cx, cy, cx + r, cy);
+    ctx.closePath();
+    ctx.fillStyle = '#1e293b';
+    ctx.fill();
+
+    /* App name */
+    ctx.fillStyle = '#f8fafc';
+    ctx.font = 'bold 28px system-ui, -apple-system, sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText('QuantReflex', W / 2, 76);
+
+    /* Website */
+    ctx.fillStyle = '#94a3b8';
+    ctx.font = '13px system-ui, -apple-system, sans-serif';
+    ctx.fillText('QuantReflex.netlify.app', W / 2, 100);
+
+    /* Divider */
+    ctx.strokeStyle = '#334155';
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.moveTo(60, 116);
+    ctx.lineTo(W - 60, 116);
+    ctx.stroke();
+
+    /* Accuracy (large) */
+    ctx.fillStyle = '#22d3ee';
+    ctx.font = 'bold 64px system-ui, -apple-system, sans-serif';
+    ctx.fillText(accuracy + '%', W / 2, 188);
+
+    /* Accuracy label */
+    ctx.fillStyle = '#94a3b8';
+    ctx.font = '14px system-ui, -apple-system, sans-serif';
+    ctx.fillText('Accuracy', W / 2, 210);
+
+    /* Avg time stat — left block */
+    var leftX = W / 2 - 100;
+    ctx.fillStyle = '#f8fafc';
+    ctx.font = 'bold 22px system-ui, -apple-system, sans-serif';
+    ctx.fillText(avg + 's', leftX, 248);
+    ctx.fillStyle = '#64748b';
+    ctx.font = '12px system-ui, -apple-system, sans-serif';
+    ctx.fillText('Avg Time', leftX, 266);
+
+    /* Speed benchmark — right block */
+    var rightX = W / 2 + 100;
+    ctx.fillStyle = '#f8fafc';
+    ctx.font = 'bold 22px system-ui, -apple-system, sans-serif';
+    ctx.fillText('Top ' + (100 - percentile) + '%', rightX, 248);
+    ctx.fillStyle = '#64748b';
+    ctx.font = '12px system-ui, -apple-system, sans-serif';
+    ctx.fillText('Speed Rank', rightX, 266);
+
+    /* Tagline */
+    ctx.fillStyle = '#475569';
+    ctx.font = 'italic 13px system-ui, -apple-system, sans-serif';
+    ctx.fillText('Train your brain daily', W / 2, 302);
+
+    /* Share the image */
+    canvas.toBlob(function (blob) {
+      if (!blob) { _shareTextFallback(accuracy, percentile); return; }
+      var file = new File([blob], 'quantreflex-result.png', { type: 'image/png' });
+      if (navigator.share && navigator.canShare && navigator.canShare({ files: [file] })) {
+        navigator.share({ files: [file], title: 'QuantReflex Result' }).catch(function () {
+          _shareTextFallback(accuracy, percentile);
+        });
+      } else if (navigator.share) {
+        _shareTextFallback(accuracy, percentile);
+      } else {
+        /* Download fallback — create an <a> and trigger download */
+        var url = URL.createObjectURL(blob);
+        var a = document.createElement('a');
+        a.href = url;
+        a.download = 'quantreflex-result.png';
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        setTimeout(function () { URL.revokeObjectURL(url); }, 2000);
+        if (typeof showToast === 'function') showToast('\u2705 Image saved!');
+      }
+    }, 'image/png');
+  }
+
+  function _shareTextFallback(accuracy, percentile) {
+    var shareText = 'I scored ' + accuracy + '% accuracy on QuantReflex \uD83D\uDD25 - faster than ' + percentile + '% of users! Train your mental math: https://quantreflex.netlify.app';
+    if (navigator.share) {
+      navigator.share({ text: shareText }).catch(function () {});
+    } else if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(shareText).then(function () {
+        if (typeof showToast === 'function') showToast('\u2705 Copied to clipboard!');
+      }).catch(function () {
+        if (typeof showToast === 'function') showToast('Could not copy. Try again.');
+      });
+    } else {
+      if (typeof showToast === 'function') showToast('Sharing not supported on this browser.');
+    }
+  }
+
   function _computeSessionInsight(accNum, wrongCats) {
     /* Load 7-day rolling average from progress localStorage for comparison */
     var rollingAvg = null;
@@ -647,9 +772,6 @@ function createDrillEngine(container, opts) {
     else if (accNum >= 50) { badgeText = '📝 Needs Practice'; badgeClass = 'badge-practice'; }
     else { badgeText = '💪 Keep Trying'; badgeClass = 'badge-weak'; }
 
-    /* Retry challenge text */
-    var retryChallenge = avg !== '0.0' ? 'Beat your ' + avg + 's avg?' : 'Try to go faster!';
-
     /* Rule-based post-session insight (always visible, no AI call) */
     var _insightText = _computeSessionInsight(accNum, sessionWrongCategories);
 
@@ -692,9 +814,8 @@ function createDrillEngine(container, opts) {
           '<div class="benchmark-ai-section" id="benchmarkAiSection">' +
             '<div class="benchmark-ai-placeholder" id="benchmarkAiPlaceholder"></div>' +
           '</div>' +
-          '<button class="benchmark-cta-btn" type="button" id="benchmarkImproveBtn">' + _escHtml(retryChallenge) + ' \u2192</button>' +
         '</div>' +
-        '<button class="btn results-share-btn" type="button" id="shareResultBtn">📤 Share Result</button>' +
+        '<button class="btn results-share-btn" type="button" id="shareResultBtn">\uD83D\uDCE4 Share Result</button>' +
         '<button class="btn accent" id="tryAgainBtn">Try Again</button>' +
         '<button class="btn" id="homeBtn">Home</button>' +
       '</div>';
@@ -713,29 +834,11 @@ function createDrillEngine(container, opts) {
         Router.showView('home');
       }
     });
-    var improveBtn = container.querySelector('#benchmarkImproveBtn');
-    if (improveBtn) {
-      improveBtn.addEventListener('click', function () {
-        if (onFinish) { onFinish('practice'); } else { Router.showView('practice'); }
-      });
-    }
-
-    /* Share button */
+    /* Share button — generates a PNG image card and shares it */
     var shareBtn = container.querySelector('#shareResultBtn');
     if (shareBtn) {
       shareBtn.addEventListener('click', function () {
-        var shareText = 'I scored ' + accuracy + '% accuracy on QuantReflex \uD83D\uDD25 — faster than ' + percentile + '% of users! Train your mental math: https://quantreflex.app';
-        if (navigator.share) {
-          navigator.share({ text: shareText }).catch(function () {});
-        } else if (navigator.clipboard && navigator.clipboard.writeText) {
-          navigator.clipboard.writeText(shareText).then(function () {
-            if (typeof showToast === 'function') showToast('\u2705 Copied to clipboard!');
-          }).catch(function () {
-            if (typeof showToast === 'function') showToast('Could not copy. Try again.');
-          });
-        } else {
-          if (typeof showToast === 'function') showToast('Sharing not supported on this browser.');
-        }
+        _shareAsImage(accuracy, avg, percentile);
       });
     }
 

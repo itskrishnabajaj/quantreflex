@@ -238,7 +238,7 @@ var _CATEGORY_LABELS = {
  * @returns {string} formatted label (e.g. 'Time & Work')
  */
 function formatCategoryName(key) {
-  if (!key) return '—';
+  if (!key) return '-';
   if (_CATEGORY_LABELS[key]) return _CATEGORY_LABELS[key];
   /* Fallback: capitalize and replace hyphens with spaces */
   return key.replace(/-/g, ' ').replace(/\b\w/g, function (c) { return c.toUpperCase(); });
@@ -1959,7 +1959,7 @@ function renderStatsView() {
      Compare last 7 days accuracy vs prior 7 days.
      A difference > 2% is considered meaningful enough to report as improving/declining,
      while smaller changes are reported as steady to avoid noise from variance. */
-  var trend = '—';
+  var trend = '-';
   var trendClass = '';
   var history = p.dailyHistory || {};
   var dates = Object.keys(history).sort();
@@ -2007,7 +2007,7 @@ function renderStatsView() {
   var speedEl = document.getElementById('statsSpeed');
   if (speedEl) {
     speedEl.innerHTML =
-      '<div class="stat-card"><div class="value">' + (avgTime || '—') + 's</div><div class="label">Avg Response Time</div></div>' +
+      '<div class="stat-card"><div class="value">' + (avgTime || '-') + 's</div><div class="label">Avg Response Time</div></div>' +
       '<div class="stat-card"><div class="value">' + (p.bestStreak || 0) + '</div><div class="label">Best Streak</div></div>';
   }
 
@@ -2027,12 +2027,10 @@ function renderStatsView() {
       '<div class="stat-card"><div class="value">' + (p.todayAttempted || 0) + '</div><div class="label">Today\'s Questions</div></div>';
   }
 
-  /* Section 4b — 7-Day Accuracy Sparkline */
+  /* Section 4b — 7-Day Accuracy Bar Chart */
   var sparklineEl = document.getElementById('statsSparkline');
   if (sparklineEl) {
-    /* Sort keys by actual date timestamp to ensure chronological order,
-       since Date.toDateString() keys (e.g. "Mon Apr 1 2026") are NOT
-       lexicographically sortable — parse them to timestamps first. */
+    /* Sort keys by actual date timestamp to ensure chronological order */
     var _allDates = Object.keys(history).sort(function (a, b) {
       return new Date(a).getTime() - new Date(b).getTime();
     });
@@ -2040,32 +2038,40 @@ function renderStatsView() {
     if (_last7.length < 2) {
       sparklineEl.innerHTML = '<p class="secondary-text sparkline-empty">Practice for 2+ days to see your accuracy trend.</p>';
     } else {
-      var _barW = 28, _barGap = 8, _chartH = 64, _labelH = 18;
+      var _DAY_ABBREV = ['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa'];
+      var _barW = 36, _barGap = 10, _chartH = 80, _labelH = 22;
       var _svgW = _last7.length * (_barW + _barGap) - _barGap;
       var _svgH = _chartH + _labelH;
       var _values = _last7.map(function (d) {
         var e = history[d];
         return e && e.attempted > 0 ? Math.round((e.correct / e.attempted) * 100) : 0;
       });
+      /* Find highest value to highlight it */
+      var _maxVal = Math.max.apply(null, _values);
       var _bars = '';
       for (var _i = 0; _i < _last7.length; _i++) {
         var _pct = _values[_i];
         var _barH = Math.max(4, Math.round((_pct / 100) * _chartH));
         var _x = _i * (_barW + _barGap);
         var _y = _chartH - _barH;
-        var _barColor = _pct >= 80 ? '#16a34a' : _pct >= 60 ? '#2563eb' : '#ef4444';
+        /* Highlight the best day in accent cyan; others use accuracy-tier colors */
+        var _barColor = (_pct === _maxVal && _maxVal > 0) ? '#22d3ee'
+          : _pct >= 80 ? '#16a34a' : _pct >= 60 ? '#2563eb' : '#ef4444';
         var _d = new Date(_last7[_i]);
-        var _dayLabel = _d.toLocaleDateString(undefined, { weekday: 'short', month: 'numeric', day: 'numeric' });
+        var _dayLabel = _DAY_ABBREV[_d.getDay()];
+        var _valDisplay = _pct > 0 ? _pct + '%' : '';
         _bars +=
-          '<rect x="' + _x + '" y="' + _y + '" width="' + _barW + '" height="' + _barH + '" rx="4" fill="' + _barColor + '" opacity="0.85"/>' +
-          '<text x="' + (_x + _barW / 2) + '" y="' + (_y - 3) + '" text-anchor="middle" class="sparkline-val">' + _pct + '%</text>' +
-          '<text x="' + (_x + _barW / 2) + '" y="' + (_chartH + _labelH - 2) + '" text-anchor="middle" class="sparkline-day">' + _dayLabel + '</text>';
+          '<rect x="' + _x + '" y="' + _y + '" width="' + _barW + '" height="' + _barH + '" rx="5" fill="' + _barColor + '" opacity="0.9"/>' +
+          '<text x="' + (_x + _barW / 2) + '" y="' + (_y - 4) + '" text-anchor="middle" class="sparkline-val">' + _valDisplay + '</text>' +
+          '<text x="' + (_x + _barW / 2) + '" y="' + (_chartH + _labelH - 4) + '" text-anchor="middle" class="sparkline-day">' + _dayLabel + '</text>';
       }
+      var _trendLabel = trend !== '-' ? trend : '';
       sparklineEl.innerHTML =
         '<svg class="stats-sparkline" viewBox="0 0 ' + _svgW + ' ' + _svgH + '" width="100%" preserveAspectRatio="xMidYMid meet" aria-label="7-day accuracy chart">' +
           '<line x1="0" y1="' + _chartH + '" x2="' + _svgW + '" y2="' + _chartH + '" stroke="currentColor" opacity="0.15" stroke-width="1"/>' +
           _bars +
-        '</svg>';
+        '</svg>' +
+        (_trendLabel ? '<div class="sparkline-trend-label">' + _trendLabel + '</div>' : '');
     }
   }
 
@@ -2086,13 +2092,12 @@ function renderStatsView() {
       }
     } else {
     var categoryInsightMsg = (!weakest && !strongest) ? 'Solve more questions to unlock category insights.' : '';
-    var weakestDisplay = weakest ? formatCategoryName(weakest) : (categoryInsightMsg ? '🔒' : '—');
-    var strongestDisplay = strongest ? formatCategoryName(strongest) : (categoryInsightMsg ? '🔒' : '—');
-
+    var weakestDisplay = weakest ? formatCategoryName(weakest) : (categoryInsightMsg ? '🔒' : '-');
+    var strongestDisplay = strongest ? formatCategoryName(strongest) : (categoryInsightMsg ? '🔒' : '-');
+    insightsEl.className = 'stat-grid stat-grid-2';
     insightsEl.innerHTML =
       '<div class="stat-card' + (strongest ? ' stat-card-positive' : '') + '"><div class="value value-sm">' + strongestDisplay + '</div><div class="label">Strongest Category</div>' + (categoryInsightMsg && !strongest ? '<div class="stat-hint">' + categoryInsightMsg + '</div>' : '') + '</div>' +
-      '<div class="stat-card' + (weakest ? ' stat-card-negative' : '') + '"><div class="value value-sm">' + weakestDisplay + '</div><div class="label">Weakest Category</div>' + (categoryInsightMsg && !weakest ? '<div class="stat-hint">' + categoryInsightMsg + '</div>' : '') + '</div>' +
-      '<div class="stat-card' + trendClass + '"><div class="value value-sm">' + trend + '</div><div class="label">Recent Trend</div></div>';
+      '<div class="stat-card' + (weakest ? ' stat-card-negative' : '') + '"><div class="value value-sm">' + weakestDisplay + '</div><div class="label">Weakest Category</div>' + (categoryInsightMsg && !weakest ? '<div class="stat-hint">' + categoryInsightMsg + '</div>' : '') + '</div>';
     }
   }
 
