@@ -866,10 +866,11 @@ var FirestoreSync = (function () {
       }
       docRef.set(payload, { merge: true }).then(function () {
         if (callback) callback(null);
+        /* Mirror only after root write confirms success — avoids mirror divergence on failure */
+        _syncProfileSubcollection(null, { isPremium: true, hasPaid: true, isTrial: false, trialEnd: null });
       }).catch(function (err) {
         if (callback) callback(err && err.message ? err.message : 'Premium unlock failed');
       });
-      _syncProfileSubcollection(null, { isPremium: true, hasPaid: true, isTrial: false, trialEnd: null });
     }
   };
 })();
