@@ -2030,6 +2030,230 @@ body.dark-mode .info-quote p { color: #94a3b8; }
   transform: scale(.98);
 }
 
+/* ---- Guide Premium Tier Cards ---- */
+.guide-premium-section {
+  border-radius: 1rem;
+  padding: 1.25rem 1.15rem 1rem;
+  margin-bottom: 0;
+  border: 1.5px solid rgba(37,99,235,.15);
+  background: linear-gradient(145deg, rgba(37,99,235,.04) 0%, rgba(255,255,255,.0) 100%);
+}
+.guide-ai-tier {
+  border-color: rgba(124,58,237,.18);
+  background: linear-gradient(145deg, rgba(124,58,237,.05) 0%, rgba(255,255,255,.0) 100%);
+}
+.guide-premium-header {
+  margin-bottom: 1.1rem;
+}
+.guide-tier-badge {
+  display: inline-block;
+  font-size: .65rem;
+  font-weight: 800;
+  letter-spacing: .07em;
+  padding: .2rem .55rem;
+  border-radius: 2rem;
+  margin-bottom: .6rem;
+  text-transform: uppercase;
+}
+.guide-tier-badge--premium {
+  background: rgba(37,99,235,.1);
+  color: #2563eb;
+  border: 1px solid rgba(37,99,235,.2);
+}
+.guide-tier-badge--ai {
+  background: rgba(124,58,237,.1);
+  color: #7c3aed;
+  border: 1px solid rgba(124,58,237,.2);
+}
+.guide-tier-title {
+  font-size: 1.08rem;
+  font-weight: 720;
+  color: #0f172a;
+  margin: 0 0 .3rem;
+  line-height: 1.3;
+}
+.guide-tier-subtitle {
+  font-size: .82rem;
+  color: #64748b;
+  margin: 0;
+  line-height: 1.5;
+}
+.guide-feature-group {
+  margin-bottom: 1rem;
+}
+.guide-feature-group:last-of-type {
+  margin-bottom: .75rem;
+}
+.guide-feature-group-label {
+  font-size: .68rem;
+  font-weight: 800;
+  color: #94a3b8;
+  text-transform: uppercase;
+  letter-spacing: .09em;
+  margin-bottom: .5rem;
+  padding-bottom: .35rem;
+  border-bottom: 1px solid rgba(226,232,240,.7);
+}
+.guide-feature-row {
+  display: flex;
+  align-items: flex-start;
+  gap: .55rem;
+  padding: .42rem 0;
+  border-bottom: 1px solid rgba(241,245,249,.8);
+}
+.guide-feature-row:last-child {
+  border-bottom: none;
+}
+.guide-feature-icon {
+  font-size: .95rem;
+  line-height: 1.4;
+  flex-shrink: 0;
+  width: 1.3rem;
+  text-align: center;
+}
+.guide-feature-info {
+  display: flex;
+  flex-direction: column;
+  gap: .1rem;
+  min-width: 0;
+}
+.guide-feature-name {
+  font-size: .86rem;
+  font-weight: 650;
+  color: #0f172a;
+  line-height: 1.35;
+}
+.guide-feature-desc {
+  font-size: .78rem;
+  color: #64748b;
+  line-height: 1.5;
+}
+.guide-tier-footer {
+  font-size: .75rem;
+  font-weight: 600;
+  color: #2563eb;
+  text-align: center;
+  margin-top: .85rem;
+  padding: .55rem .75rem;
+  background: rgba(37,99,235,.06);
+  border-radius: .6rem;
+  border: 1px solid rgba(37,99,235,.12);
+  letter-spacing: .01em;
+}
+.guide-tier-cta-note {
+  color: #7c3aed;
+  background: rgba(124,58,237,.06);
+  border-color: rgba(124,58,237,.15);
+}
+
+/* Dark mode — guide premium cards */
+body.dark-mode .guide-premium-section {
+  border-color: rgba(96,165,250,.15);
+  background: linear-gradient(145deg, rgba(96,165,250,.06) 0%, rgba(30,41,59,.0) 100%);
+}
+body.dark-mode .guide-ai-tier {
+  border-color: rgba(167,139,250,.15);
+  background: linear-gradient(145deg, rgba(167,139,250,.06) 0%, rgba(30,41,59,.0) 100%);
+}
+body.dark-mode .guide-tier-badge--premium {
+  background: rgba(96,165,250,.12);
+  color: #60a5fa;
+  border-color: rgba(96,165,250,.2);
+}
+body.dark-mode .guide-tier-badge--ai {
+  background: rgba(167,139,250,.12);
+  color: #a78bfa;
+  border-color: rgba(167,139,250,.2);
+}
+body.dark-mode .guide-tier-title { color: #e2e8f0; }
+body.dark-mode .guide-tier-subtitle { color: #64748b; }
+body.dark-mode .guide-feature-group-label { color: #475569; border-bottom-color: rgba(51,65,85,.6); }
+body.dark-mode .guide-feature-row { border-bottom-color: rgba(51,65,85,.5); }
+body.dark-mode .guide-feature-name { color: #e2e8f0; }
+body.dark-mode .guide-feature-desc { color: #64748b; }
+body.dark-mode .guide-tier-footer {
+  color: #60a5fa;
+  background: rgba(96,165,250,.08);
+  border-color: rgba(96,165,250,.15);
+}
+body.dark-mode .guide-tier-cta-note {
+  color: #a78bfa;
+  background: rgba(167,139,250,.08);
+  border-color: rgba(167,139,250,.15);
+}
+
+/* Playful theme — guide premium cards */
+body.theme-playful .guide-premium-section {
+  border-color: rgba(79,143,247,.18);
+  background: linear-gradient(145deg, rgba(79,143,247,.05) 0%, rgba(250,249,247,.0) 100%);
+}
+body.theme-playful .guide-ai-tier {
+  border-color: rgba(124,58,237,.15);
+  background: linear-gradient(145deg, rgba(124,58,237,.05) 0%, rgba(250,249,247,.0) 100%);
+}
+body.theme-playful .guide-tier-badge--premium {
+  background: rgba(79,143,247,.1);
+  color: #4f8ff7;
+  border-color: rgba(79,143,247,.2);
+}
+body.theme-playful .guide-tier-badge--ai {
+  background: rgba(124,58,237,.1);
+  color: #7c3aed;
+  border-color: rgba(124,58,237,.2);
+}
+body.theme-playful .guide-tier-title { color: #1a1a2e; }
+body.theme-playful .guide-tier-subtitle { color: #5a6275; }
+body.theme-playful .guide-feature-group-label { color: #8b8fa3; border-bottom-color: rgba(226,222,214,.7); }
+body.theme-playful .guide-feature-row { border-bottom-color: rgba(241,238,234,.8); }
+body.theme-playful .guide-feature-name { color: #1a1a2e; }
+body.theme-playful .guide-feature-desc { color: #5a6275; }
+body.theme-playful .guide-tier-footer {
+  color: #4f8ff7;
+  background: rgba(79,143,247,.07);
+  border-color: rgba(79,143,247,.15);
+}
+body.theme-playful .guide-tier-cta-note {
+  color: #7c3aed;
+  background: rgba(124,58,237,.06);
+  border-color: rgba(124,58,237,.15);
+}
+
+/* Playful dark — guide premium cards */
+body.theme-playful.dark-mode .guide-premium-section {
+  border-color: rgba(88,166,255,.15);
+  background: linear-gradient(145deg, rgba(88,166,255,.06) 0%, rgba(13,17,23,.0) 100%);
+}
+body.theme-playful.dark-mode .guide-ai-tier {
+  border-color: rgba(167,139,250,.15);
+  background: linear-gradient(145deg, rgba(167,139,250,.06) 0%, rgba(13,17,23,.0) 100%);
+}
+body.theme-playful.dark-mode .guide-tier-badge--premium {
+  background: rgba(88,166,255,.12);
+  color: #58a6ff;
+  border-color: rgba(88,166,255,.2);
+}
+body.theme-playful.dark-mode .guide-tier-badge--ai {
+  background: rgba(167,139,250,.12);
+  color: #a78bfa;
+  border-color: rgba(167,139,250,.2);
+}
+body.theme-playful.dark-mode .guide-tier-title { color: #e6edf3; }
+body.theme-playful.dark-mode .guide-tier-subtitle { color: #484f58; }
+body.theme-playful.dark-mode .guide-feature-group-label { color: #484f58; border-bottom-color: rgba(79,143,247,.1); }
+body.theme-playful.dark-mode .guide-feature-row { border-bottom-color: rgba(79,143,247,.08); }
+body.theme-playful.dark-mode .guide-feature-name { color: #e6edf3; }
+body.theme-playful.dark-mode .guide-feature-desc { color: #484f58; }
+body.theme-playful.dark-mode .guide-tier-footer {
+  color: #58a6ff;
+  background: rgba(88,166,255,.08);
+  border-color: rgba(88,166,255,.15);
+}
+body.theme-playful.dark-mode .guide-tier-cta-note {
+  color: #a78bfa;
+  background: rgba(167,139,250,.08);
+  border-color: rgba(167,139,250,.15);
+}
+
 /* ---- Category Stats (Stats page) ---- */
 .category-stats-list { margin-top: .5rem; }
 .category-stat-row {

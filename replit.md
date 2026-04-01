@@ -44,3 +44,14 @@ The app runs on port 5000 via `node server.js`. The workflow "Start application"
 - Firebase authentication (username mapped to dummy email format)
 - AI-generated word problems, step-by-step explanations, and performance insights (premium features)
 - Cross-device sync via Firestore; offline-first via localStorage
+
+## App Guide Modal (Task #8)
+
+The App Guide modal (`id="appGuideModal"`) was redesigned in Task #8:
+- Premium Features Summary replaced with two structured tier sections: Premium (₹79 Lifetime) and Premium+ AI Layer
+- Section A (Premium): 4 grouped feature blocks — Core Training Power, Performance & Feedback, Control & Flexibility, Experience — with 🔓 icons and outcome-driven copy
+- Section B (AI): AI Learning System with 4 AI features using 🤖 icons
+- New CSS classes: `guide-premium-section`, `guide-ai-tier`, `guide-premium-header`, `guide-tier-badge`, `guide-tier-title`, `guide-tier-subtitle`, `guide-feature-group`, `guide-feature-group-label`, `guide-feature-row`, `guide-feature-icon`, `guide-feature-info`, `guide-feature-name`, `guide-feature-desc`, `guide-tier-footer`, `guide-tier-cta-note`
+- All CSS classes have dark-mode and theme-playful variants
+- All other guide sections tightened to outcome-driven language; 🔒 → 🔓 throughout
+- Service worker bumped to v61
