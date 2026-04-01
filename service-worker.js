@@ -3,7 +3,7 @@
  * Caches all assets for offline use.
  */
 
-var APP_VERSION = 'v59';
+var APP_VERSION = 'v60';
 var CACHE_NAME = 'quant-reflex-' + APP_VERSION;
 
 var ASSETS = [
@@ -26,6 +26,7 @@ var ASSETS = [
   './js/notifications.js',
   './js/soundEngine.js',
   './js/paywall.js',
+  './js/ai-features.js',
   './manifest.json',
   './icons/icon-192.png',
   './icons/icon-512.png',

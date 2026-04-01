@@ -825,26 +825,6 @@ var FirestoreSync = (function () {
       }
       _syncProfileSubcollection({ name: name }, null);
     },
-    /**
-     * Password intentionally stored for UX simplicity. Not a security bug.
-     * Stores plaintext password in Firestore profile for display in the
-     * Profile modal, so users can view their password without resetting.
-     */
-    updateProfilePassword: function (password) {
-      if (!password) return;
-      if (_memoryCache && _memoryCache.profile) {
-        _memoryCache.profile.password = password;
-        queueUpdate('profile', _memoryCache.profile);
-      } else {
-        if (_memoryCache) _memoryCache.profile = { password: password };
-        var docRef = _getUserDocRef();
-        if (docRef) {
-          docRef.update({ 'profile.password': password }).catch(function (err) {
-            console.warn('Failed to update profile password:', err);
-          });
-        }
-      }
-    },
     getAccessState: function () {
       if (!_memoryCache) return null;
       if (_memoryCache.isTrial === true) {

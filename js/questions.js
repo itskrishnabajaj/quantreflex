@@ -562,6 +562,11 @@ function _wasRecentlyAsked(questionText) {
   return _recentQuestions.indexOf(questionText) !== -1;
 }
 
+/** Reset the recent-question tracker — call at the start of each new drill session */
+function resetRecentQuestions() {
+  _recentQuestions = [];
+}
+
 /* ---- public API ---- */
 
 var generators = [genSquare, genCube, genArea, genVolume, genFraction, genPercentage,

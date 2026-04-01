@@ -962,6 +962,8 @@ function createDrillEngine(container, opts) {
   function begin() {
     if (beginStarted) return;
     beginStarted = true;
+    /* Reset anti-repetition tracker so new session gets fresh questions */
+    if (typeof resetRecentQuestions === 'function') resetRecentQuestions();
     /* Mark session as active and hide nav for immersive experience */
     _enterDrillSession();
 

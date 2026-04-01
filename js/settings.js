@@ -571,8 +571,6 @@ function openProfileModal() {
   var nameInput = document.getElementById('profileName');
   var usernameInput = document.getElementById('profileUsername');
   var bannerEl = document.getElementById('profileBanner');
-  var passwordInput = document.getElementById('profilePassword');
-  var passwordToggle = document.getElementById('profilePasswordToggle');
   var cancelBtn = document.getElementById('profileCancel');
   var saveBtn = document.getElementById('profileSave');
 
@@ -596,30 +594,6 @@ function openProfileModal() {
     bannerEl.textContent = displayName + ' started mathing on ' + dateStr + '.';
   }
 
-  /* Pre-fill password from Firestore profile cache if available */
-  if (passwordInput) {
-    passwordInput.type = 'password';
-    var storedPassword = (profile && profile.password) ? profile.password : '';
-    passwordInput.value = storedPassword;
-    passwordInput.placeholder = storedPassword ? '\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022' : 'Set a password';
-  }
-  if (passwordToggle) {
-    passwordToggle.textContent = '👁️';
-  }
-
-  /* Password eye toggle */
-  if (passwordToggle && passwordInput) {
-    passwordToggle.onclick = function () {
-      if (passwordInput.type === 'password') {
-        passwordInput.type = 'text';
-        passwordToggle.textContent = '🙈';
-      } else {
-        passwordInput.type = 'password';
-        passwordToggle.textContent = '👁️';
-      }
-    };
-  }
-
   function closeModal() {
     modal.style.display = 'none';
   }
@@ -631,34 +605,13 @@ function openProfileModal() {
 
   saveBtn.onclick = function () {
     var newName = nameInput ? nameInput.value.trim() : '';
-    var newPassword = passwordInput ? passwordInput.value : '';
 
     /* Update name in Firestore */
     if (newName && typeof FirestoreSync !== 'undefined') {
       FirestoreSync.updateProfileName(newName);
-    }
-
-    /* Update password via Firebase Auth and store in Firestore profile */
-    if (newPassword && newPassword.length >= 6) {
-      if (typeof Auth !== 'undefined' && Auth.getCurrentUser()) {
-        Auth.getCurrentUser().updatePassword(newPassword).then(function () {
-          /* Password intentionally stored for UX simplicity. Not a security bug. */
-          if (typeof FirestoreSync !== 'undefined' && FirestoreSync.updateProfilePassword) {
-            FirestoreSync.updateProfilePassword(newPassword);
-          }
-          showToast('Password updated successfully.');
-        }).catch(function (err) {
-          showToast('Password update failed: ' + err.message);
-        });
-      }
-    } else if (newPassword && newPassword.length < 6) {
-      showToast('Password must be at least 6 characters.');
-      return;
-    }
-
-    if (newName) {
       showToast('Profile updated.');
     }
+
     closeModal();
   };
 }

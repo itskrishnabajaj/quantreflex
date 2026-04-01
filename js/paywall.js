@@ -356,19 +356,6 @@ function showPaywall(featureType) {
   }
 }
 
-function showFirstLoginPaywall() {
-  try {
-    var shown = localStorage.getItem('quant_first_login_paywall_shown');
-    if (shown) return;
-    var user = _getAccessUserState();
-    if (user && (user.isPremium === true || user.hasPaid === true || user.isEarlyUser === true)) return;
-    localStorage.setItem('quant_first_login_paywall_shown', '1');
-    setTimeout(function () {
-      showPaywall('settings');
-    }, 2000);
-  } catch (_) {}
-}
-
 function getDailyQuestionLimit() {
   var user = _getAccessUserState();
   if (user && (user.hasPaid || user.isEarlyUser || user.isPremium)) return Infinity;
@@ -388,14 +375,12 @@ global.showPaywall = showPaywall;
 global.openPayment = openPayment;
 global.verifyPaymentResponse = verifyPaymentResponse;
 global.unlockPremium = unlockPremium;
-global.showFirstLoginPaywall = showFirstLoginPaywall;
 global.getDailyQuestionLimit = getDailyQuestionLimit;
 global.hasReachedDailyLimit = hasReachedDailyLimit;
 global.Paywall = {
   canAccess: canAccess,
   canAccessFeature: canAccessFeature,
   showPaywall: showPaywall,
-  showFirstLoginPaywall: showFirstLoginPaywall,
   getDailyQuestionLimit: getDailyQuestionLimit,
   hasReachedDailyLimit: hasReachedDailyLimit
 };
