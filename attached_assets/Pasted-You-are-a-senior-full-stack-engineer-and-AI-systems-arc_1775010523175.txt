@@ -1,0 +1,329 @@
+You are a senior full-stack engineer and AI systems architect working on a production-grade PWA "Quant Reflex Trainer".
+
+This is a HIGH-IMPACT FEATURE UPGRADE.
+
+Your goal:
+Upgrade the difficulty system and implement Speed Benchmark using a hybrid AI + logic approach.
+
+---
+
+🚨 CORE PRINCIPLES
+
+- NO API key exposure
+- ALL AI calls → backend only
+- PremiumPlus gating → server-side
+- AI usage must be MINIMIZED and CONTROLLED
+- NO UI breakage
+- PERFORMANCE FIRST
+
+---
+
+🎯 FEATURE 1: ADAPTIVE TRAINING (AI-ENHANCED DIFFICULTY)
+
+PROBLEM:
+
+Current difficulty system only changes numbers.
+This is NOT real difficulty.
+
+We must upgrade difficulty to include:
+
+- conceptual complexity
+- multi-step solving
+- traps/distractions
+- language complexity (for word problems)
+
+---
+
+🧠 SYSTEM DESIGN
+
+Two modes:
+
+1. STATIC MODE (existing)
+   
+   - change numeric values only
+   - fast, no AI
+
+2. ADAPTIVE MODE (NEW - PREMIUM)
+   
+   - uses performance + AI to control difficulty
+   - changes BOTH:
+     a) numbers
+     b) question TYPE
+
+---
+
+🖥️ FRONTEND
+
+Add toggle:
+
+[ Adaptive Training ✨ 🔒 ]
+
+In:
+
+- Focus Training
+- Custom Training
+- Word Problems
+
+---
+
+If ON:
+
+- hide/ignore manual difficulty
+- show "Adaptive Mode Active"
+
+---
+
+⚙️ BACKEND LOGIC (STEP 1 - PERFORMANCE TRACKING)
+
+Track:
+
+- last 10–20 questions
+- accuracy
+- avg response time
+- mistake patterns (topics)
+
+---
+
+Determine difficulty band:
+
+IF accuracy > 80% AND fast:
+→ HARD
+
+IF 50–80%:
+→ MEDIUM
+
+IF < 50%:
+→ EASY
+
+---
+
+🤖 AI USAGE (STEP 2 - QUESTION COMPLEXITY CONTROL)
+
+AI should NOT generate every question.
+
+Instead:
+
+Use AI ONLY to generate:
+
+- question patterns/templates
+
+---
+
+Endpoint:
+
+POST /api/ai/question-pattern
+
+---
+
+Input:
+
+{
+topic,
+difficulty,
+weakAreas
+}
+
+---
+
+Prompt:
+
+"You are a quantitative aptitude expert.
+
+Generate a question PATTERN (not actual numbers) for:
+
+Topic: {{topic}}
+Difficulty: {{difficulty}}
+
+Rules:
+
+- EASY → direct formula, single-step
+- MEDIUM → multi-step, small twist
+- HARD → multi-concept, traps, indirect solving
+
+Return JSON:
+
+{
+"pattern": "",
+"type": "easy|medium|hard",
+"logic": ""
+}"
+
+---
+
+---
+
+⚡ IMPLEMENTATION STRATEGY
+
+1. AI generates pattern ONCE per topic/difficulty
+2. Store in Firestore (pattern bank)
+3. Actual questions generated locally using pattern
+
+---
+
+Benefits:
+
+- minimal API cost
+- no latency during session
+- consistent difficulty scaling
+
+---
+
+---
+
+🎯 FEATURE 2: SPEED BENCHMARK
+
+Goal:
+Show user how fast they are vs others
+
+---
+
+⚙️ STEP 1: CALCULATE METRICS (NO AI)
+
+After session:
+
+Compute:
+
+- avg response time
+- accuracy
+- speed score
+
+---
+
+Simulate percentile:
+
+- use internal dataset OR simple distribution
+
+---
+
+🤖 STEP 2: AI SUMMARY (OPTIONAL, LIGHT)
+
+Endpoint:
+
+POST /api/ai/speed-benchmark
+
+---
+
+Input:
+
+{
+accuracy,
+avgTime,
+percentile
+}
+
+---
+
+Prompt:
+
+"You are a performance coach.
+
+User stats:
+Accuracy: X%
+Avg Time: Y sec
+Percentile: Z
+
+Give:
+
+1. one-line performance summary
+2. level (Beginner/Intermediate/Advanced)
+3. one improvement suggestion
+
+Return JSON only."
+
+---
+
+Expected:
+
+{
+"summary": "",
+"level": "",
+"suggestion": ""
+}
+
+---
+
+---
+
+💾 CACHING (CRITICAL)
+
+- benchmark → per session
+- adaptive patterns → per topic + difficulty
+
+---
+
+DO NOT regenerate unnecessarily
+
+---
+
+---
+
+🔒 PREMIUM CONTROL
+
+Adaptive Training:
+
+- premiumPlus ONLY
+
+Speed Benchmark:
+
+- premium OR premiumPlus (your choice)
+
+---
+
+Backend must enforce:
+
+IF not premium:
+→ return 403
+→ frontend shows paywall
+
+---
+
+---
+
+⚡ PERFORMANCE RULES
+
+- NO AI call during active solving
+- ONLY pre-generate or post-session
+- cache everything
+- debounce repeated calls
+
+---
+
+---
+
+🧪 VALIDATION
+
+Test:
+
+- adaptive ON/OFF switching
+- weak vs strong user behavior
+- long sessions
+- repeated sessions
+
+---
+
+Ensure:
+
+- difficulty feels REAL (not numeric)
+- no lag
+- no API overuse
+
+---
+
+---
+
+📊 OUTPUT REQUIRED
+
+1. Adaptive system implemented
+2. AI pattern system created
+3. Speed benchmark implemented
+4. Backend endpoints added
+5. Caching strategy
+6. API usage control
+7. Final confirmation:
+
+"Adaptive AI-based difficulty and speed benchmark implemented with scalable and cost-efficient architecture."
+
+---
+
+This is a SYSTEM UPGRADE, not a feature patch.
+Think like a product architect.
