@@ -410,6 +410,22 @@ function showPaywall(featureType) {
   if (freeBtn) {
     freeBtn.addEventListener('click', _closePaywallModal);
   }
+
+  /* Interactive plan card selection */
+  var planPremium = overlay.querySelector('.paywall-plan-premium');
+  var planPlus = overlay.querySelector('.paywall-plan-plus');
+  if (planPremium && planPlus) {
+    planPremium.addEventListener('click', function (e) {
+      if (e.target.closest('button')) return;
+      planPremium.classList.remove('paywall-plan-deselected');
+      planPlus.classList.remove('paywall-plan-selected');
+    });
+    planPlus.addEventListener('click', function (e) {
+      if (e.target.closest('button')) return;
+      planPlus.classList.add('paywall-plan-selected');
+      planPremium.classList.add('paywall-plan-deselected');
+    });
+  }
 }
 
 function getDailyQuestionLimit() {

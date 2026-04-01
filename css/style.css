@@ -2053,6 +2053,39 @@ body.dark-mode .stats-insights-locked-cta {
   color: #93c5fd;
 }
 
+/* Paywall plan card interactive selection state */
+.paywall-plan {
+  cursor: pointer;
+  transition: box-shadow .15s, border-color .15s, transform .12s;
+}
+
+.paywall-plan-premium:not(.paywall-plan-deselected) {
+  box-shadow: 0 4px 22px rgba(37,99,235,.45);
+  transform: translateY(-1px);
+}
+
+.paywall-plan-premium.paywall-plan-deselected {
+  opacity: .75;
+  transform: none;
+  box-shadow: none;
+}
+
+.paywall-plan-plus.paywall-plan-selected {
+  border-color: #2563eb;
+  box-shadow: 0 4px 16px rgba(37,99,235,.22);
+  transform: translateY(-1px);
+}
+
+/* Responsive: stack plan cards on narrow screens */
+@media (max-width: 420px) {
+  .paywall-plans {
+    grid-template-columns: 1fr;
+  }
+  .paywall-benefits {
+    grid-template-columns: 1fr;
+  }
+}
+
 @keyframes paywallFadeIn {
   from { opacity: 0; }
   to { opacity: 1; }
