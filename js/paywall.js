@@ -314,13 +314,25 @@ function openPremiumPlusPayment(plan, userId) {
         headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + idToken },
         body: JSON.stringify({ plan: plan })
       })
-        .then(function (resp) { return resp.json(); })
+        .then(function (resp) {
+          if (!resp.ok) {
+            return resp.json().catch(function () { return {}; }).then(function (errData) {
+              _paywallPlusPaymentBusy = false;
+              if (plusBtn) plusBtn.disabled = false;
+              var errMsg = (errData && errData.error && errData.error.message) ? errData.error.message : 'Could not start payment. Please try again.';
+              showToast(errMsg);
+              return null;
+            });
+          }
+          return resp.json();
+        })
         .then(function (data) {
           if (!data || !data.subscriptionId) {
-            _paywallPlusPaymentBusy = false;
-            if (plusBtn) plusBtn.disabled = false;
-            var errMsg = (data && data.error && data.error.message) ? data.error.message : 'Could not start payment. Please try again.';
-            showToast(errMsg);
+            if (data !== null) {
+              _paywallPlusPaymentBusy = false;
+              if (plusBtn) plusBtn.disabled = false;
+              showToast('Could not start payment. Please try again.');
+            }
             return;
           }
 
@@ -356,7 +368,14 @@ function openPremiumPlusPayment(plan, userId) {
                   headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + (freshToken || idToken) },
                   body: JSON.stringify({ subscriptionId: rzpSubscriptionId, paymentId: paymentId, signature: signature })
                 })
-                  .then(function (r) { return r.json(); })
+                  .then(function (r) {
+                    if (!r.ok) {
+                      return r.json().catch(function () { return {}; }).then(function (errData) {
+                        return { success: false, _serverError: (errData && errData.error && errData.error.message) || null };
+                      });
+                    }
+                    return r.json();
+                  })
                   .then(function (result) {
                     _paywallPlusPaymentBusy = false;
                     if (plusBtn) plusBtn.disabled = false;
