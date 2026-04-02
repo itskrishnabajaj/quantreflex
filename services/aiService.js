@@ -149,6 +149,7 @@ async function unlockPremiumPlus(uid, plan, paymentId) {
     }, { merge: true });
   });
 
+  console.log('Premium+ unlocked for uid:', uid, 'plan:', plan, 'expiry:', new Date(finalExpiry).toISOString(), 'paymentId:', paymentId);
   return finalExpiry;
 }
 
