@@ -310,6 +310,7 @@ function openPremiumPlusPayment(plan, userId) {
 
   if (_plusPaymentSafetyTimer) clearTimeout(_plusPaymentSafetyTimer);
   _plusPaymentSafetyTimer = setTimeout(function () {
+    ++_plusAttemptId;
     _resetPlusPaymentGuards();
   }, PAYMENT_TIMEOUT_MS);
 
