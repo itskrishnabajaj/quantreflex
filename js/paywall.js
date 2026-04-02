@@ -380,7 +380,8 @@ function openPremiumPlusPayment(plan, userId) {
                     _paywallPlusPaymentBusy = false;
                     if (plusBtn) plusBtn.disabled = false;
                     if (!result || !result.success) {
-                      showToast('Subscription activation failed. Please contact support.');
+                      var activationMsg = (result && result._serverError) ? result._serverError : 'Subscription activation failed. Please contact support.';
+                      showToast(activationMsg);
                       return;
                     }
                     if (typeof FirestoreSync !== 'undefined' && typeof FirestoreSync.unlockPremiumPlus === 'function') {
