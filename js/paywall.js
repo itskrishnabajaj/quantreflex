@@ -309,28 +309,28 @@ function openPremiumPlusPayment(plan, userId) {
         return;
       }
 
-      fetch('/api/subscriptions/create-order', {
+      fetch('/api/subscriptions/create', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + idToken },
         body: JSON.stringify({ plan: plan })
       })
         .then(function (resp) { return resp.json(); })
         .then(function (data) {
-          if (!data || !data.orderId) {
+          if (!data || !data.subscriptionId) {
             _paywallPlusPaymentBusy = false;
             if (plusBtn) plusBtn.disabled = false;
-            showToast('Could not start payment. Please try again.');
+            var errMsg = (data && data.error && data.error.message) ? data.error.message : 'Could not start payment. Please try again.';
+            showToast(errMsg);
             return;
           }
 
+          console.log('Razorpay subscription created:', data.subscriptionId);
           var description = plan === 'yearly' ? 'Premium+ Yearly - Rs 499/yr' : 'Premium+ Monthly - Rs 49/mo';
           var options = {
             key: RAZORPAY_LIVE_KEY,
-            amount: data.amount,
-            currency: data.currency || 'INR',
+            subscription_id: data.subscriptionId,
             name: 'QuantReflex',
             description: description,
-            order_id: data.orderId,
             modal: {
               ondismiss: function () {
                 _paywallPlusPaymentBusy = false;
@@ -339,10 +339,11 @@ function openPremiumPlusPayment(plan, userId) {
               }
             },
             handler: function (response) {
+              console.log('Razorpay subscription payment success:', response.razorpay_payment_id);
               var paymentId = response.razorpay_payment_id;
-              var rzpOrderId = response.razorpay_order_id;
+              var rzpSubscriptionId = response.razorpay_subscription_id;
               var signature = response.razorpay_signature;
-              if (!paymentId || !rzpOrderId || !signature) {
+              if (!paymentId || !rzpSubscriptionId || !signature) {
                 _paywallPlusPaymentBusy = false;
                 if (plusBtn) plusBtn.disabled = false;
                 showToast('Payment verification failed. Please retry.');
@@ -353,7 +354,7 @@ function openPremiumPlusPayment(plan, userId) {
                 fetch('/api/subscriptions/verify', {
                   method: 'POST',
                   headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + (freshToken || idToken) },
-                  body: JSON.stringify({ orderId: rzpOrderId, paymentId: paymentId, signature: signature, plan: plan })
+                  body: JSON.stringify({ subscriptionId: rzpSubscriptionId, paymentId: paymentId, signature: signature })
                 })
                   .then(function (r) { return r.json(); })
                   .then(function (result) {

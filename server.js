@@ -274,37 +274,40 @@ app.post('/api/ai/study-plan', authMiddleware, rateLimitMiddleware, premiumPlusG
 });
 
 
-app.post('/api/subscriptions/create-order', authMiddleware, async function (req, res) {
+app.post('/api/subscriptions/create', authMiddleware, async function (req, res) {
   try {
     var plan = req.body && req.body.plan;
     if (plan !== 'monthly' && plan !== 'yearly') {
       return res.status(400).json({ error: { code: 'BAD_REQUEST', message: 'Invalid plan. Must be "monthly" or "yearly".', retryable: false } });
     }
-    var order = await paymentService.createPremiumPlusOrder(plan);
-    res.json(order);
+    var subscription = await paymentService.createPremiumPlusSubscription(plan);
+    console.log('Subscription created for user', req.userId, ':', subscription.subscriptionId);
+    res.json(subscription);
   } catch (err) {
-    console.error('Create order error:', err.message);
-    res.status(500).json({ error: { code: 'INTERNAL_ERROR', message: 'Could not create payment order. Please try again.', retryable: true } });
+    console.error('Create subscription error:', err.message);
+    res.status(500).json({ error: { code: 'INTERNAL_ERROR', message: 'Could not start subscription. Please try again.', retryable: true } });
   }
 });
 
 app.post('/api/subscriptions/verify', authMiddleware, async function (req, res) {
   try {
     var body = req.body || {};
-    var orderId = typeof body.orderId === 'string' ? body.orderId.trim() : '';
+    var subscriptionId = typeof body.subscriptionId === 'string' ? body.subscriptionId.trim() : '';
     var paymentId = typeof body.paymentId === 'string' ? body.paymentId.trim() : '';
     var signature = typeof body.signature === 'string' ? body.signature.trim() : '';
 
-    if (!orderId || !paymentId || !signature) {
-      return res.status(400).json({ error: { code: 'BAD_REQUEST', message: 'Missing required fields: orderId, paymentId, signature.', retryable: false } });
+    if (!subscriptionId || !paymentId || !signature) {
+      return res.status(400).json({ error: { code: 'BAD_REQUEST', message: 'Missing required fields: subscriptionId, paymentId, signature.', retryable: false } });
     }
 
-    var valid = paymentService.verifyRazorpaySignature(orderId, paymentId, signature);
+    var valid = paymentService.verifySubscriptionSignature(subscriptionId, paymentId, signature);
     if (!valid) {
+      console.error('Subscription signature verification failed for subscription:', subscriptionId);
       return res.status(400).json({ error: { code: 'SIGNATURE_INVALID', message: 'Payment verification failed. Please contact support.', retryable: false } });
     }
 
-    var trustedPlan = await paymentService.fetchOrderPlan(orderId);
+    var trustedPlan = await paymentService.fetchSubscriptionPlan(subscriptionId);
+    console.log('Subscription verified for user', req.userId, '- plan:', trustedPlan, 'paymentId:', paymentId);
 
     var expiry = await aiService.unlockPremiumPlus(req.userId, trustedPlan, paymentId);
     res.json({ success: true, expiry: expiry, plan: trustedPlan });

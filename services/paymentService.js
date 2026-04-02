@@ -4,10 +4,14 @@ const Razorpay = require('razorpay');
 var RAZORPAY_KEY_ID = 'rzp_live_STanzIgCpSAfL7';
 var RAZORPAY_KEY_SECRET = process.env.RAZORPAY_KEY_SECRET;
 
-var PLAN_AMOUNTS = {
-  monthly: 4900,
-  yearly: 49900
+var PLAN_IDS = {
+  monthly: 'plan_SYT5165ofapoIK',
+  yearly: 'plan_SYT68bs2ppUUVD'
 };
+
+var PLAN_ID_TO_TYPE = {};
+PLAN_ID_TO_TYPE[PLAN_IDS.monthly] = 'monthly';
+PLAN_ID_TO_TYPE[PLAN_IDS.yearly] = 'yearly';
 
 var razorpayInstance = null;
 
@@ -24,45 +28,42 @@ function _getRazorpay() {
   return razorpayInstance;
 }
 
-async function createPremiumPlusOrder(plan) {
-  var amount = PLAN_AMOUNTS[plan];
-  if (!amount) {
+async function createPremiumPlusSubscription(plan) {
+  var planId = PLAN_IDS[plan];
+  if (!planId) {
     throw new Error('Invalid plan. Must be "monthly" or "yearly".');
   }
   var rzp = _getRazorpay();
-  var order = await rzp.orders.create({
-    amount: amount,
-    currency: 'INR',
-    receipt: 'premiumplus_' + plan + '_' + Date.now(),
+  console.log('Creating Razorpay subscription for plan:', plan, 'planId:', planId);
+  var subscription = await rzp.subscriptions.create({
+    plan_id: planId,
+    customer_notify: 1,
+    total_count: plan === 'yearly' ? 10 : 120,
     notes: { plan: plan, product: 'PremiumPlus' }
   });
+  console.log('Subscription created:', subscription.id, 'status:', subscription.status);
   return {
-    orderId: order.id,
-    amount: order.amount,
-    currency: order.currency,
+    subscriptionId: subscription.id,
     plan: plan
   };
 }
 
-async function fetchOrderPlan(orderId) {
+async function fetchSubscriptionPlan(subscriptionId) {
   var rzp = _getRazorpay();
-  var order = await rzp.orders.fetch(orderId);
-  var plan = order && order.notes && order.notes.plan;
-  if (plan !== 'monthly' && plan !== 'yearly') {
-    throw new Error('Order plan mismatch or missing: ' + plan);
-  }
-  var expectedAmount = PLAN_AMOUNTS[plan];
-  if (order.amount !== expectedAmount) {
-    throw new Error('Order amount mismatch for plan ' + plan + ': got ' + order.amount + ' expected ' + expectedAmount);
+  var subscription = await rzp.subscriptions.fetch(subscriptionId);
+  var planId = subscription && subscription.plan_id;
+  var plan = PLAN_ID_TO_TYPE[planId];
+  if (!plan) {
+    throw new Error('Subscription plan mismatch or unknown plan_id: ' + planId);
   }
   return plan;
 }
 
-function verifyRazorpaySignature(orderId, paymentId, signature) {
+function verifySubscriptionSignature(subscriptionId, paymentId, signature) {
   if (!RAZORPAY_KEY_SECRET) return false;
-  if (!orderId || !paymentId || !signature) return false;
+  if (!subscriptionId || !paymentId || !signature) return false;
   try {
-    var body = orderId + '|' + paymentId;
+    var body = paymentId + '|' + subscriptionId;
     var expected = crypto
       .createHmac('sha256', RAZORPAY_KEY_SECRET)
       .update(body)
@@ -76,4 +77,4 @@ function verifyRazorpaySignature(orderId, paymentId, signature) {
   }
 }
 
-module.exports = { createPremiumPlusOrder, fetchOrderPlan, verifyRazorpaySignature };
+module.exports = { createPremiumPlusSubscription, fetchSubscriptionPlan, verifySubscriptionSignature };
