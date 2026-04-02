@@ -20,6 +20,9 @@ function _getRazorpay() {
     if (!RAZORPAY_KEY_SECRET) {
       throw new Error('RAZORPAY_KEY_SECRET is not configured.');
     }
+    if (RAZORPAY_KEY_SECRET.startsWith('rzp_')) {
+      throw new Error('RAZORPAY_KEY_SECRET contains a key_id (starts with rzp_). It must be the API key secret, not the key ID.');
+    }
     razorpayInstance = new Razorpay({
       key_id: RAZORPAY_KEY_ID,
       key_secret: RAZORPAY_KEY_SECRET
@@ -37,7 +40,6 @@ async function createPremiumPlusSubscription(plan) {
   console.log('Creating Razorpay subscription for plan:', plan, 'planId:', planId);
   var subscription = await rzp.subscriptions.create({
     plan_id: planId,
-    customer_notify: 1,
     total_count: plan === 'yearly' ? 10 : 120,
     notes: { plan: plan, product: 'PremiumPlus' }
   });

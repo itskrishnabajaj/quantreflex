@@ -330,6 +330,7 @@ function openPremiumPlusPayment(plan, userId) {
         return;
       }
 
+      console.log('[Premium+] Calling /api/subscriptions/create, plan:', plan);
       fetch('/api/subscriptions/create', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + idToken },
@@ -337,11 +338,13 @@ function openPremiumPlusPayment(plan, userId) {
       })
         .then(function (resp) {
           if (currentAttempt !== _plusAttemptId) return null;
+          console.log('[Premium+] /api/subscriptions/create response status:', resp.status);
           if (!resp.ok) {
             return resp.json().catch(function () { return {}; }).then(function (errData) {
               if (currentAttempt !== _plusAttemptId) return null;
               _resetPlusPaymentGuards();
-              var errMsg = (errData && errData.error && errData.error.message) ? errData.error.message : 'Could not start payment. Please try again.';
+              var errMsg = (errData && errData.error && errData.error.message) ? errData.error.message : 'Could not start subscription. Please try again.';
+              console.error('[Premium+] Create subscription failed:', errMsg, errData);
               showToast(errMsg);
               return null;
             });
@@ -350,15 +353,17 @@ function openPremiumPlusPayment(plan, userId) {
         })
         .then(function (data) {
           if (currentAttempt !== _plusAttemptId) return;
+          console.log('[Premium+] Subscription response data:', JSON.stringify(data));
           if (!data || !data.subscriptionId) {
             if (data !== null) {
               _resetPlusPaymentGuards();
-              showToast('Could not start payment. Please try again.');
+              console.error('[Premium+] Missing subscriptionId in response:', data);
+              showToast('Could not start subscription. Please try again.');
             }
             return;
           }
 
-          console.log('Razorpay subscription created:', data.subscriptionId);
+          console.log('[Premium+] Opening Razorpay checkout with subscription_id:', data.subscriptionId);
           var description = plan === 'yearly' ? 'Premium+ Yearly - Rs 499/yr' : 'Premium+ Monthly - Rs 49/mo';
           var options = {
             key: RAZORPAY_LIVE_KEY,

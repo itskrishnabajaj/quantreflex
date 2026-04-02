@@ -284,8 +284,12 @@ app.post('/api/subscriptions/create', authMiddleware, async function (req, res) 
     console.log('Subscription created for user', req.userId, ':', subscription.subscriptionId);
     res.json(subscription);
   } catch (err) {
-    console.error('Create subscription error:', err.message);
-    res.status(500).json({ error: { code: 'INTERNAL_ERROR', message: 'Could not start subscription. Please try again.', retryable: true } });
+    console.error('Create subscription error:', err.message, err.statusCode || '', JSON.stringify(err.error || ''));
+    var userMsg = 'Could not start subscription. Please try again.';
+    if (err.statusCode && err.error && err.error.description) {
+      userMsg = err.error.description;
+    }
+    res.status(500).json({ error: { code: 'INTERNAL_ERROR', message: userMsg, retryable: true } });
   }
 });
 
