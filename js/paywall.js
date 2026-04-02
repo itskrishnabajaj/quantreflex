@@ -449,10 +449,11 @@ function openPremiumPlusPayment(plan, userId) {
             showToast('Could not open payment. Check your network and retry.');
           }
         })
-        .catch(function () {
+        .catch(function (networkErr) {
           if (currentAttempt !== _plusAttemptId) return;
           _resetPlusPaymentGuards();
-          showToast('Could not start payment. Check your network and retry.');
+          console.error('[Premium+] Network/fetch error:', networkErr);
+          showToast('Could not start subscription. Check your network and retry.');
         });
     });
   });
