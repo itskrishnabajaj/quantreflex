@@ -48,9 +48,15 @@ async function createPremiumPlusSubscription(plan) {
   };
 }
 
+var VALID_SUBSCRIPTION_STATUSES = ['authenticated', 'active', 'completed'];
+
 async function fetchSubscriptionPlan(subscriptionId) {
   var rzp = _getRazorpay();
   var subscription = await rzp.subscriptions.fetch(subscriptionId);
+  var status = subscription && subscription.status;
+  if (VALID_SUBSCRIPTION_STATUSES.indexOf(status) === -1) {
+    throw new Error('Subscription not in a valid paid state. Status: ' + status + ' (id: ' + subscriptionId + ')');
+  }
   var planId = subscription && subscription.plan_id;
   var plan = PLAN_ID_TO_TYPE[planId];
   if (!plan) {

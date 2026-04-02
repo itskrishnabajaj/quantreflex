@@ -287,24 +287,44 @@ function _getPlusIdToken(callback) {
   callback(null);
 }
 
+var _plusPaymentSafetyTimer = null;
+var _plusAttemptId = 0;
+
+function _resetPlusPaymentGuards() {
+  if (_plusPaymentSafetyTimer) {
+    clearTimeout(_plusPaymentSafetyTimer);
+    _plusPaymentSafetyTimer = null;
+  }
+  _paywallPlusPaymentBusy = false;
+  var plusBtn = document.querySelector('.paywall-plus-subscribe');
+  if (plusBtn) plusBtn.disabled = false;
+}
+
 function openPremiumPlusPayment(plan, userId) {
   if (_paywallPlusPaymentBusy) return;
   _paywallPlusPaymentBusy = true;
   var plusBtn = document.querySelector('.paywall-plus-subscribe');
   if (plusBtn) plusBtn.disabled = true;
 
+  var currentAttempt = ++_plusAttemptId;
+
+  if (_plusPaymentSafetyTimer) clearTimeout(_plusPaymentSafetyTimer);
+  _plusPaymentSafetyTimer = setTimeout(function () {
+    _resetPlusPaymentGuards();
+  }, PAYMENT_TIMEOUT_MS);
+
   _loadRazorpayScript(function (loadErr) {
+    if (currentAttempt !== _plusAttemptId) return;
     if (loadErr || typeof Razorpay === 'undefined') {
-      _paywallPlusPaymentBusy = false;
-      if (plusBtn) plusBtn.disabled = false;
+      _resetPlusPaymentGuards();
       showToast('Payment service is unavailable right now.');
       return;
     }
 
     _getPlusIdToken(function (idToken) {
+      if (currentAttempt !== _plusAttemptId) return;
       if (!idToken) {
-        _paywallPlusPaymentBusy = false;
-        if (plusBtn) plusBtn.disabled = false;
+        _resetPlusPaymentGuards();
         showToast('Please login to continue payment.');
         return;
       }
@@ -315,10 +335,11 @@ function openPremiumPlusPayment(plan, userId) {
         body: JSON.stringify({ plan: plan })
       })
         .then(function (resp) {
+          if (currentAttempt !== _plusAttemptId) return null;
           if (!resp.ok) {
             return resp.json().catch(function () { return {}; }).then(function (errData) {
-              _paywallPlusPaymentBusy = false;
-              if (plusBtn) plusBtn.disabled = false;
+              if (currentAttempt !== _plusAttemptId) return null;
+              _resetPlusPaymentGuards();
               var errMsg = (errData && errData.error && errData.error.message) ? errData.error.message : 'Could not start payment. Please try again.';
               showToast(errMsg);
               return null;
@@ -327,10 +348,10 @@ function openPremiumPlusPayment(plan, userId) {
           return resp.json();
         })
         .then(function (data) {
+          if (currentAttempt !== _plusAttemptId) return;
           if (!data || !data.subscriptionId) {
             if (data !== null) {
-              _paywallPlusPaymentBusy = false;
-              if (plusBtn) plusBtn.disabled = false;
+              _resetPlusPaymentGuards();
               showToast('Could not start payment. Please try again.');
             }
             return;
@@ -345,30 +366,31 @@ function openPremiumPlusPayment(plan, userId) {
             description: description,
             modal: {
               ondismiss: function () {
-                _paywallPlusPaymentBusy = false;
-                if (plusBtn) plusBtn.disabled = false;
+                _resetPlusPaymentGuards();
                 showToast('Payment cancelled. You can subscribe anytime.');
               }
             },
             handler: function (response) {
+              if (currentAttempt !== _plusAttemptId) return;
               console.log('Razorpay subscription payment success:', response.razorpay_payment_id);
               var paymentId = response.razorpay_payment_id;
               var rzpSubscriptionId = response.razorpay_subscription_id;
               var signature = response.razorpay_signature;
               if (!paymentId || !rzpSubscriptionId || !signature) {
-                _paywallPlusPaymentBusy = false;
-                if (plusBtn) plusBtn.disabled = false;
+                _resetPlusPaymentGuards();
                 showToast('Payment verification failed. Please retry.');
                 return;
               }
 
               _getPlusIdToken(function (freshToken) {
+                if (currentAttempt !== _plusAttemptId) return;
                 fetch('/api/subscriptions/verify', {
                   method: 'POST',
                   headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + (freshToken || idToken) },
                   body: JSON.stringify({ subscriptionId: rzpSubscriptionId, paymentId: paymentId, signature: signature })
                 })
                   .then(function (r) {
+                    if (currentAttempt !== _plusAttemptId) return null;
                     if (!r.ok) {
                       return r.json().catch(function () { return {}; }).then(function (errData) {
                         return { success: false, _serverError: (errData && errData.error && errData.error.message) || null };
@@ -377,8 +399,8 @@ function openPremiumPlusPayment(plan, userId) {
                     return r.json();
                   })
                   .then(function (result) {
-                    _paywallPlusPaymentBusy = false;
-                    if (plusBtn) plusBtn.disabled = false;
+                    if (currentAttempt !== _plusAttemptId) return;
+                    _resetPlusPaymentGuards();
                     if (!result || !result.success) {
                       var activationMsg = (result && result._serverError) ? result._serverError : 'Subscription activation failed. Please contact support.';
                       showToast(activationMsg);
@@ -401,8 +423,8 @@ function openPremiumPlusPayment(plan, userId) {
                     }
                   })
                   .catch(function () {
-                    _paywallPlusPaymentBusy = false;
-                    if (plusBtn) plusBtn.disabled = false;
+                    if (currentAttempt !== _plusAttemptId) return;
+                    _resetPlusPaymentGuards();
                     showToast('Subscription activation failed. Please contact support.');
                   });
               });
@@ -412,20 +434,18 @@ function openPremiumPlusPayment(plan, userId) {
           try {
             var rzp = new Razorpay(options);
             rzp.on('payment.failed', function () {
-              _paywallPlusPaymentBusy = false;
-              if (plusBtn) plusBtn.disabled = false;
+              _resetPlusPaymentGuards();
               showToast('Payment failed. Please try again.');
             });
             rzp.open();
           } catch (_) {
-            _paywallPlusPaymentBusy = false;
-            if (plusBtn) plusBtn.disabled = false;
+            _resetPlusPaymentGuards();
             showToast('Could not open payment. Check your network and retry.');
           }
         })
         .catch(function () {
-          _paywallPlusPaymentBusy = false;
-          if (plusBtn) plusBtn.disabled = false;
+          if (currentAttempt !== _plusAttemptId) return;
+          _resetPlusPaymentGuards();
           showToast('Could not start payment. Check your network and retry.');
         });
     });

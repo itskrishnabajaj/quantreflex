@@ -108,7 +108,7 @@ async function isUserPremiumPlus(uid) {
   }
 }
 
-async function unlockPremiumPlus(uid, plan, paymentId) {
+async function unlockPremiumPlus(uid, plan, paymentId, subscriptionId) {
   var days = plan === 'yearly' ? 365 : 30;
   var expiry = Date.now() + days * 24 * 60 * 60 * 1000;
 
@@ -134,12 +134,14 @@ async function unlockPremiumPlus(uid, plan, paymentId) {
       }, { merge: true });
       return;
     }
-    tx.create(paymentRef, {
+    var paymentDoc2 = {
       uid: uid,
       plan: plan,
       expiry: expiry,
       claimedAt: Date.now()
-    });
+    };
+    if (subscriptionId) paymentDoc2.subscriptionId = String(subscriptionId);
+    tx.create(paymentRef, paymentDoc2);
     tx.set(userRef, {
       isPremiumPlus: true,
       premiumPlusPlan: plan,
@@ -149,7 +151,7 @@ async function unlockPremiumPlus(uid, plan, paymentId) {
     }, { merge: true });
   });
 
-  console.log('Premium+ unlocked for uid:', uid, 'plan:', plan, 'expiry:', new Date(finalExpiry).toISOString(), 'paymentId:', paymentId);
+  console.log('Premium+ unlocked for uid:', uid, 'plan:', plan, 'expiry:', new Date(finalExpiry).toISOString(), 'paymentId:', paymentId, 'subscriptionId:', subscriptionId || 'N/A');
   return finalExpiry;
 }
 

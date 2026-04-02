@@ -309,7 +309,7 @@ app.post('/api/subscriptions/verify', authMiddleware, async function (req, res) 
     var trustedPlan = await paymentService.fetchSubscriptionPlan(subscriptionId);
     console.log('Subscription verified for user', req.userId, '- plan:', trustedPlan, 'paymentId:', paymentId);
 
-    var expiry = await aiService.unlockPremiumPlus(req.userId, trustedPlan, paymentId);
+    var expiry = await aiService.unlockPremiumPlus(req.userId, trustedPlan, paymentId, subscriptionId);
     res.json({ success: true, expiry: expiry, plan: trustedPlan });
   } catch (err) {
     console.error('Verify subscription error:', err.message);
