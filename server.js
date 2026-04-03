@@ -288,6 +288,8 @@ app.post('/api/subscriptions/create', authMiddleware, async function (req, res) 
     var userMsg = 'Could not start subscription. Please try again.';
     if (err.statusCode && err.error && err.error.description) {
       userMsg = err.error.description;
+    } else if (err.message) {
+      userMsg = err.message;
     }
     res.status(500).json({ error: { code: 'INTERNAL_ERROR', message: userMsg, retryable: true } });
   }
