@@ -37,6 +37,7 @@ The app runs on port 5000 via `node server.js`. The workflow "Start application"
 
 - `GEMINI_API_KEY` — Google Gemini API key (stored as a Replit Secret)
 - `RAZORPAY_KEY_SECRET` — Razorpay API key secret for subscription payments (stored as a Replit Secret)
+- `FIREBASE_SERVICE_ACCOUNT` — Firebase Admin SDK service account JSON (stored as a Replit Secret)
 
 ## Key Features
 

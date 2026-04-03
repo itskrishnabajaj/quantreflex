@@ -7,7 +7,19 @@ if (!GEMINI_API_KEY) {
 }
 
 if (!admin.apps.length) {
-  admin.initializeApp({ projectId: 'quant-reflex-trainer' });
+  var firebaseConfig = { projectId: 'quant-reflex-trainer' };
+  var serviceAccountJson = process.env.FIREBASE_SERVICE_ACCOUNT;
+  if (serviceAccountJson) {
+    try {
+      var serviceAccount = JSON.parse(serviceAccountJson);
+      firebaseConfig.credential = admin.credential.cert(serviceAccount);
+    } catch (parseErr) {
+      console.error('FIREBASE_SERVICE_ACCOUNT is not valid JSON:', parseErr.message);
+    }
+  } else {
+    console.warn('FIREBASE_SERVICE_ACCOUNT not set. Firestore and Auth will not work.');
+  }
+  admin.initializeApp(firebaseConfig);
 }
 var db = admin.firestore();
 
