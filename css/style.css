@@ -197,7 +197,9 @@ a { color: inherit; text-decoration: none; }
   max-width: 480px;
   padding: 1.25rem;
   flex: 1;
-  overflow: hidden;
+  overflow-x: hidden;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
 }
 
 /* Web browser mode: allow full page scrolling while keeping PWA immersive behavior */
@@ -211,7 +213,8 @@ body.web-mode {
 body.web-mode .container {
   min-height: 100vh;
   min-height: 100dvh;
-  overflow: visible;
+  overflow-x: hidden;
+  overflow-y: auto;
 }
 
 body.web-mode:not(.paywall-open):not(.drill-session-active) {
