@@ -210,6 +210,16 @@ body.web-mode {
   overscroll-behavior-y: auto;
 }
 
+/* PWA (installed) mode: explicitly enable page-level scrolling on both html and body.
+   Without this, iOS Safari standalone PWA relies on implicit overflow propagation
+   which can silently suppress vertical scrolling. */
+html.pwa-mode,
+body.pwa-mode {
+  height: auto;
+  overflow-y: auto;
+  overscroll-behavior-y: auto;
+}
+
 body.web-mode .container {
   min-height: 100vh;
   min-height: 100dvh;

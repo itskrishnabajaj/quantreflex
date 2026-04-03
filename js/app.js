@@ -936,6 +936,7 @@ document.addEventListener('DOMContentLoaded', function () {
   function _revealMainApp() {
     _hideAppLoader();
     document.body.style.overflow = '';
+    document.documentElement.style.overflow = '';
     if (container) container.style.display = '';
     if (bottomNav) bottomNav.style.display = '';
     /* Apply correct navigation icons for the current theme */
