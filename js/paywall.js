@@ -37,6 +37,9 @@ var _paymentSafetyTimer = null;
 var _unlockGuard = {};
 var _paywallPlusPaymentBusy = false;
 var _paywallPlusGuestPromptAt = 0;
+var _paymentSlowTimer = null;
+var _plusPaymentSlowTimer = null;
+var PAYMENT_SLOW_MS = 5000;
 
 function _toMillis(value) {
   if (!value) return 0;
@@ -57,10 +60,18 @@ function _resetPaymentGuards(enableButton) {
     clearTimeout(_paymentSafetyTimer);
     _paymentSafetyTimer = null;
   }
+  if (_paymentSlowTimer) {
+    clearTimeout(_paymentSlowTimer);
+    _paymentSlowTimer = null;
+  }
   _paywallPaymentBusy = false;
   _paywallUnlockInFlight = false;
   _paywallLastPaymentId = '';
-  if (enableButton && _paywallUpgradeBtn) _paywallUpgradeBtn.disabled = false;
+  if (enableButton && _paywallUpgradeBtn) {
+    _paywallUpgradeBtn.disabled = false;
+    _paywallUpgradeBtn.classList.remove('btn-loading');
+    _paywallUpgradeBtn.textContent = 'Unlock Premium \u2013 \u20B979';
+  }
 }
 
 var _AI_FEATURES = { ai_explain: true, ai_coach: true, ai_study_plan: true };
@@ -229,7 +240,17 @@ function _loadRazorpayScript(callback) {
 function openPayment(userId) {
   if (_paywallPaymentBusy || _paywallUnlockInFlight) return;
   _paywallPaymentBusy = true;
-  if (_paywallUpgradeBtn) _paywallUpgradeBtn.disabled = true;
+  if (_paywallUpgradeBtn) {
+    _paywallUpgradeBtn.disabled = true;
+    _paywallUpgradeBtn.textContent = 'Processing\u2026';
+    _paywallUpgradeBtn.classList.add('btn-loading');
+  }
+  if (_paymentSlowTimer) clearTimeout(_paymentSlowTimer);
+  _paymentSlowTimer = setTimeout(function () {
+    if (_paywallUpgradeBtn && _paywallPaymentBusy) {
+      _paywallUpgradeBtn.textContent = 'Still processing, please wait\u2026';
+    }
+  }, PAYMENT_SLOW_MS);
   if (_paymentSafetyTimer) clearTimeout(_paymentSafetyTimer);
   _paymentSafetyTimer = setTimeout(function () {
     _resetPaymentGuards(true);
@@ -295,18 +316,39 @@ function _resetPlusPaymentGuards() {
     clearTimeout(_plusPaymentSafetyTimer);
     _plusPaymentSafetyTimer = null;
   }
+  if (_plusPaymentSlowTimer) {
+    clearTimeout(_plusPaymentSlowTimer);
+    _plusPaymentSlowTimer = null;
+  }
   _paywallPlusPaymentBusy = false;
   var plusBtn = document.querySelector('.paywall-plus-subscribe');
-  if (plusBtn) plusBtn.disabled = false;
+  if (plusBtn) {
+    plusBtn.disabled = false;
+    plusBtn.classList.remove('btn-loading');
+    var activeToggle = document.querySelector('.paywall-plus-toggle-btn.active');
+    var isYearly = activeToggle && activeToggle.getAttribute('data-plan') === 'yearly';
+    plusBtn.textContent = isYearly ? 'Subscribe Yearly \u00B7 \u20B9499' : 'Subscribe Monthly \u00B7 \u20B949';
+  }
 }
 
 function openPremiumPlusPayment(plan, userId) {
   if (_paywallPlusPaymentBusy) return;
   _paywallPlusPaymentBusy = true;
   var plusBtn = document.querySelector('.paywall-plus-subscribe');
-  if (plusBtn) plusBtn.disabled = true;
+  if (plusBtn) {
+    plusBtn.disabled = true;
+    plusBtn.textContent = 'Processing\u2026';
+    plusBtn.classList.add('btn-loading');
+  }
 
   var currentAttempt = ++_plusAttemptId;
+
+  if (_plusPaymentSlowTimer) clearTimeout(_plusPaymentSlowTimer);
+  _plusPaymentSlowTimer = setTimeout(function () {
+    if (plusBtn && _paywallPlusPaymentBusy) {
+      plusBtn.textContent = 'Still processing, please wait\u2026';
+    }
+  }, PAYMENT_SLOW_MS);
 
   if (_plusPaymentSafetyTimer) clearTimeout(_plusPaymentSafetyTimer);
   _plusPaymentSafetyTimer = setTimeout(function () {
@@ -668,6 +710,8 @@ function showPaywall(featureType) {
       planPremium.classList.add('paywall-plan-deselected');
     });
   }
+
+  _loadRazorpayScript(null);
 }
 
 function getDailyQuestionLimit() {
