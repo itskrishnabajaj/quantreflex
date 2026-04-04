@@ -81,16 +81,17 @@ var FirestoreSync = (function () {
   function _subcollectionWrite(collPath, docId, payload, label) {
     var docRef = _getUserDocRef();
     if (!docRef) return;
+    var uid = _loadedUserId || 'unknown';
     var ref = docRef.collection(collPath).doc(docId);
     ref.set(payload, { merge: true }).then(function () {
-      console.log('[FirestoreSync:' + label + '] subcollection write succeeded');
+      console.log('[FirestoreSync:' + label + '] write succeeded (uid: ' + uid + ')');
     }).catch(function (err) {
-      console.warn('[FirestoreSync:' + label + '] subcollection write failed, retrying in 3s:', err.message || err);
+      console.warn('[FirestoreSync:' + label + '] write failed (uid: ' + uid + '), retrying in 3s:', err.message || err);
       setTimeout(function () {
         ref.set(payload, { merge: true }).then(function () {
-          console.log('[FirestoreSync:' + label + '] retry succeeded');
+          console.log('[FirestoreSync:' + label + '] retry succeeded (uid: ' + uid + ')');
         }).catch(function (retryErr) {
-          console.error('[FirestoreSync:' + label + '] retry also failed, data lost for this sync cycle:', retryErr.message || retryErr);
+          console.error('[FirestoreSync:' + label + '] retry failed (uid: ' + uid + '), data lost for this cycle:', retryErr.message || retryErr);
         });
       }, 3000);
     });
