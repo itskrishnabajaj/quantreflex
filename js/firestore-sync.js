@@ -666,7 +666,12 @@ var FirestoreSync = (function () {
     docRef.set(snapshot, { merge: true }).then(function () {
       _flushInFlight = false;
       _flushRetryCount = 0;
+      if (_flushRetryTimer) { clearTimeout(_flushRetryTimer); _flushRetryTimer = null; }
       console.log('[FirestoreSync:_flushUpdates] flushed', keys.length, 'field(s):', keys.join(', '));
+      if (Object.keys(_pendingUpdates).length > 0) {
+        if (_syncTimer) clearTimeout(_syncTimer);
+        _syncTimer = setTimeout(_flushUpdates, SYNC_DEBOUNCE_MS);
+      }
     }).catch(function (err) {
       _flushInFlight = false;
       for (var k = 0; k < keys.length; k++) {
