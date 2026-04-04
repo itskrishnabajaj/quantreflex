@@ -35,6 +35,7 @@ var FirestoreSync = (function () {
   var _flushRetryCount = 0;
   var _flushRetryTimer = null;
   var _flushInFlight = false;
+  var _syncGeneration = 0;
   var SYNC_DEBOUNCE_MS = 2000; /* batch updates every 2 seconds */
   var FLUSH_RETRY_DELAY_MS = 5000;
   var FLUSH_MAX_RETRIES = 2;
@@ -157,8 +158,9 @@ var FirestoreSync = (function () {
    * leaks to the next session.
    */
   function resetSyncState() {
-    /* Flush any pending writes for the current user before clearing */
-    if (Object.keys(_pendingUpdates).length > 0) {
+    _syncGeneration++;
+
+    if (Object.keys(_pendingUpdates).length > 0 && !_flushInFlight) {
       _flushUpdates();
     }
 
@@ -169,13 +171,13 @@ var FirestoreSync = (function () {
     _loadedUserId = null;
     _flushRetryCount = 0;
     _flushInFlight = false;
-    if (_syncTimer) {
-      clearTimeout(_syncTimer);
-      _syncTimer = null;
-    }
     if (_flushRetryTimer) {
       clearTimeout(_flushRetryTimer);
       _flushRetryTimer = null;
+    }
+    if (_syncTimer) {
+      clearTimeout(_syncTimer);
+      _syncTimer = null;
     }
 
     /* Clear all user-related localStorage keys to prevent data leakage */
@@ -663,9 +665,14 @@ var FirestoreSync = (function () {
     snapshot.updatedAt = new Date().toISOString();
     _pendingUpdates = {};
     _flushInFlight = true;
+    var gen = _syncGeneration;
 
     docRef.set(snapshot, { merge: true }).then(function () {
       _flushInFlight = false;
+      if (gen !== _syncGeneration) {
+        console.warn('[FirestoreSync:_flushUpdates] generation changed after write, discarding follow-up');
+        return;
+      }
       _flushRetryCount = 0;
       if (_flushRetryTimer) { clearTimeout(_flushRetryTimer); _flushRetryTimer = null; }
       console.log('[FirestoreSync:_flushUpdates] flushed', keys.length, 'field(s):', keys.join(', '));
@@ -675,6 +682,10 @@ var FirestoreSync = (function () {
       }
     }).catch(function (err) {
       _flushInFlight = false;
+      if (gen !== _syncGeneration) {
+        console.warn('[FirestoreSync:_flushUpdates] generation changed during failed write, dropping snapshot to prevent cross-user leak');
+        return;
+      }
       for (var k = 0; k < keys.length; k++) {
         if (!_pendingUpdates.hasOwnProperty(keys[k])) {
           _pendingUpdates[keys[k]] = snapshot[keys[k]];
