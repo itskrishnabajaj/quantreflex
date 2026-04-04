@@ -61,7 +61,7 @@ The user document (`users/{uid}`) is the source of truth. Key fields:
 - `users/{uid}/ai/usage` — AI feature usage counters
 - `users/{uid}/practiceSessions/{auto}` — drill session history
 
-**Write safety**: All root doc writes use `set(data, { merge: true })`. Drill mode batches writes to reduce costs. All writes include `updatedAt` timestamps.
+**Write safety**: All root doc writes use `set(data, { merge: true })`. Drill mode batches writes to reduce costs. All writes include `updatedAt` timestamps. `_flushUpdates` re-queues failed data and retries up to 2 times before giving up. Subcollection writes retry once after 3 seconds on failure. Premium+ expiry is enforced on both app load (`_enforcePremiumPlusExpiry`) and access checks (`getAccessState`). Server-side billing-critical writes are awaited (not fire-and-forget). `safeUserUpdate(uid, data, caller)` in aiService.js provides a centralized server-side write helper with logging.
 
 ## Key Features
 

@@ -99,6 +99,21 @@ function _toExpiryMillis(value) {
   return 0;
 }
 
+async function safeUserUpdate(uid, data, caller) {
+  if (!uid) {
+    console.error('[aiService:safeUserUpdate] called without uid from ' + (caller || 'unknown'));
+    return;
+  }
+  data.updatedAt = new Date().toISOString();
+  try {
+    await db.collection('users').doc(uid).set(data, { merge: true });
+    console.log('[aiService:safeUserUpdate] success from ' + (caller || 'unknown') + ' (uid: ' + uid + ') fields:', Object.keys(data).join(', '));
+  } catch (err) {
+    console.error('[aiService:safeUserUpdate] FAILED from ' + (caller || 'unknown') + ' (uid: ' + uid + '):', err.message);
+    throw err;
+  }
+}
+
 async function isUserPremiumPlus(uid) {
   try {
     var doc = await db.collection('users').doc(uid).get();
@@ -107,15 +122,14 @@ async function isUserPremiumPlus(uid) {
     if (data.isPremiumPlus !== true) return false;
     var expiryMs = _toExpiryMillis(data.premiumPlusExpiry);
     if (expiryMs > 0 && expiryMs < Date.now()) {
-      db.collection('users').doc(uid).set(
-        { isPremiumPlus: false, premiumPlusStatus: 'expired', updatedAt: new Date().toISOString() },
-        { merge: true }
-      ).catch(function (e) { console.warn('PremiumPlus expiry write failed:', e.message); });
+      try {
+        await safeUserUpdate(uid, { isPremiumPlus: false, premiumPlusStatus: 'expired' }, 'isUserPremiumPlus:expiry');
+      } catch (_) {}
       return false;
     }
     return true;
   } catch (err) {
-    console.error('PremiumPlus lookup failed for uid ' + uid + ':', err.message);
+    console.error('[aiService:isUserPremiumPlus] lookup failed (uid: ' + uid + '):', err.message);
     throw new AIServiceError('ENTITLEMENT_ERROR', 'Unable to verify subscription status. Please try again.', true);
   }
 }
@@ -304,7 +318,7 @@ async function generateWordProblems(category, difficulty, count) {
       selected.forEach(function (item) {
         batch.update(cacheRef.doc(item._docId), { usageCount: (item.usageCount || 0) + 1, lastUsed: admin.firestore.FieldValue.serverTimestamp() });
       });
-      batch.commit().catch(function () {});
+      batch.commit().catch(function (e) { console.warn('[aiService:generateWordProblems] usageCount batch update failed:', e.message); });
       return selected.map(function (item) {
         return { question: item.question, answer: item.answer, steps: item.steps || '', category: item.category };
       });
@@ -393,7 +407,7 @@ async function generateExplanation(question, answer, category) {
     var cached = await cacheRef.doc(questionHash).get();
     if (cached.exists) {
       var data = cached.data();
-      cacheRef.doc(questionHash).update({ usageCount: (data.usageCount || 0) + 1 }).catch(function () {});
+      cacheRef.doc(questionHash).update({ usageCount: (data.usageCount || 0) + 1 }).catch(function (e) { console.warn('[aiService:generateExplanation] usageCount update failed:', e.message); });
       return { concept: data.concept, steps: data.steps, mistake: data.mistake, tip: data.tip };
     }
   } catch (cacheErr) {
@@ -654,4 +668,4 @@ async function clearStudyPlanCache(userId, examDate) {
   }
 }
 
-module.exports = { generateWordProblems, generateExplanation, generateInsights, generateStudyPlan, clearStudyPlanCache, verifyIdToken, isUserPremium, isUserPremiumPlus, unlockPremiumPlus, checkWordProblemQuota, consumeWordProblemQuota, trackExplanationUsage, trackInsightsUsage, AIServiceError };
+module.exports = { generateWordProblems, generateExplanation, generateInsights, generateStudyPlan, clearStudyPlanCache, verifyIdToken, isUserPremium, isUserPremiumPlus, unlockPremiumPlus, checkWordProblemQuota, consumeWordProblemQuota, trackExplanationUsage, trackInsightsUsage, safeUserUpdate, AIServiceError };

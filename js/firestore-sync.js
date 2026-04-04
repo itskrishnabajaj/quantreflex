@@ -32,7 +32,12 @@ var FirestoreSync = (function () {
   var _drillActive = false; /* Whether a drill is in progress (defers syncing) */
   var _loadedUserId = null; /* UID whose data is currently loaded — detects user switches */
   var _trialExpiryPersistInFlight = false;
+  var _flushRetryCount = 0;
+  var _flushRetryTimer = null;
+  var _flushInFlight = false;
   var SYNC_DEBOUNCE_MS = 2000; /* batch updates every 2 seconds */
+  var FLUSH_RETRY_DELAY_MS = 5000;
+  var FLUSH_MAX_RETRIES = 2;
   var EARLY_USER_LIMIT = 121;
   var TRIAL_DAYS = 7;
 
@@ -71,11 +76,28 @@ var FirestoreSync = (function () {
     return db.collection('users').doc(userId);
   }
 
-  /* ---- Structured subcollection helpers (dual-write, fire-and-forget) ---- */
+  /* ---- Structured subcollection helpers (dual-write with single retry) ---- */
+
+  function _subcollectionWrite(collPath, docId, payload, label) {
+    var docRef = _getUserDocRef();
+    if (!docRef) return;
+    var ref = docRef.collection(collPath).doc(docId);
+    ref.set(payload, { merge: true }).then(function () {
+      console.log('[FirestoreSync:' + label + '] subcollection write succeeded');
+    }).catch(function (err) {
+      console.warn('[FirestoreSync:' + label + '] subcollection write failed, retrying in 3s:', err.message || err);
+      setTimeout(function () {
+        ref.set(payload, { merge: true }).then(function () {
+          console.log('[FirestoreSync:' + label + '] retry succeeded');
+        }).catch(function (retryErr) {
+          console.error('[FirestoreSync:' + label + '] retry also failed, data lost for this sync cycle:', retryErr.message || retryErr);
+        });
+      }, 3000);
+    });
+  }
 
   function _syncPerformanceSubcollection(stats) {
-    var docRef = _getUserDocRef();
-    if (!docRef || !stats) return;
+    if (!stats) return;
     var totalAttempted = stats.totalAttempted || 0;
     var totalCorrect = stats.totalCorrect || 0;
     var accuracy = totalAttempted > 0 ? Math.round((totalCorrect / totalAttempted) * 100) : 0;
@@ -83,7 +105,7 @@ var FirestoreSync = (function () {
     var avgTime = times.length > 0
       ? parseFloat((times.reduce(function (a, b) { return a + b; }, 0) / times.length).toFixed(1))
       : 0;
-    docRef.collection('performance').doc('overall').set({
+    _subcollectionWrite('performance', 'overall', {
       totalAttempted: totalAttempted,
       totalCorrect: totalCorrect,
       accuracy: accuracy,
@@ -92,28 +114,19 @@ var FirestoreSync = (function () {
       currentStreak: stats.currentStreak || 0,
       dailyStreak: stats.dailyStreak || 0,
       updatedAt: new Date().toISOString()
-    }, { merge: true }).catch(function (err) {
-      console.warn('Performance subcollection sync failed:', err);
-    });
+    }, 'Performance');
   }
 
   function _syncPracticeSubcollection(stats, bookmarks) {
-    var docRef = _getUserDocRef();
-    if (!docRef) return;
     var payload = { updatedAt: new Date().toISOString() };
     if (stats && Array.isArray(stats.mistakes)) payload.mistakes = stats.mistakes;
     if (Array.isArray(bookmarks)) payload.savedQuestions = bookmarks;
     if (!payload.mistakes && !payload.savedQuestions) return;
-    docRef.collection('practice').doc('data').set(payload, { merge: true }).catch(function (err) {
-      console.warn('Practice subcollection sync failed:', err);
-    });
+    _subcollectionWrite('practice', 'data', payload, 'Practice');
   }
 
   function _syncProfileSubcollection(profile, premiumFlags) {
-    var docRef = _getUserDocRef();
-    if (!docRef) return;
     var payload = { updatedAt: new Date().toISOString() };
-    /* Attach email from Firebase Auth if available */
     try {
       var currentUser = (typeof Auth !== 'undefined' && Auth.getCurrentUser) ? Auth.getCurrentUser() : null;
       if (currentUser && currentUser.email) payload.email = currentUser.email;
@@ -131,9 +144,7 @@ var FirestoreSync = (function () {
       if (premiumFlags.isPremiumPlus !== undefined) payload.isPremiumPlus = !!premiumFlags.isPremiumPlus;
       if (premiumFlags.premiumPlusPlan !== undefined) payload.premiumPlusPlan = premiumFlags.premiumPlusPlan || null;
     }
-    docRef.collection('profile').doc('data').set(payload, { merge: true }).catch(function (err) {
-      console.warn('Profile subcollection sync failed:', err);
-    });
+    _subcollectionWrite('profile', 'data', payload, 'Profile');
   }
 
   /* ---- End subcollection helpers ---- */
@@ -155,9 +166,15 @@ var FirestoreSync = (function () {
     _pendingUpdates = {};
     _drillActive = false;
     _loadedUserId = null;
+    _flushRetryCount = 0;
+    _flushInFlight = false;
     if (_syncTimer) {
       clearTimeout(_syncTimer);
       _syncTimer = null;
+    }
+    if (_flushRetryTimer) {
+      clearTimeout(_flushRetryTimer);
+      _flushRetryTimer = null;
     }
 
     /* Clear all user-related localStorage keys to prevent data leakage */
@@ -204,6 +221,7 @@ var FirestoreSync = (function () {
         _validateAndFillDefaults(data, docRef);
         _memoryCache = data;
         _enforceTrialExpiry(_memoryCache, docRef);
+        _enforcePremiumPlusExpiry(_memoryCache, docRef);
         _dataLoaded = true;
         _loadedUserId = currentUserId;
         if (data.settings) {
@@ -534,8 +552,24 @@ var FirestoreSync = (function () {
     if (!trialEndMs || Date.now() <= trialEndMs) return;
     data.isPremium = false;
     data.isTrial = false;
-    docRef.set({ isPremium: false, isTrial: false, updatedAt: new Date().toISOString() }, { merge: true }).catch(function (err) {
-      console.warn('Failed to update expired trial:', err);
+    docRef.set({ isPremium: false, isTrial: false, updatedAt: new Date().toISOString() }, { merge: true }).then(function () {
+      console.log('[FirestoreSync:_enforceTrialExpiry] trial expired, access revoked');
+    }).catch(function (err) {
+      console.warn('[FirestoreSync:_enforceTrialExpiry] failed to persist trial expiry:', err.message || err);
+    });
+  }
+
+  function _enforcePremiumPlusExpiry(data, docRef) {
+    if (!data || data.isPremiumPlus !== true) return;
+    var expiryMs = _toMillis(data.premiumPlusExpiry);
+    if (!expiryMs || expiryMs >= Date.now()) return;
+    data.isPremiumPlus = false;
+    data.premiumPlusStatus = 'expired';
+    console.log('[FirestoreSync:_enforcePremiumPlusExpiry] Premium+ expired on load, revoking access');
+    docRef.set({ isPremiumPlus: false, premiumPlusStatus: 'expired', updatedAt: new Date().toISOString() }, { merge: true }).then(function () {
+      console.log('[FirestoreSync:_enforcePremiumPlusExpiry] expiry persisted to Firestore');
+    }).catch(function (err) {
+      console.warn('[FirestoreSync:_enforcePremiumPlusExpiry] failed to persist expiry:', err.message || err);
     });
   }
 
@@ -611,25 +645,44 @@ var FirestoreSync = (function () {
   function _flushUpdates() {
     var docRef = _getUserDocRef();
     if (!docRef || Object.keys(_pendingUpdates).length === 0) return;
+    if (_flushInFlight) return;
     var currentUserId = FirebaseApp.getUserId();
     if (!currentUserId || (_loadedUserId && currentUserId !== _loadedUserId)) {
-      console.warn('Firestore sync aborted: user context changed before pending updates flush.');
+      console.warn('[FirestoreSync:_flushUpdates] aborted: user context changed');
       _pendingUpdates = {};
+      _flushRetryCount = 0;
       return;
     }
 
-    var updates = {};
+    var snapshot = {};
     var keys = Object.keys(_pendingUpdates);
     for (var i = 0; i < keys.length; i++) {
-      updates[keys[i]] = _pendingUpdates[keys[i]];
+      snapshot[keys[i]] = _pendingUpdates[keys[i]];
     }
-    updates.updatedAt = new Date().toISOString();
+    snapshot.updatedAt = new Date().toISOString();
     _pendingUpdates = {};
+    _flushInFlight = true;
 
-    docRef.set(updates, { merge: true }).then(function () {
-      console.log('Firestore: flushed', keys.length, 'field(s):', keys.join(', '));
+    docRef.set(snapshot, { merge: true }).then(function () {
+      _flushInFlight = false;
+      _flushRetryCount = 0;
+      console.log('[FirestoreSync:_flushUpdates] flushed', keys.length, 'field(s):', keys.join(', '));
     }).catch(function (err) {
-      console.warn('Firestore batch update failed:', err);
+      _flushInFlight = false;
+      for (var k = 0; k < keys.length; k++) {
+        if (!_pendingUpdates.hasOwnProperty(keys[k])) {
+          _pendingUpdates[keys[k]] = snapshot[keys[k]];
+        }
+      }
+      _flushRetryCount++;
+      if (_flushRetryCount <= FLUSH_MAX_RETRIES) {
+        console.warn('[FirestoreSync:_flushUpdates] write failed (attempt ' + _flushRetryCount + '/' + FLUSH_MAX_RETRIES + '), retrying in ' + (FLUSH_RETRY_DELAY_MS / 1000) + 's:', err.message || err);
+        if (_flushRetryTimer) clearTimeout(_flushRetryTimer);
+        _flushRetryTimer = setTimeout(_flushUpdates, FLUSH_RETRY_DELAY_MS);
+      } else {
+        console.error('[FirestoreSync:_flushUpdates] write failed after ' + FLUSH_MAX_RETRIES + ' retries, data re-queued for next sync cycle:', err.message || err);
+        _flushRetryCount = 0;
+      }
     });
   }
 

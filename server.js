@@ -69,7 +69,15 @@ async function authMiddleware(req, res, next) {
   }
 
   var idToken = authHeader.substring(7);
-  var decoded = await aiService.verifyIdToken(idToken);
+  var decoded;
+  try {
+    decoded = await aiService.verifyIdToken(idToken);
+  } catch (tokenErr) {
+    console.error('[server:authMiddleware] token verification threw:', tokenErr.message);
+    return res.status(401).json({
+      error: { code: 'UNAUTHORIZED', message: 'Authentication failed. Please login again.', retryable: false }
+    });
+  }
   if (!decoded || !decoded.uid) {
     return res.status(401).json({
       error: { code: 'UNAUTHORIZED', message: 'Invalid or expired authentication token.', retryable: false }
@@ -162,7 +170,11 @@ app.post('/api/ai/explain', authMiddleware, rateLimitMiddleware, premiumPlusGate
     }
     var answerStr = String(answer).substring(0, 50);
     var explanation = await aiService.generateExplanation(question, answerStr, category);
-    aiService.trackExplanationUsage(req.userId).catch(function (e) { console.warn('Explain usage track failed:', e.message); });
+    try {
+      await aiService.trackExplanationUsage(req.userId);
+    } catch (e) {
+      console.warn('[server:/api/ai/explain] usage tracking failed (uid: ' + req.userId + '):', e.message);
+    }
     res.json({ explanation: explanation });
   } catch (err) {
     console.error('Explanation error:', err.message);
@@ -197,7 +209,11 @@ app.post('/api/ai/insights', authMiddleware, rateLimitMiddleware, premiumPlusGat
       });
     }
     var insights = await aiService.generateInsights(stats, req.userId);
-    aiService.trackInsightsUsage(req.userId).catch(function (e) { console.warn('Insights usage track failed:', e.message); });
+    try {
+      await aiService.trackInsightsUsage(req.userId);
+    } catch (e) {
+      console.warn('[server:/api/ai/insights] usage tracking failed (uid: ' + req.userId + '):', e.message);
+    }
     res.json({ insights: insights });
   } catch (err) {
     console.error('Insights error:', err.message);
