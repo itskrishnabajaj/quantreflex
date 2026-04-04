@@ -11,6 +11,8 @@
  *     ├── stats (progress data)
  *     ├── quickLinks, customTopics, customFormulas, bookmarks
  *     ├── isPremium, isTrial, trialEnd, hasPaid, isEarlyUser
+ *     ├── isPremiumPlus, premiumPlusPlan, premiumPlusExpiry, premiumPlusStatus
+ *     ├── updatedAt, createdAt
  *
  *   users/{userId}/practiceSessions/{sessionId}  (subcollection — drill history)
  *
@@ -199,11 +201,11 @@ var FirestoreSync = (function () {
       if (doc.exists) {
         var data = doc.data();
         _normalizeMonetization(data, docRef);
+        _validateAndFillDefaults(data, docRef);
         _memoryCache = data;
         _enforceTrialExpiry(_memoryCache, docRef);
         _dataLoaded = true;
         _loadedUserId = currentUserId;
-        /* Merge Firestore data into localStorage (Firestore is source of truth) */
         if (data.settings) {
           try { localStorage.setItem('quant_reflex_settings', JSON.stringify(data.settings)); } catch (_) {}
         }
@@ -284,7 +286,12 @@ var FirestoreSync = (function () {
       trialEnd: null,
       hasPaid: false,
       isEarlyUser: false,
-      createdAt: now.toISOString()
+      isPremiumPlus: false,
+      premiumPlusPlan: null,
+      premiumPlusExpiry: null,
+      premiumPlusStatus: null,
+      createdAt: now.toISOString(),
+      updatedAt: now.toISOString()
     };
 
     _memoryCache = fallbackDefaults;
@@ -341,9 +348,14 @@ var FirestoreSync = (function () {
           trialEnd: monetizationState.trialEnd,
           hasPaid: monetizationState.hasPaid,
           isEarlyUser: monetizationState.isEarlyUser,
+          isPremiumPlus: false,
+          premiumPlusPlan: null,
+          premiumPlusExpiry: null,
+          premiumPlusStatus: null,
           createdAt: (typeof firebase !== 'undefined' && firebase.firestore && firebase.firestore.FieldValue)
             ? firebase.firestore.FieldValue.serverTimestamp()
-            : now.toISOString()
+            : now.toISOString(),
+          updatedAt: now.toISOString()
         };
         tx.set(docRef, docDefaults, { merge: true });
         tx.set(metaRef, { totalUsers: totalUsers + 1 }, { merge: true });
@@ -354,6 +366,7 @@ var FirestoreSync = (function () {
         });
       });
     }).then(function () {
+      console.log('Firestore: new user document created successfully');
       /* Non-blocking: eagerly seed all structured subcollections for new user */
       var mc = _memoryCache || fallbackDefaults;
       var seedDocRef = _getUserDocRef();
@@ -410,7 +423,12 @@ var FirestoreSync = (function () {
       typeof data.hasPaid === 'boolean' &&
       typeof data.isEarlyUser === 'boolean' &&
       data.hasOwnProperty('trialEnd') &&
-      data.hasOwnProperty('createdAt');
+      data.hasOwnProperty('createdAt') &&
+      typeof data.isPremiumPlus === 'boolean' &&
+      data.hasOwnProperty('premiumPlusPlan') &&
+      data.hasOwnProperty('premiumPlusExpiry') &&
+      data.hasOwnProperty('premiumPlusStatus') &&
+      data.hasOwnProperty('updatedAt');
     if (hasAll) return;
 
     var patch = {};
@@ -420,6 +438,11 @@ var FirestoreSync = (function () {
     if (typeof data.hasPaid !== 'boolean') patch.hasPaid = false;
     if (typeof data.isEarlyUser !== 'boolean') patch.isEarlyUser = false;
     if (!data.hasOwnProperty('createdAt')) patch.createdAt = new Date().toISOString();
+    if (typeof data.isPremiumPlus !== 'boolean') patch.isPremiumPlus = false;
+    if (!data.hasOwnProperty('premiumPlusPlan')) patch.premiumPlusPlan = null;
+    if (!data.hasOwnProperty('premiumPlusExpiry')) patch.premiumPlusExpiry = null;
+    if (!data.hasOwnProperty('premiumPlusStatus')) patch.premiumPlusStatus = null;
+    if (!data.hasOwnProperty('updatedAt')) patch.updatedAt = new Date().toISOString();
 
     var keys = Object.keys(patch);
     if (keys.length === 0) return;
@@ -427,8 +450,81 @@ var FirestoreSync = (function () {
     for (var i = 0; i < keys.length; i++) {
       data[keys[i]] = patch[keys[i]];
     }
-    docRef.set(patch, { merge: true }).catch(function (err) {
+    docRef.set(patch, { merge: true }).then(function () {
+      console.log('Firestore: normalized monetization fields:', Object.keys(patch).join(', '));
+    }).catch(function (err) {
       console.warn('Failed to normalize monetization fields:', err);
+    });
+  }
+
+  var _defaultStats = {
+    totalAttempted: 0, totalCorrect: 0,
+    bestStreak: 0, currentStreak: 0,
+    drillSessions: 0, timedTestSessions: 0,
+    dailyStreak: 0, bestDailyStreak: 0, lastActiveDate: null,
+    lastPracticeDate: null,
+    todayAttempted: 0, todayCorrect: 0,
+    categoryStats: {}, mistakes: [],
+    responseTimes: [], dailyHistory: {}
+  };
+
+  var _defaultSettings = {
+    darkMode: false, sound: true, vibration: true, difficulty: 'medium',
+    dailyGoal: 50, reducedMotion: false, skipEnabled: false, notificationsEnabled: false,
+    theme: 'classic'
+  };
+
+  function _validateAndFillDefaults(data, docRef) {
+    if (!data) return;
+    var patch = {};
+    var needsPatch = false;
+
+    if (!data.stats || typeof data.stats !== 'object') {
+      data.stats = JSON.parse(JSON.stringify(_defaultStats));
+      patch.stats = data.stats;
+      needsPatch = true;
+    } else {
+      var sk = Object.keys(_defaultStats);
+      for (var i = 0; i < sk.length; i++) {
+        if (data.stats[sk[i]] === undefined) {
+          data.stats[sk[i]] = _defaultStats[sk[i]];
+          needsPatch = true;
+        }
+      }
+      if (needsPatch) patch.stats = data.stats;
+    }
+
+    if (!data.settings || typeof data.settings !== 'object') {
+      data.settings = JSON.parse(JSON.stringify(_defaultSettings));
+      patch.settings = data.settings;
+      needsPatch = true;
+    } else {
+      var stk = Object.keys(_defaultSettings);
+      var settingsPatched = false;
+      for (var j = 0; j < stk.length; j++) {
+        if (data.settings[stk[j]] === undefined) {
+          data.settings[stk[j]] = _defaultSettings[stk[j]];
+          settingsPatched = true;
+        }
+      }
+      if (settingsPatched) {
+        patch.settings = data.settings;
+        needsPatch = true;
+      }
+    }
+
+    if (!Array.isArray(data.quickLinks)) { data.quickLinks = ['fractionTable', 'tablesContainer', 'formulaSections', 'mentalTricks']; patch.quickLinks = data.quickLinks; needsPatch = true; }
+    if (!Array.isArray(data.customTopics)) { data.customTopics = []; patch.customTopics = data.customTopics; needsPatch = true; }
+    if (!data.customFormulas || typeof data.customFormulas !== 'object') { data.customFormulas = {}; patch.customFormulas = data.customFormulas; needsPatch = true; }
+    if (!Array.isArray(data.bookmarks)) { data.bookmarks = []; patch.bookmarks = data.bookmarks; needsPatch = true; }
+
+    if (!needsPatch) return;
+    patch.updatedAt = new Date().toISOString();
+    data.updatedAt = patch.updatedAt;
+    docRef.set(patch, { merge: true }).then(function () {
+      console.log('Firestore: filled missing defaults:', Object.keys(patch).join(', '));
+    }).catch(function (err) {
+      console.warn('Failed to fill missing defaults:', err);
     });
   }
 
@@ -438,7 +534,7 @@ var FirestoreSync = (function () {
     if (!trialEndMs || Date.now() <= trialEndMs) return;
     data.isPremium = false;
     data.isTrial = false;
-    docRef.set({ isPremium: false, isTrial: false }, { merge: true }).catch(function (err) {
+    docRef.set({ isPremium: false, isTrial: false, updatedAt: new Date().toISOString() }, { merge: true }).catch(function (err) {
       console.warn('Failed to update expired trial:', err);
     });
   }
@@ -527,9 +623,12 @@ var FirestoreSync = (function () {
     for (var i = 0; i < keys.length; i++) {
       updates[keys[i]] = _pendingUpdates[keys[i]];
     }
+    updates.updatedAt = new Date().toISOString();
     _pendingUpdates = {};
 
-    docRef.set(updates, { merge: true }).catch(function (err) {
+    docRef.set(updates, { merge: true }).then(function () {
+      console.log('Firestore: flushed', keys.length, 'field(s):', keys.join(', '));
+    }).catch(function (err) {
       console.warn('Firestore batch update failed:', err);
     });
   }
@@ -633,7 +732,7 @@ var FirestoreSync = (function () {
           var uid = docRef.id;
           var db = docRef.firestore;
           db.collection('users').doc(uid).collection('performance').doc('overall').set({
-            totalAttempted: 0, totalCorrect: 0,
+            totalAttempted: 0, totalCorrect: 0, accuracy: 0, avgTime: 0,
             bestStreak: 0, currentStreak: 0,
             dailyStreak: 0, bestDailyStreak: 0,
             drillSessions: 0, timedTestSessions: 0,
@@ -718,7 +817,7 @@ var FirestoreSync = (function () {
           var uid = docRef.id;
           var db = docRef.firestore;
           db.collection('users').doc(uid).collection('performance').doc('overall').set({
-            totalAttempted: 0, totalCorrect: 0,
+            totalAttempted: 0, totalCorrect: 0, accuracy: 0, avgTime: 0,
             bestStreak: 0, currentStreak: 0,
             dailyStreak: 0, bestDailyStreak: 0,
             drillSessions: 0, timedTestSessions: 0,
@@ -839,7 +938,7 @@ var FirestoreSync = (function () {
             var docRef = _getUserDocRef();
             if (docRef) {
               _trialExpiryPersistInFlight = true;
-              docRef.set({ isPremium: false, isTrial: false }, { merge: true }).catch(function (err) {
+              docRef.set({ isPremium: false, isTrial: false, updatedAt: new Date().toISOString() }, { merge: true }).catch(function (err) {
                 console.warn('Failed to persist trial expiry from access state:', err);
               }).finally(function () {
                 _trialExpiryPersistInFlight = false;
@@ -856,7 +955,7 @@ var FirestoreSync = (function () {
           _memoryCache.premiumPlusStatus = 'expired';
           var ppDocRef = _getUserDocRef();
           if (ppDocRef) {
-            ppDocRef.set({ isPremiumPlus: false, premiumPlusStatus: 'expired' }, { merge: true }).catch(function (err) {
+            ppDocRef.set({ isPremiumPlus: false, premiumPlusStatus: 'expired', updatedAt: new Date().toISOString() }, { merge: true }).catch(function (err) {
               console.warn('Failed to persist PremiumPlus expiry from access state:', err);
             });
           }
@@ -884,7 +983,8 @@ var FirestoreSync = (function () {
         isPremiumPlus: true,
         premiumPlusPlan: plan,
         premiumPlusExpiry: expiry,
-        premiumPlusStatus: 'active'
+        premiumPlusStatus: 'active',
+        updatedAt: new Date().toISOString()
       };
       if (paymentId) payload.lastPremiumPlusPaymentId = String(paymentId);
       if (_memoryCache) {
@@ -895,9 +995,11 @@ var FirestoreSync = (function () {
         if (paymentId) _memoryCache.lastPremiumPlusPaymentId = String(paymentId);
       }
       docRef.set(payload, { merge: true }).then(function () {
+        console.log('Firestore: Premium+ unlocked — plan:', plan, 'expiry:', expiry);
         if (callback) callback(null);
         _syncProfileSubcollection(null, { isPremiumPlus: true, premiumPlusPlan: plan });
       }).catch(function (err) {
+        console.warn('Firestore: Premium+ unlock write failed:', err);
         if (callback) callback(err && err.message ? err.message : 'PremiumPlus unlock failed');
       });
     },
@@ -911,7 +1013,8 @@ var FirestoreSync = (function () {
         isPremium: true,
         hasPaid: true,
         isTrial: false,
-        trialEnd: null
+        trialEnd: null,
+        updatedAt: new Date().toISOString()
       };
       if (paymentId) payload.lastPaymentId = String(paymentId);
       if (_memoryCache) {
@@ -922,10 +1025,11 @@ var FirestoreSync = (function () {
         if (paymentId) _memoryCache.lastPaymentId = String(paymentId);
       }
       docRef.set(payload, { merge: true }).then(function () {
+        console.log('Firestore: Premium unlocked — paymentId:', paymentId);
         if (callback) callback(null);
-        /* Mirror only after root write confirms success — avoids mirror divergence on failure */
         _syncProfileSubcollection(null, { isPremium: true, hasPaid: true, isTrial: false, trialEnd: null });
       }).catch(function (err) {
+        console.warn('Firestore: Premium unlock write failed:', err);
         if (callback) callback(err && err.message ? err.message : 'Premium unlock failed');
       });
     }

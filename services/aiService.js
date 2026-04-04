@@ -108,7 +108,7 @@ async function isUserPremiumPlus(uid) {
     var expiryMs = _toExpiryMillis(data.premiumPlusExpiry);
     if (expiryMs > 0 && expiryMs < Date.now()) {
       db.collection('users').doc(uid).set(
-        { isPremiumPlus: false, premiumPlusStatus: 'expired' },
+        { isPremiumPlus: false, premiumPlusStatus: 'expired', updatedAt: new Date().toISOString() },
         { merge: true }
       ).catch(function (e) { console.warn('PremiumPlus expiry write failed:', e.message); });
       return false;
@@ -142,7 +142,8 @@ async function unlockPremiumPlus(uid, plan, paymentId, subscriptionId) {
         premiumPlusPlan: existing.plan || plan,
         premiumPlusExpiry: finalExpiry,
         premiumPlusStatus: 'active',
-        lastPremiumPlusPaymentId: String(paymentId)
+        lastPremiumPlusPaymentId: String(paymentId),
+        updatedAt: new Date().toISOString()
       }, { merge: true });
       return;
     }
@@ -159,7 +160,8 @@ async function unlockPremiumPlus(uid, plan, paymentId, subscriptionId) {
       premiumPlusPlan: plan,
       premiumPlusExpiry: expiry,
       premiumPlusStatus: 'active',
-      lastPremiumPlusPaymentId: String(paymentId)
+      lastPremiumPlusPaymentId: String(paymentId),
+      updatedAt: new Date().toISOString()
     }, { merge: true });
   });
 
@@ -196,7 +198,7 @@ async function _loadUsage(uid) {
         insightsGeneratedDate: null
       };
       usageCache[uid] = migrated;
-      db.collection('users').doc(uid).collection('usage').doc('ai').set(migrated).catch(function (e) { console.warn('Legacy migration write failed:', e.message); });
+      db.collection('users').doc(uid).collection('usage').doc('ai').set(migrated, { merge: true }).catch(function (e) { console.warn('Legacy migration write failed:', e.message); });
       return migrated;
     }
   } catch (legacyErr) {

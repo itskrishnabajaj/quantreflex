@@ -39,6 +39,30 @@ The app runs on port 5000 via `node server.js`. The workflow "Start application"
 - `RAZORPAY_KEY_SECRET` — Razorpay API key secret for subscription payments (stored as a Replit Secret)
 - `FIREBASE_SERVICE_ACCOUNT` — Firebase Admin SDK service account JSON (stored as a Replit Secret)
 
+## Firestore Data Architecture
+
+The user document (`users/{uid}`) is the source of truth. Key fields:
+
+**Monetization fields** (all normalized on load via `_normalizeMonetization`):
+- `isPremium`, `isTrial`, `trialEnd`, `hasPaid`, `isEarlyUser` — Premium tier
+- `isPremiumPlus`, `premiumPlusPlan`, `premiumPlusExpiry`, `premiumPlusStatus` — Premium+ tier
+- `updatedAt`, `createdAt` — timestamps
+
+**Data fields** (validated on load via `_validateAndFillDefaults`):
+- `stats` — progress data (totalAttempted, totalCorrect, categoryStats, etc.)
+- `settings` — user preferences (darkMode, difficulty, theme, etc.)
+- `profile` — name, username, createdAt
+- `quickLinks`, `customTopics`, `customFormulas`, `bookmarks`
+
+**Subcollections** (dual-written alongside root doc):
+- `users/{uid}/performance/overall` — derived accuracy, avgTime, streaks
+- `users/{uid}/practice/data` — mistakes, savedQuestions
+- `users/{uid}/profile/data` — name, premium flags
+- `users/{uid}/ai/usage` — AI feature usage counters
+- `users/{uid}/practiceSessions/{auto}` — drill session history
+
+**Write safety**: All root doc writes use `set(data, { merge: true })`. Drill mode batches writes to reduce costs. All writes include `updatedAt` timestamps.
+
 ## Key Features
 
 - 12 math categories: squares, cubes, area, volume, percentages, multiplication, fractions, averages, ratios, profit-loss, time-speed-distance, time-and-work
