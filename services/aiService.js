@@ -124,7 +124,9 @@ async function isUserPremiumPlus(uid) {
     if (expiryMs > 0 && expiryMs < Date.now()) {
       try {
         await safeUserUpdate(uid, { isPremiumPlus: false, premiumPlusStatus: 'expired' }, 'isUserPremiumPlus:expiry');
-      } catch (_) {}
+      } catch (expiryErr) {
+        console.error('[aiService:isUserPremiumPlus] expiry revocation write failed (uid: ' + uid + '):', expiryErr.message);
+      }
       return false;
     }
     return true;
@@ -148,9 +150,11 @@ async function unlockPremiumPlus(uid, plan, paymentId, subscriptionId) {
     if (paymentDoc.exists) {
       var existing = paymentDoc.data();
       if (existing.uid !== uid) {
+        console.error('[aiService:unlockPremiumPlus] PAYMENT_REPLAY detected (uid: ' + uid + ', paymentId: ' + paymentId + ', existingUid: ' + existing.uid + ')');
         throw new AIServiceError('PAYMENT_REPLAY', 'Payment already used by another account.', false);
       }
       finalExpiry = existing.expiry || expiry;
+      console.log('[aiService:unlockPremiumPlus] re-applying existing payment (uid: ' + uid + ', paymentId: ' + paymentId + ')');
       tx.set(userRef, {
         isPremiumPlus: true,
         premiumPlusPlan: existing.plan || plan,
@@ -179,7 +183,7 @@ async function unlockPremiumPlus(uid, plan, paymentId, subscriptionId) {
     }, { merge: true });
   });
 
-  console.log('Premium+ unlocked for uid:', uid, 'plan:', plan, 'expiry:', new Date(finalExpiry).toISOString(), 'paymentId:', paymentId, 'subscriptionId:', subscriptionId || 'N/A');
+  console.log('[aiService:unlockPremiumPlus] success (uid: ' + uid + ', plan: ' + plan + ', expiry: ' + new Date(finalExpiry).toISOString() + ', paymentId: ' + paymentId + ', subscriptionId: ' + (subscriptionId || 'N/A') + ')');
   return finalExpiry;
 }
 
