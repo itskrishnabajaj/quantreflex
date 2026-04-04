@@ -254,7 +254,8 @@ async function _saveUsage(uid) {
   try {
     await db.collection('users').doc(uid).collection('usage').doc('ai').set(entry, { merge: true });
   } catch (err) {
-    console.warn('Usage write failed:', err.message);
+    console.error('[aiService:_saveUsage] write failed (uid: ' + uid + '):', err.message);
+    throw err;
   }
 }
 

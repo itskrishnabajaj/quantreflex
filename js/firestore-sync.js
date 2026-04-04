@@ -685,8 +685,10 @@ var FirestoreSync = (function () {
         if (_flushRetryTimer) clearTimeout(_flushRetryTimer);
         _flushRetryTimer = setTimeout(_flushUpdates, FLUSH_RETRY_DELAY_MS);
       } else {
-        console.error('[FirestoreSync:_flushUpdates] write failed after ' + FLUSH_MAX_RETRIES + ' retries, data re-queued for next sync cycle:', err.message || err);
+        console.error('[FirestoreSync:_flushUpdates] write failed after ' + FLUSH_MAX_RETRIES + ' retries, data re-queued:', err.message || err);
         _flushRetryCount = 0;
+        if (_flushRetryTimer) clearTimeout(_flushRetryTimer);
+        _flushRetryTimer = setTimeout(_flushUpdates, FLUSH_RETRY_DELAY_MS * 6);
       }
     });
   }
