@@ -104,10 +104,11 @@ async function safeUserUpdate(uid, data, caller) {
     console.error('[aiService:safeUserUpdate] called without uid from ' + (caller || 'unknown'));
     return;
   }
-  data.updatedAt = new Date().toISOString();
+  var payload = Object.assign({}, data);
+  payload.updatedAt = new Date().toISOString();
   try {
-    await db.collection('users').doc(uid).set(data, { merge: true });
-    console.log('[aiService:safeUserUpdate] success from ' + (caller || 'unknown') + ' (uid: ' + uid + ') fields:', Object.keys(data).join(', '));
+    await db.collection('users').doc(uid).set(payload, { merge: true });
+    console.log('[aiService:safeUserUpdate] success from ' + (caller || 'unknown') + ' (uid: ' + uid + ') fields:', Object.keys(payload).join(', '));
   } catch (err) {
     console.error('[aiService:safeUserUpdate] FAILED from ' + (caller || 'unknown') + ' (uid: ' + uid + '):', err.message);
     throw err;
