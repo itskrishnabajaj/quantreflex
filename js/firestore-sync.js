@@ -158,11 +158,11 @@ var FirestoreSync = (function () {
    * leaks to the next session.
    */
   function resetSyncState() {
-    _syncGeneration++;
-
     if (Object.keys(_pendingUpdates).length > 0 && !_flushInFlight) {
       _flushUpdates();
     }
+
+    _syncGeneration++;
 
     _memoryCache = null;
     _dataLoaded = false;
@@ -682,8 +682,8 @@ var FirestoreSync = (function () {
       }
     }).catch(function (err) {
       _flushInFlight = false;
-      if (gen !== _syncGeneration) {
-        console.warn('[FirestoreSync:_flushUpdates] generation changed during failed write, dropping snapshot to prevent cross-user leak');
+      if (gen !== _syncGeneration || !_loadedUserId || FirebaseApp.getUserId() !== currentUserId) {
+        console.warn('[FirestoreSync:_flushUpdates] user context changed during failed write, dropping snapshot to prevent cross-user leak');
         return;
       }
       for (var k = 0; k < keys.length; k++) {
@@ -697,10 +697,8 @@ var FirestoreSync = (function () {
         if (_flushRetryTimer) clearTimeout(_flushRetryTimer);
         _flushRetryTimer = setTimeout(_flushUpdates, FLUSH_RETRY_DELAY_MS);
       } else {
-        console.error('[FirestoreSync:_flushUpdates] write failed after ' + FLUSH_MAX_RETRIES + ' retries, data re-queued:', err.message || err);
+        console.error('[FirestoreSync:_flushUpdates] write failed after ' + FLUSH_MAX_RETRIES + ' retries, data re-queued for next user-triggered sync:', err.message || err);
         _flushRetryCount = 0;
-        if (_flushRetryTimer) clearTimeout(_flushRetryTimer);
-        _flushRetryTimer = setTimeout(_flushUpdates, FLUSH_RETRY_DELAY_MS * 6);
       }
     });
   }
