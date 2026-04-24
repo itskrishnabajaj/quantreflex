@@ -86,6 +86,7 @@ function createDrillEngine(container, opts) {
   var perQTimer = null;
   var autoAdvanceTimer = null;
   var answered = false; /* prevents double-counting */
+  var finished = false; /* prevents any action after drill ends */
   var beginStarted = false; /* prevents duplicate START on rapid taps */
   var reviewOriginalCount = 0; /* track original count for review mode cap */
   var ui = {
@@ -701,6 +702,8 @@ function createDrillEngine(container, opts) {
   }
 
   function finish() {
+    if (finished) return; /* prevent double-finish from timer race */
+    finished = true;
     cleanup();
     _exitDrillSession();
     if (adaptiveMode) _clearAdaptiveOverride();
@@ -913,7 +916,7 @@ function createDrillEngine(container, opts) {
         clearInterval(perQTimer);
         perQTimer = null;
         /* Auto-submit empty answer when time runs out */
-        if (!answered) checkAnswer('');
+        if (!answered && !finished) checkAnswer('');
         return;
       }
       remaining--;

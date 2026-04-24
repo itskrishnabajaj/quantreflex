@@ -13,6 +13,31 @@
 
 var PROGRESS_KEY = 'quant_reflex_progress';
 
+/**
+ * Return today's date as a consistent ISO string (YYYY-MM-DD).
+ * Avoids locale-dependent toDateString() which breaks across timezones.
+ */
+function _todayISO() {
+  return new Date().toISOString().slice(0, 10);
+}
+
+/**
+ * Normalize a stored date value to ISO format.
+ * Handles legacy toDateString() values (e.g. "Thu Apr 24 2026")
+ * and already-ISO values transparently.
+ * @param {string|null} dateStr
+ * @returns {string|null}
+ */
+function _normalizeDate(dateStr) {
+  if (!dateStr) return null;
+  /* Already ISO format (YYYY-MM-DD) */
+  if (/^\d{4}-\d{2}-\d{2}$/.test(dateStr)) return dateStr;
+  /* Legacy toDateString() format — parse and convert */
+  var parsed = new Date(dateStr);
+  if (isNaN(parsed.getTime())) return null;
+  return parsed.toISOString().slice(0, 10);
+}
+
 /** Return saved progress or defaults */
 function loadProgress() {
   try {
@@ -20,11 +45,12 @@ function loadProgress() {
     if (raw) {
       var data = JSON.parse(raw);
       /* Check if date has changed — reset today counters */
-      var today = new Date().toDateString();
-      if (data.lastActiveDate !== today) {
+      var today = _todayISO();
+      var normalizedLastActive = _normalizeDate(data.lastActiveDate);
+      if (normalizedLastActive !== today) {
         /* Check daily streak continuity */
-        if (data.lastActiveDate) {
-          var last = new Date(data.lastActiveDate);
+        if (normalizedLastActive) {
+          var last = new Date(normalizedLastActive);
           var now = new Date(today);
           var diffDays = Math.round((now - last) / (1000 * 60 * 60 * 24));
           if (diffDays > 1) {
@@ -34,6 +60,10 @@ function loadProgress() {
         data.todayAttempted = 0;
         data.todayCorrect = 0;
         data.lastActiveDate = today;
+        /* Auto-migrate lastPracticeDate to ISO if present */
+        if (data.lastPracticeDate) {
+          data.lastPracticeDate = _normalizeDate(data.lastPracticeDate);
+        }
         saveProgress(data);
       }
       /* Ensure required fields exist */
@@ -93,10 +123,11 @@ function saveProgress(data) {
  */
 function recordAnswer(correct, category, questionData, responseTime) {
   var p = loadProgress();
-  var today = new Date().toDateString();
+  var today = _todayISO();
 
   /* Daily streak: increment on first practice of a new day */
-  if (p.lastPracticeDate !== today) {
+  var normalizedLastPractice = _normalizeDate(p.lastPracticeDate);
+  if (normalizedLastPractice !== today) {
     p.dailyStreak = (p.dailyStreak || 0) + 1;
     /* Track best daily streak ever achieved */
     if (p.dailyStreak > (p.bestDailyStreak || 0)) {

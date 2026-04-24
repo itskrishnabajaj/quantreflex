@@ -412,10 +412,17 @@ var FirestoreSync = (function () {
       }
     }).catch(function (err) {
       console.warn('Firestore default document creation failed:', err);
-      fallbackDefaults.isPremium = false;
+      /* On transaction failure, grant a time-limited trial as a safe default.
+         This is self-correcting: trial expires naturally, and on next successful
+         load the normalizeMonetization path will set the correct state.
+         Better than locking the user out entirely on a flaky connection. */
+      var trialEndFallback = Date.now() + (TRIAL_DAYS * 24 * 60 * 60 * 1000);
+      fallbackDefaults.isPremium = true;
+      fallbackDefaults.isTrial = true;
+      fallbackDefaults.trialEnd = trialEndFallback;
       fallbackDefaults.isEarlyUser = false;
-      fallbackDefaults.isTrial = false;
-      fallbackDefaults.trialEnd = null;
+      fallbackDefaults.hasPaid = false;
+      _memoryCache = fallbackDefaults;
       docRef.set(fallbackDefaults, { merge: true }).catch(function (fallbackErr) {
         console.warn('Firestore fallback default document creation failed:', fallbackErr);
       });

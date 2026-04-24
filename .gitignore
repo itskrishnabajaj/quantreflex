@@ -2,3 +2,31 @@ node_modules/
 dist/
 .DS_Store
 *.log
+
+# Environment & secrets
+.env
+.env.*
+.env.local
+.env.production
+
+# Firebase
+firebase-debug.log
+.firebaserc
+firebase.json
+firestore.rules
+firestore.indexes.json
+serviceAccountKey.json
+*-service-account*.json
+
+# IDE
+.vscode/
+.idea/
+
+# OS
+Thumbs.db
+Desktop.ini
+
+# Replit (from original hosting)
+.replit
+replit.nix
+.local/

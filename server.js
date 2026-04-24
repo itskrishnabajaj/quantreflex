@@ -10,7 +10,17 @@ app.use(express.json({ limit: '16kb' }));
 
 app.use(function (req, res, next) {
   var p = req.path.toLowerCase();
-  if (p === '/server.js' || p === '/services' || p.startsWith('/services/') || p === '/package.json' || p === '/package-lock.json' || p.endsWith('.md') || p.startsWith('/.local/') || p.startsWith('/node_modules/') || p === '/.replit' || p === '/replit.nix') {
+  /* Security: block access to server files, configs, and sensitive paths.
+     The static middleware serves from __dirname, so anything not blocked is public. */
+  if (p === '/server.js' || p === '/services' || p.startsWith('/services/') ||
+      p === '/package.json' || p === '/package-lock.json' ||
+      p.endsWith('.md') ||
+      p.startsWith('/.local/') || p.startsWith('/node_modules/') ||
+      p === '/.replit' || p === '/replit.nix' ||
+      p === '/.env' || p.startsWith('/.env.') ||
+      p === '/.gitignore' || p.startsWith('/.git/') || p === '/.git' ||
+      p === '/firebase.json' || p === '/firestore.rules' || p === '/firestore.indexes.json' ||
+      p === '/.firebaserc') {
     return res.status(404).end();
   }
   next();

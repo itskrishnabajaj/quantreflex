@@ -74,6 +74,8 @@ function verifySubscriptionSignature(subscriptionId, paymentId, signature) {
   if (!RAZORPAY_KEY_SECRET) return false;
   if (!subscriptionId || !paymentId || !signature) return false;
   try {
+    /* Razorpay subscription signature format: razorpay_payment_id|razorpay_subscription_id
+       See: https://razorpay.com/docs/api/subscriptions/#verify-payment-signature */
     var body = paymentId + '|' + subscriptionId;
     var expected = crypto
       .createHmac('sha256', RAZORPAY_KEY_SECRET)

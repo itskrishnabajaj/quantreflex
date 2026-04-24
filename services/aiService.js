@@ -58,12 +58,10 @@ const CATEGORY_LABELS = {
 };
 
 async function verifyIdToken(idToken) {
-  try {
-    var decoded = await admin.auth().verifyIdToken(idToken);
-    return decoded;
-  } catch (err) {
-    return null;
-  }
+  /* Let errors propagate so authMiddleware can log the actual failure reason
+     (e.g. expired token, revoked token, clock skew). The middleware's
+     try/catch handles the error and returns a proper 401 response. */
+  return await admin.auth().verifyIdToken(idToken);
 }
 
 async function isUserPremium(uid) {
@@ -192,13 +190,32 @@ var WP_FREE_LIMIT = 5;
 var WP_PREMIUM_DAILY = 25;
 var MAX_QUESTION_LENGTH = 300;
 var usageCache = {};
+var usageCacheTimestamps = {};
+var USAGE_CACHE_TTL_MS = 10 * 60 * 1000; /* 10 minutes */
+var USAGE_CACHE_MAX_SIZE = 1000;
+
+function _evictStaleCacheEntries() {
+  var keys = Object.keys(usageCache);
+  if (keys.length <= USAGE_CACHE_MAX_SIZE) return;
+  var now = Date.now();
+  for (var i = 0; i < keys.length; i++) {
+    if (now - (usageCacheTimestamps[keys[i]] || 0) > USAGE_CACHE_TTL_MS) {
+      delete usageCache[keys[i]];
+      delete usageCacheTimestamps[keys[i]];
+    }
+  }
+}
 
 async function _loadUsage(uid) {
-  if (usageCache[uid]) return usageCache[uid];
+  /* Return cached entry if still within TTL */
+  if (usageCache[uid] && usageCacheTimestamps[uid] && (Date.now() - usageCacheTimestamps[uid] < USAGE_CACHE_TTL_MS)) {
+    return usageCache[uid];
+  }
   try {
     var doc = await db.collection('users').doc(uid).collection('usage').doc('ai').get();
     if (doc.exists) {
       usageCache[uid] = _normalizeUsageDoc(doc.data());
+      usageCacheTimestamps[uid] = Date.now();
       return usageCache[uid];
     }
   } catch (err) {
@@ -252,6 +269,8 @@ function _normalizeUsageDoc(data) {
 async function _saveUsage(uid) {
   var entry = usageCache[uid];
   if (!entry) return;
+  usageCacheTimestamps[uid] = Date.now();
+  _evictStaleCacheEntries();
   try {
     await db.collection('users').doc(uid).collection('usage').doc('ai').set(entry, { merge: true });
   } catch (err) {
