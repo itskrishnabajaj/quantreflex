@@ -3,6 +3,7 @@
  */
 
 (function (global) {
+var API_BASE = window.QUANTREFLEX_API_BASE || '';
 var RAZORPAY_LIVE_KEY = 'rzp_live_STanzIgCpSAfL7';
 var _LOCKED_FEATURES = {
   custom_training: true,
@@ -373,7 +374,7 @@ function openPremiumPlusPayment(plan, userId) {
       }
 
       console.log('[Premium+] Calling /api/subscriptions/create, plan:', plan);
-      fetch('/api/subscriptions/create', {
+      fetch(API_BASE + '/api/subscriptions/create', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + idToken },
         body: JSON.stringify({ plan: plan })
@@ -432,7 +433,7 @@ function openPremiumPlusPayment(plan, userId) {
 
               _getPlusIdToken(function (freshToken) {
                 if (currentAttempt !== _plusAttemptId) return;
-                fetch('/api/subscriptions/verify', {
+                fetch(API_BASE + '/api/subscriptions/verify', {
                   method: 'POST',
                   headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + (freshToken || idToken) },
                   body: JSON.stringify({ subscriptionId: rzpSubscriptionId, paymentId: paymentId, signature: signature })

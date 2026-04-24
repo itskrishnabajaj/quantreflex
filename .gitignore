@@ -26,7 +26,8 @@ serviceAccountKey.json
 Thumbs.db
 Desktop.ini
 
-# Replit (from original hosting)
-.replit
-replit.nix
-.local/
+# Backend
+backend/node_modules/
+backend/.env
+backend/.env.*
+!backend/.env.example

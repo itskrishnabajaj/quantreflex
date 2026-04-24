@@ -1,4 +1,5 @@
 var AIFeatures = (function () {
+  var API_BASE = window.QUANTREFLEX_API_BASE || '';
   var WP_FREE_LIMIT = 5;
   var WP_PREMIUM_DAILY_LIMIT = 25;
   var COACH_CACHE_HOURS = 24;
@@ -149,7 +150,7 @@ var AIFeatures = (function () {
     }
     var actualCount = Math.min(count, quota.remaining);
 
-    _sendAuthenticatedRequest('POST', '/api/ai/word-problems',
+    _sendAuthenticatedRequest('POST', API_BASE + '/api/ai/word-problems',
       { category: category, difficulty: difficulty, count: actualCount }, 30000,
       function (err, data) {
         _wpInFlight = false;
@@ -167,7 +168,7 @@ var AIFeatures = (function () {
     if (_explainInFlight) { callback('request_in_progress'); return; }
     _explainInFlight = true;
 
-    _sendAuthenticatedRequest('POST', '/api/ai/explain',
+    _sendAuthenticatedRequest('POST', API_BASE + '/api/ai/explain',
       { question: question, answer: answer, category: category }, 20000,
       function (err, data) {
         _explainInFlight = false;
@@ -186,7 +187,7 @@ var AIFeatures = (function () {
     }
 
     _insightsInFlight = true;
-    _sendAuthenticatedRequest('POST', '/api/ai/insights',
+    _sendAuthenticatedRequest('POST', API_BASE + '/api/ai/insights',
       { stats: stats }, 20000,
       function (err, data) {
         _insightsInFlight = false;
@@ -733,7 +734,7 @@ var AIFeatures = (function () {
         if (!token) { callback(FRIENDLY_ERROR); return; }
         var xhr = new XMLHttpRequest();
         _spActiveXhr = xhr;
-        xhr.open('POST', '/api/ai/study-plan', true);
+        xhr.open('POST', API_BASE + '/api/ai/study-plan', true);
         xhr.setRequestHeader('Content-Type', 'application/json');
         xhr.setRequestHeader('Authorization', 'Bearer ' + token);
         xhr.timeout = 45000;
