@@ -39,8 +39,8 @@ var FirestoreSync = (function () {
   var SYNC_DEBOUNCE_MS = 2000; /* batch updates every 2 seconds */
   var FLUSH_RETRY_DELAY_MS = 5000;
   var FLUSH_MAX_RETRIES = 2;
-  var EARLY_USER_LIMIT = 121;
-  var TRIAL_DAYS = 7;
+  /* Early user and auto-trial logic has been removed.
+     Trial access is now admin-only (set manually in Firestore). */
 
   /* All localStorage keys that store user-specific data */
   var _USER_STORAGE_KEYS = [
@@ -276,8 +276,9 @@ var FirestoreSync = (function () {
       username = Auth.getCurrentUser().email.split('@')[0];
     }
     var now = new Date();
-    var trialEndMs = now.getTime() + (TRIAL_DAYS * 24 * 60 * 60 * 1000);
-    var fallbackDefaults = {
+
+    /* Strict default: NO premium, NO trial. Trial is admin-only via Firestore. */
+    var docDefaults = {
       profile: {
         name: '',
         username: username,
@@ -304,6 +305,7 @@ var FirestoreSync = (function () {
       bookmarks: [],
       isPremium: false,
       isTrial: false,
+      trialStart: null,
       trialEnd: null,
       hasPaid: false,
       isEarlyUser: false,
@@ -311,121 +313,56 @@ var FirestoreSync = (function () {
       premiumPlusPlan: null,
       premiumPlusExpiry: null,
       premiumPlusStatus: null,
+      subscriptionId: null,
+      plan: null,
       createdAt: now.toISOString(),
       updatedAt: now.toISOString()
     };
 
-    _memoryCache = fallbackDefaults;
+    _memoryCache = docDefaults;
     _dataLoaded = true;
 
     /* Write clean defaults to localStorage so the app has consistent state */
     try {
-      localStorage.setItem('quant_reflex_settings', JSON.stringify(fallbackDefaults.settings));
-      localStorage.setItem('quant_reflex_progress', JSON.stringify(fallbackDefaults.stats));
-      localStorage.setItem('quant_quick_links', JSON.stringify(fallbackDefaults.quickLinks));
-      localStorage.setItem('quant_custom_topics', JSON.stringify(fallbackDefaults.customTopics));
-      localStorage.setItem('quant_custom_formulas', JSON.stringify(fallbackDefaults.customFormulas));
-      localStorage.setItem('quant_bookmarks', JSON.stringify(fallbackDefaults.bookmarks));
+      localStorage.setItem('quant_reflex_settings', JSON.stringify(docDefaults.settings));
+      localStorage.setItem('quant_reflex_progress', JSON.stringify(docDefaults.stats));
+      localStorage.setItem('quant_quick_links', JSON.stringify(docDefaults.quickLinks));
+      localStorage.setItem('quant_custom_topics', JSON.stringify(docDefaults.customTopics));
+      localStorage.setItem('quant_custom_formulas', JSON.stringify(docDefaults.customFormulas));
+      localStorage.setItem('quant_bookmarks', JSON.stringify(docDefaults.bookmarks));
     } catch (_) {}
-    var metaRef = db.collection('appMeta').doc('global');
 
-    db.runTransaction(function (tx) {
-      return tx.get(docRef).then(function (userDoc) {
-        if (userDoc.exists) return;
-        return tx.get(metaRef).then(function (metaDoc) {
-        var meta = metaDoc.exists ? (metaDoc.data() || {}) : {};
-        var totalUsers = parseInt(meta.totalUsers, 10);
-        if (isNaN(totalUsers) || totalUsers < 0) totalUsers = 0;
-        var isEarlyUser = totalUsers < EARLY_USER_LIMIT;
-        var monetizationState = isEarlyUser
-          ? {
-              isPremium: true,
-              isEarlyUser: true,
-              isTrial: false,
-              hasPaid: false,
-              trialEnd: null
-            }
-          : {
-              isPremium: true,
-              isEarlyUser: false,
-              isTrial: true,
-              hasPaid: false,
-              trialEnd: trialEndMs
-            };
-        var docDefaults = {
-          profile: {
-            name: '',
-            username: username,
-            createdAt: now.toISOString()
-          },
-          settings: fallbackDefaults.settings,
-          stats: fallbackDefaults.stats,
-          quickLinks: fallbackDefaults.quickLinks,
-          customTopics: fallbackDefaults.customTopics,
-          customFormulas: fallbackDefaults.customFormulas,
-          bookmarks: fallbackDefaults.bookmarks,
-          isPremium: monetizationState.isPremium,
-          isTrial: monetizationState.isTrial,
-          trialEnd: monetizationState.trialEnd,
-          hasPaid: monetizationState.hasPaid,
-          isEarlyUser: monetizationState.isEarlyUser,
-          isPremiumPlus: false,
-          premiumPlusPlan: null,
-          premiumPlusExpiry: null,
-          premiumPlusStatus: null,
-          createdAt: (typeof firebase !== 'undefined' && firebase.firestore && firebase.firestore.FieldValue)
-            ? firebase.firestore.FieldValue.serverTimestamp()
-            : now.toISOString(),
-          updatedAt: now.toISOString()
-        };
-        tx.set(docRef, docDefaults, { merge: true });
-        tx.set(metaRef, { totalUsers: totalUsers + 1 }, { merge: true });
-        _memoryCache = docDefaults;
-        if (_memoryCache.createdAt && typeof _memoryCache.createdAt.toDate === 'function') {
-          _memoryCache.createdAt = _memoryCache.createdAt.toDate().toISOString();
-        }
-        });
-      });
+    /* Simple set — no transaction, no user counting, no auto-trial */
+    docRef.get().then(function (existingDoc) {
+      if (existingDoc.exists) {
+        /* Document already exists (race condition), don't overwrite */
+        _memoryCache = existingDoc.data();
+        return;
+      }
+      return docRef.set(docDefaults, { merge: true });
     }).then(function () {
       console.log('Firestore: new user document created successfully');
-      /* Non-blocking: eagerly seed all structured subcollections for new user */
-      var mc = _memoryCache || fallbackDefaults;
+      /* Non-blocking: seed structured subcollections */
+      var mc = _memoryCache || docDefaults;
       var seedDocRef = _getUserDocRef();
       _syncProfileSubcollection(
         { name: (mc.profile && mc.profile.name) || '', username: (mc.profile && mc.profile.username) || '' },
-        { isPremium: !!mc.isPremium, isTrial: !!mc.isTrial, trialEnd: mc.trialEnd || null, isEarlyUser: !!mc.isEarlyUser, hasPaid: !!mc.hasPaid }
+        { isPremium: false, isTrial: false, trialEnd: null, hasPaid: false }
       );
-      _syncPerformanceSubcollection(mc.stats || fallbackDefaults.stats);
-      /* Eagerly create practice/data and ai/usage so all subcollections exist from day 0 */
+      _syncPerformanceSubcollection(mc.stats || docDefaults.stats);
       if (seedDocRef) {
         seedDocRef.collection('practice').doc('data').set({
-          mistakes: [],
-          savedQuestions: [],
-          updatedAt: new Date().toISOString()
+          mistakes: [], savedQuestions: [], updatedAt: new Date().toISOString()
         }, { merge: true }).catch(function (err) { console.warn('Practice seed failed:', err); });
         seedDocRef.collection('ai').doc('usage').set({
-          wordProblemsUsedLifetime: 0,
-          wordProblemsUsedToday: 0,
-          explanationsUsed: 0,
+          wordProblemsUsedLifetime: 0, wordProblemsUsedToday: 0, explanationsUsed: 0,
           updatedAt: new Date().toISOString()
         }, { merge: true }).catch(function (err) { console.warn('AI usage seed failed:', err); });
       }
     }).catch(function (err) {
       console.warn('Firestore default document creation failed:', err);
-      /* On transaction failure, grant a time-limited trial as a safe default.
-         This is self-correcting: trial expires naturally, and on next successful
-         load the normalizeMonetization path will set the correct state.
-         Better than locking the user out entirely on a flaky connection. */
-      var trialEndFallback = Date.now() + (TRIAL_DAYS * 24 * 60 * 60 * 1000);
-      fallbackDefaults.isPremium = true;
-      fallbackDefaults.isTrial = true;
-      fallbackDefaults.trialEnd = trialEndFallback;
-      fallbackDefaults.isEarlyUser = false;
-      fallbackDefaults.hasPaid = false;
-      _memoryCache = fallbackDefaults;
-      docRef.set(fallbackDefaults, { merge: true }).catch(function (fallbackErr) {
-        console.warn('Firestore fallback default document creation failed:', fallbackErr);
-      });
+      /* On failure: DO NOT grant trial. User stays non-premium.
+         Next successful load will retry document creation. */
     });
   }
 
@@ -1046,7 +983,7 @@ var FirestoreSync = (function () {
         isTrial: _memoryCache.isTrial === true,
         trialEnd: _memoryCache.trialEnd || null,
         hasPaid: _memoryCache.hasPaid === true,
-        isEarlyUser: _memoryCache.isEarlyUser === true,
+        isEarlyUser: false,
         createdAt: _memoryCache.createdAt || null
       };
     },

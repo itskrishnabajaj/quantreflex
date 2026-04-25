@@ -88,10 +88,24 @@ async function isUserPremium(uid) {
     var doc = await db.collection('users').doc(uid).get();
     if (!doc.exists) return false;
     var data = doc.data();
-    if (data.isPremium === true || data.premiumUser === true || data.hasPaid === true || data.isEarlyUser === true) return true;
+
+    /* Direct premium flags — paid users */
+    if (data.isPremium === true || data.hasPaid === true) return true;
+
+    /* Trial check — admin-granted only, with strict expiry enforcement */
     if (data.isTrial === true) {
       var trialEndMs = _toExpiryMillis(data.trialEnd);
-      return trialEndMs > 0 && trialEndMs >= Date.now();
+      if (trialEndMs > 0 && trialEndMs >= Date.now()) {
+        return true;
+      }
+      /* Trial expired — revoke in Firestore immediately */
+      console.log('[firebaseAdmin:isUserPremium] trial expired for uid ' + uid + ', revoking');
+      try {
+        await safeUserUpdate(uid, { isTrial: false, isPremium: false }, 'isUserPremium:trialExpiry');
+      } catch (revokeErr) {
+        console.error('[firebaseAdmin:isUserPremium] trial revocation write failed (uid: ' + uid + '):', revokeErr.message);
+      }
+      return false;
     }
     return false;
   } catch (err) {

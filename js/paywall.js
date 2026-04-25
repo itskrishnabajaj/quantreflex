@@ -92,7 +92,6 @@ function canAccess(feature, user) {
   }
   if (normalizedUser && normalizedUser.isPremium === true) return true;
   if (normalizedUser && normalizedUser.hasPaid === true) return true;
-  if (normalizedUser && normalizedUser.isEarlyUser === true) return true;
   if (normalizedUser && normalizedUser.isTrial === true) {
     var trialEndMs = _toMillis(normalizedUser.trialEnd);
     if (trialEndMs > 0 && Date.now() <= trialEndMs) return true;
@@ -506,8 +505,7 @@ function showPaywall(featureType) {
   var user = _getAccessUserState();
   var isAiFeature = !!_AI_FEATURES[featureType];
   if (!isAiFeature) {
-    if (user && user.isPremium === true) return;
-    if (user && (user.hasPaid === true || user.isEarlyUser === true)) return;
+    if (user && (user.hasPaid === true || user.isPremium === true)) return;
     if (user && user.isTrial === true) {
       var te = _toMillis(user.trialEnd);
       if (te > 0 && Date.now() <= te) return;
@@ -717,7 +715,7 @@ function showPaywall(featureType) {
 
 function getDailyQuestionLimit() {
   var user = _getAccessUserState();
-  if (user && (user.hasPaid || user.isEarlyUser || user.isPremium)) return Infinity;
+  if (user && (user.hasPaid || user.isPremium)) return Infinity;
   return 25;
 }
 

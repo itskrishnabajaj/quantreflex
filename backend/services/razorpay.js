@@ -1,10 +1,10 @@
 const crypto = require('crypto');
 const Razorpay = require('razorpay');
 
-var RAZORPAY_KEY_ID = 'rzp_live_STanzIgCpSAfL7';
+var RAZORPAY_KEY_ID = process.env.RAZORPAY_KEY_ID || 'rzp_live_STanzIgCpSAfL7';
 var RAZORPAY_KEY_SECRET = process.env.RAZORPAY_KEY_SECRET;
-if (!RAZORPAY_KEY_SECRET) {
-  console.warn('RAZORPAY_KEY_SECRET not set. Subscription payments will be unavailable.');
+if (!RAZORPAY_KEY_ID || !RAZORPAY_KEY_SECRET) {
+  console.warn('RAZORPAY_KEY_ID or RAZORPAY_KEY_SECRET not set. Payments will be unavailable.');
 }
 
 var PLAN_IDS = {

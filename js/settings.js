@@ -414,12 +414,10 @@ function updateAboutUserStatus() {
       }
     }
     message = '✨ Premium+ (' + planLabel + ')' + expiryStr;
-  } else if (accessState.isEarlyUser === true) {
-    message = '🎉 You are one of our first users! Lifetime premium unlocked.';
   } else if (accessState.hasPaid === true) {
     message = '💙 Thank you for upgrading to premium.';
   } else if (accessState.isTrial === true) {
-    message = '⏳ You are on a 7-day premium trial.';
+    message = '⏳ You are on a premium trial.';
   }
   if (statusEl) {
     statusEl.textContent = message;
