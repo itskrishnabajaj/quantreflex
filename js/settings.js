@@ -84,8 +84,7 @@ function initSettingsView() {
   var accessState = (typeof FirestoreSync !== 'undefined' && typeof FirestoreSync.getAccessState === 'function')
     ? FirestoreSync.getAccessState()
     : {};
-  var isPremiumUser = accessState && accessState.isPremium === true;
-  var isTrialUser = accessState && accessState.isTrial === true;
+  var isPremiumUser = accessState && accessState.premium === true;
 
   var darkToggle = document.getElementById('darkModeToggle');
   var soundToggle = document.getElementById('soundToggle');
@@ -365,12 +364,12 @@ function initSettingsView() {
 
   var trialUpgradeSection = document.getElementById('trialUpgradeSection');
   if (trialUpgradeSection) {
-    trialUpgradeSection.style.display = (!isPremiumUser || isTrialUser) ? 'block' : 'none';
+    trialUpgradeSection.style.display = !isPremiumUser ? 'block' : 'none';
   }
   var trialUpgradeBtn = document.getElementById('trialUpgradeBtn');
   if (trialUpgradeBtn) {
     rebind(trialUpgradeBtn, 'click', function () {
-      showPaywall('settings');
+      showPaywall('upgrade');
     });
   }
 
@@ -400,25 +399,24 @@ function updateAboutUserStatus() {
     ? (FirestoreSync.getAccessState() || {})
     : {};
   var message = 'Free user';
-  if (accessState.isPremiumPlus === true) {
-    var planLabel = accessState.premiumPlusPlan === 'yearly' ? 'Yearly' : 'Monthly';
-    var expiryStr = '';
-    if (accessState.premiumPlusExpiry) {
-      var expMs = typeof accessState.premiumPlusExpiry === 'number' ? accessState.premiumPlusExpiry : 0;
-      if (typeof accessState.premiumPlusExpiry === 'object' && typeof accessState.premiumPlusExpiry.toDate === 'function') {
-        try { expMs = accessState.premiumPlusExpiry.toDate().getTime(); } catch (_) {}
+  
+  if (accessState.premium === true) {
+    if (accessState.expiry) {
+      var expMs = typeof accessState.expiry === 'number' ? accessState.expiry : 0;
+      if (typeof accessState.expiry === 'object' && typeof accessState.expiry.toDate === 'function') {
+        try { expMs = accessState.expiry.toDate().getTime(); } catch (_) {}
       }
       if (expMs > 0) {
         var d = new Date(expMs);
-        expiryStr = ' · Renews ' + d.toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric' });
+        message = '✨ Premium · Expires ' + d.toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric' });
+      } else {
+        message = '✨ Lifetime Premium Access';
       }
+    } else {
+      message = '✨ Lifetime Premium Access';
     }
-    message = '✨ Premium+ (' + planLabel + ')' + expiryStr;
-  } else if (accessState.hasPaid === true) {
-    message = '💙 Thank you for upgrading to premium.';
-  } else if (accessState.isTrial === true) {
-    message = '⏳ You are on a premium trial.';
   }
+
   if (statusEl) {
     statusEl.textContent = message;
   }

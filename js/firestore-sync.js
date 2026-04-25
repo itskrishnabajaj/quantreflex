@@ -10,8 +10,7 @@
  *     ├── settings
  *     ├── stats (progress data)
  *     ├── quickLinks, customTopics, customFormulas, bookmarks
- *     ├── isPremium, isTrial, trialEnd, hasPaid, isEarlyUser
- *     ├── isPremiumPlus, premiumPlusPlan, premiumPlusExpiry, premiumPlusStatus
+ *     ├── premium, plan, expiry
  *     ├── updatedAt, createdAt
  *
  *   users/{userId}/practiceSessions/{sessionId}  (subcollection — drill history)
@@ -31,7 +30,7 @@ var FirestoreSync = (function () {
   var _dataLoaded = false; /* Whether initial load has completed */
   var _drillActive = false; /* Whether a drill is in progress (defers syncing) */
   var _loadedUserId = null; /* UID whose data is currently loaded — detects user switches */
-  var _trialExpiryPersistInFlight = false;
+
   var _flushRetryCount = 0;
   var _flushRetryTimer = null;
   var _flushInFlight = false;
@@ -39,8 +38,7 @@ var FirestoreSync = (function () {
   var SYNC_DEBOUNCE_MS = 2000; /* batch updates every 2 seconds */
   var FLUSH_RETRY_DELAY_MS = 5000;
   var FLUSH_MAX_RETRIES = 2;
-  /* Early user and auto-trial logic has been removed.
-     Trial access is now admin-only (set manually in Firestore). */
+  /* No trial logic. No subscription logic. One-time payments only. */
 
   /* All localStorage keys that store user-specific data */
   var _USER_STORAGE_KEYS = [
@@ -138,13 +136,9 @@ var FirestoreSync = (function () {
       if (profile.username !== undefined && !payload.name) payload.name = profile.username || '';
     }
     if (premiumFlags) {
-      if (premiumFlags.isPremium !== undefined) payload.isPremium = !!premiumFlags.isPremium;
-      if (premiumFlags.isTrial !== undefined) payload.isTrial = !!premiumFlags.isTrial;
-      if (premiumFlags.trialEnd !== undefined) payload.trialEnd = premiumFlags.trialEnd || null;
-      if (premiumFlags.isEarlyUser !== undefined) payload.isEarlyUser = !!premiumFlags.isEarlyUser;
-      if (premiumFlags.hasPaid !== undefined) payload.hasPaid = !!premiumFlags.hasPaid;
-      if (premiumFlags.isPremiumPlus !== undefined) payload.isPremiumPlus = !!premiumFlags.isPremiumPlus;
-      if (premiumFlags.premiumPlusPlan !== undefined) payload.premiumPlusPlan = premiumFlags.premiumPlusPlan || null;
+      if (premiumFlags.premium !== undefined) payload.premium = !!premiumFlags.premium;
+      if (premiumFlags.plan !== undefined) payload.plan = premiumFlags.plan || null;
+      if (premiumFlags.expiry !== undefined) payload.expiry = premiumFlags.expiry || null;
     }
     _subcollectionWrite('profile', 'data', payload, 'Profile');
   }
@@ -223,8 +217,7 @@ var FirestoreSync = (function () {
         _normalizeMonetization(data, docRef);
         _validateAndFillDefaults(data, docRef);
         _memoryCache = data;
-        _enforceTrialExpiry(_memoryCache, docRef);
-        _enforcePremiumPlusExpiry(_memoryCache, docRef);
+        _enforceExpiry(_memoryCache, docRef);
         _dataLoaded = true;
         _loadedUserId = currentUserId;
         if (data.settings) {
@@ -277,7 +270,7 @@ var FirestoreSync = (function () {
     }
     var now = new Date();
 
-    /* Strict default: NO premium, NO trial. Trial is admin-only via Firestore. */
+    /* Clean defaults: no premium access until payment */
     var docDefaults = {
       profile: {
         name: '',
@@ -303,18 +296,9 @@ var FirestoreSync = (function () {
       customTopics: [],
       customFormulas: {},
       bookmarks: [],
-      isPremium: false,
-      isTrial: false,
-      trialStart: null,
-      trialEnd: null,
-      hasPaid: false,
-      isEarlyUser: false,
-      isPremiumPlus: false,
-      premiumPlusPlan: null,
-      premiumPlusExpiry: null,
-      premiumPlusStatus: null,
-      subscriptionId: null,
+      premium: false,
       plan: null,
+      expiry: null,
       createdAt: now.toISOString(),
       updatedAt: now.toISOString()
     };
@@ -332,7 +316,7 @@ var FirestoreSync = (function () {
       localStorage.setItem('quant_bookmarks', JSON.stringify(docDefaults.bookmarks));
     } catch (_) {}
 
-    /* Simple set — no transaction, no user counting, no auto-trial */
+    /* Simple set — no transaction */
     docRef.get().then(function (existingDoc) {
       if (existingDoc.exists) {
         /* Document already exists (race condition), don't overwrite */
@@ -347,7 +331,7 @@ var FirestoreSync = (function () {
       var seedDocRef = _getUserDocRef();
       _syncProfileSubcollection(
         { name: (mc.profile && mc.profile.name) || '', username: (mc.profile && mc.profile.username) || '' },
-        { isPremium: false, isTrial: false, trialEnd: null, hasPaid: false }
+        { premium: false, plan: null, expiry: null }
       );
       _syncPerformanceSubcollection(mc.stats || docDefaults.stats);
       if (seedDocRef) {
@@ -361,7 +345,7 @@ var FirestoreSync = (function () {
       }
     }).catch(function (err) {
       console.warn('Firestore default document creation failed:', err);
-      /* On failure: DO NOT grant trial. User stays non-premium.
+      /* On failure: User stays non-premium.
          Next successful load will retry document creation. */
     });
   }
@@ -383,30 +367,18 @@ var FirestoreSync = (function () {
   function _normalizeMonetization(data, docRef) {
     if (!data) return;
     var hasAll =
-      typeof data.isPremium === 'boolean' &&
-      typeof data.isTrial === 'boolean' &&
-      typeof data.hasPaid === 'boolean' &&
-      typeof data.isEarlyUser === 'boolean' &&
-      data.hasOwnProperty('trialEnd') &&
+      typeof data.premium === 'boolean' &&
+      data.hasOwnProperty('plan') &&
+      data.hasOwnProperty('expiry') &&
       data.hasOwnProperty('createdAt') &&
-      typeof data.isPremiumPlus === 'boolean' &&
-      data.hasOwnProperty('premiumPlusPlan') &&
-      data.hasOwnProperty('premiumPlusExpiry') &&
-      data.hasOwnProperty('premiumPlusStatus') &&
       data.hasOwnProperty('updatedAt');
     if (hasAll) return;
 
     var patch = {};
-    if (typeof data.isPremium !== 'boolean') patch.isPremium = false;
-    if (typeof data.isTrial !== 'boolean') patch.isTrial = false;
-    if (!data.hasOwnProperty('trialEnd')) patch.trialEnd = null;
-    if (typeof data.hasPaid !== 'boolean') patch.hasPaid = false;
-    if (typeof data.isEarlyUser !== 'boolean') patch.isEarlyUser = false;
+    if (typeof data.premium !== 'boolean') patch.premium = false;
+    if (!data.hasOwnProperty('plan')) patch.plan = null;
+    if (!data.hasOwnProperty('expiry')) patch.expiry = null;
     if (!data.hasOwnProperty('createdAt')) patch.createdAt = new Date().toISOString();
-    if (typeof data.isPremiumPlus !== 'boolean') patch.isPremiumPlus = false;
-    if (!data.hasOwnProperty('premiumPlusPlan')) patch.premiumPlusPlan = null;
-    if (!data.hasOwnProperty('premiumPlusExpiry')) patch.premiumPlusExpiry = null;
-    if (!data.hasOwnProperty('premiumPlusStatus')) patch.premiumPlusStatus = null;
     if (!data.hasOwnProperty('updatedAt')) patch.updatedAt = new Date().toISOString();
 
     var keys = Object.keys(patch);
@@ -493,30 +465,17 @@ var FirestoreSync = (function () {
     });
   }
 
-  function _enforceTrialExpiry(data, docRef) {
-    if (!data || !data.isTrial) return;
-    var trialEndMs = _toMillis(data.trialEnd);
-    if (!trialEndMs || Date.now() <= trialEndMs) return;
-    data.isPremium = false;
-    data.isTrial = false;
-    docRef.set({ isPremium: false, isTrial: false, updatedAt: new Date().toISOString() }, { merge: true }).then(function () {
-      console.log('[FirestoreSync:_enforceTrialExpiry] trial expired, access revoked');
-    }).catch(function (err) {
-      console.warn('[FirestoreSync:_enforceTrialExpiry] failed to persist trial expiry:', err.message || err);
-    });
-  }
-
-  function _enforcePremiumPlusExpiry(data, docRef) {
-    if (!data || data.isPremiumPlus !== true) return;
-    var expiryMs = _toMillis(data.premiumPlusExpiry);
+  function _enforceExpiry(data, docRef) {
+    if (!data || data.premium !== true) return;
+    if (!data.expiry) return; // lifetime plan
+    var expiryMs = _toMillis(data.expiry);
     if (!expiryMs || expiryMs >= Date.now()) return;
-    data.isPremiumPlus = false;
-    data.premiumPlusStatus = 'expired';
-    console.log('[FirestoreSync:_enforcePremiumPlusExpiry] Premium+ expired on load, revoking access');
-    docRef.set({ isPremiumPlus: false, premiumPlusStatus: 'expired', updatedAt: new Date().toISOString() }, { merge: true }).then(function () {
-      console.log('[FirestoreSync:_enforcePremiumPlusExpiry] expiry persisted to Firestore');
+    data.premium = false;
+    console.log('[FirestoreSync:_enforceExpiry] Premium expired on load, revoking access');
+    docRef.set({ premium: false, updatedAt: new Date().toISOString() }, { merge: true }).then(function () {
+      console.log('[FirestoreSync:_enforceExpiry] expiry persisted to Firestore');
     }).catch(function (err) {
-      console.warn('[FirestoreSync:_enforcePremiumPlusExpiry] failed to persist expiry:', err.message || err);
+      console.warn('[FirestoreSync:_enforceExpiry] failed to persist expiry:', err.message || err);
     });
   }
 
@@ -943,108 +902,54 @@ var FirestoreSync = (function () {
     getAccessState: function () {
       if (!_memoryCache) return null;
       var now = Date.now();
-      if (_memoryCache.isTrial === true) {
-        var trialEndMs = _toMillis(_memoryCache.trialEnd);
-        if (trialEndMs > 0 && now > trialEndMs) {
-          _memoryCache.isPremium = false;
-          _memoryCache.isTrial = false;
-          if (!_trialExpiryPersistInFlight) {
-            var docRef = _getUserDocRef();
-            if (docRef) {
-              _trialExpiryPersistInFlight = true;
-              docRef.set({ isPremium: false, isTrial: false, updatedAt: new Date().toISOString() }, { merge: true }).catch(function (err) {
-                console.warn('Failed to persist trial expiry from access state:', err);
-              }).finally(function () {
-                _trialExpiryPersistInFlight = false;
-              });
-            }
-          }
-        }
-      }
-      if (_memoryCache.isPremiumPlus === true) {
-        var ppExpiry = _memoryCache.premiumPlusExpiry;
-        var ppExpiryMs = _toMillis(ppExpiry);
-        if (ppExpiryMs > 0 && ppExpiryMs < now) {
-          _memoryCache.isPremiumPlus = false;
-          _memoryCache.premiumPlusStatus = 'expired';
-          var ppDocRef = _getUserDocRef();
-          if (ppDocRef) {
-            ppDocRef.set({ isPremiumPlus: false, premiumPlusStatus: 'expired', updatedAt: new Date().toISOString() }, { merge: true }).catch(function (err) {
-              console.warn('Failed to persist PremiumPlus expiry from access state:', err);
+      if (_memoryCache.premium === true && _memoryCache.expiry) {
+        var expiryMs = _toMillis(_memoryCache.expiry);
+        if (expiryMs > 0 && now > expiryMs) {
+          _memoryCache.premium = false;
+          var docRef = _getUserDocRef();
+          if (docRef) {
+            docRef.set({ premium: false, updatedAt: new Date().toISOString() }, { merge: true }).catch(function (err) {
+              console.warn('Failed to persist expiry from access state:', err);
             });
           }
         }
       }
       return {
-        isPremium: _memoryCache.isPremium === true,
-        isPremiumPlus: _memoryCache.isPremiumPlus === true,
-        premiumPlusPlan: _memoryCache.premiumPlusPlan || null,
-        premiumPlusExpiry: _memoryCache.premiumPlusExpiry || null,
-        isTrial: _memoryCache.isTrial === true,
-        trialEnd: _memoryCache.trialEnd || null,
-        hasPaid: _memoryCache.hasPaid === true,
-        isEarlyUser: false,
+        premium: _memoryCache.premium === true,
+        plan: _memoryCache.plan || null,
+        expiry: _memoryCache.expiry || null,
         createdAt: _memoryCache.createdAt || null
       };
     },
-    unlockPremiumPlus: function (plan, expiry, paymentId, callback) {
+    unlockAccess: function (plan, expiry, paymentId, orderId, callback) {
       var docRef = _getUserDocRef();
       if (!docRef) {
         if (callback) callback('User not authenticated');
         return;
       }
       var payload = {
-        isPremiumPlus: true,
-        premiumPlusPlan: plan,
-        premiumPlusExpiry: expiry,
-        premiumPlusStatus: 'active',
-        updatedAt: new Date().toISOString()
-      };
-      if (paymentId) payload.lastPremiumPlusPaymentId = String(paymentId);
-      if (_memoryCache) {
-        _memoryCache.isPremiumPlus = true;
-        _memoryCache.premiumPlusPlan = plan;
-        _memoryCache.premiumPlusExpiry = expiry;
-        _memoryCache.premiumPlusStatus = 'active';
-        if (paymentId) _memoryCache.lastPremiumPlusPaymentId = String(paymentId);
-      }
-      docRef.set(payload, { merge: true }).then(function () {
-        console.log('Firestore: Premium+ unlocked — plan:', plan, 'expiry:', expiry);
-        if (callback) callback(null);
-        _syncProfileSubcollection(null, { isPremiumPlus: true, premiumPlusPlan: plan });
-      }).catch(function (err) {
-        console.warn('Firestore: Premium+ unlock write failed:', err);
-        if (callback) callback(err && err.message ? err.message : 'PremiumPlus unlock failed');
-      });
-    },
-    unlockPremium: function (paymentId, callback) {
-      var docRef = _getUserDocRef();
-      if (!docRef) {
-        if (callback) callback('User not authenticated');
-        return;
-      }
-      var payload = {
-        isPremium: true,
-        hasPaid: true,
-        isTrial: false,
-        trialEnd: null,
+        premium: true,
+        plan: plan,
+        expiry: expiry,
         updatedAt: new Date().toISOString()
       };
       if (paymentId) payload.lastPaymentId = String(paymentId);
+      if (orderId) payload.lastOrderId = String(orderId);
+      
       if (_memoryCache) {
-        _memoryCache.isPremium = true;
-        _memoryCache.hasPaid = true;
-        _memoryCache.isTrial = false;
-        _memoryCache.trialEnd = null;
+        _memoryCache.premium = true;
+        _memoryCache.plan = plan;
+        _memoryCache.expiry = expiry;
         if (paymentId) _memoryCache.lastPaymentId = String(paymentId);
+        if (orderId) _memoryCache.lastOrderId = String(orderId);
       }
       docRef.set(payload, { merge: true }).then(function () {
-        console.log('Firestore: Premium unlocked — paymentId:', paymentId);
+        console.log('Firestore: Access unlocked — plan:', plan, 'expiry:', expiry);
         if (callback) callback(null);
-        _syncProfileSubcollection(null, { isPremium: true, hasPaid: true, isTrial: false, trialEnd: null });
+        _syncProfileSubcollection(null, { premium: true, plan: plan, expiry: expiry });
       }).catch(function (err) {
-        console.warn('Firestore: Premium unlock write failed:', err);
-        if (callback) callback(err && err.message ? err.message : 'Premium unlock failed');
+        console.warn('Firestore: Access unlock write failed:', err);
+        if (callback) callback(err && err.message ? err.message : 'Access unlock failed');
       });
     }
   };

@@ -8,7 +8,7 @@
 
 const express = require('express');
 const router = express.Router();
-const { authMiddleware, rateLimitMiddleware, premiumPlusGate, formatError } = require('../middleware/auth');
+const { authMiddleware, rateLimitMiddleware, premiumGate, formatError } = require('../middleware/auth');
 const firestore = require('../services/firebaseAdmin');
 const openai = require('../services/openai');
 
@@ -19,11 +19,11 @@ var MAX_QUESTION_INPUT_LENGTH = 500;
 /*  Word Problems                                                     */
 /* ------------------------------------------------------------------ */
 
-router.post('/word-problems', authMiddleware, rateLimitMiddleware, premiumPlusGate('ai_word_problems'), async function (req, res) {
+router.post('/word-problems', authMiddleware, rateLimitMiddleware, premiumGate('ai_word_problems'), async function (req, res) {
   try {
-    var remaining = await firestore.checkWordProblemQuota(req.userId, req.userPremiumPlus);
+    var remaining = await firestore.checkWordProblemQuota(req.userId, req.userPremium);
     if (remaining <= 0) {
-      var msg = req.userPremiumPlus ? 'Daily word problem limit reached. Come back tomorrow.' : 'Free word problem limit reached. Upgrade to Premium+ for more.';
+      var msg = req.userPremium ? 'Daily word problem limit reached. Come back tomorrow.' : 'Free word problem limit reached. Upgrade to Premium for more.';
       return res.status(429).json({ error: { code: 'QUOTA_EXCEEDED', message: msg, retryable: false } });
     }
     var body = req.body;
@@ -106,7 +106,7 @@ router.post('/word-problems', authMiddleware, rateLimitMiddleware, premiumPlusGa
       questions = generated.slice(0, clampedCount);
     }
 
-    await firestore.consumeWordProblemQuota(req.userId, req.userPremiumPlus, questions.length);
+    await firestore.consumeWordProblemQuota(req.userId, req.userPremium, questions.length);
     res.json({ questions: questions, remaining: remaining - questions.length });
   } catch (err) {
     console.error('Word problems error:', err.message);
@@ -118,7 +118,7 @@ router.post('/word-problems', authMiddleware, rateLimitMiddleware, premiumPlusGa
 /*  Explain                                                           */
 /* ------------------------------------------------------------------ */
 
-router.post('/explain', authMiddleware, rateLimitMiddleware, premiumPlusGate('ai_explain'), async function (req, res) {
+router.post('/explain', authMiddleware, rateLimitMiddleware, premiumGate('ai_explain'), async function (req, res) {
   try {
     var body = req.body;
     var question = typeof body.question === 'string' ? body.question.substring(0, MAX_QUESTION_INPUT_LENGTH) : '';
@@ -237,8 +237,8 @@ async function insightsHandler(req, res) {
   }
 }
 
-router.post('/insights', authMiddleware, rateLimitMiddleware, premiumPlusGate('ai_coach'), insightsHandler);
-router.post('/coach', authMiddleware, rateLimitMiddleware, premiumPlusGate('ai_coach'), insightsHandler);
+router.post('/insights', authMiddleware, rateLimitMiddleware, premiumGate('ai_coach'), insightsHandler);
+router.post('/coach', authMiddleware, rateLimitMiddleware, premiumGate('ai_coach'), insightsHandler);
 
 /* ------------------------------------------------------------------ */
 /*  Study Plan                                                        */
@@ -319,8 +319,8 @@ async function studyPlanHandler(req, res) {
   }
 }
 
-router.post('/study-plan', authMiddleware, rateLimitMiddleware, premiumPlusGate('ai_study_plan'), studyPlanHandler);
-router.post('/plan', authMiddleware, rateLimitMiddleware, premiumPlusGate('ai_study_plan'), studyPlanHandler);
+router.post('/study-plan', authMiddleware, rateLimitMiddleware, premiumGate('ai_study_plan'), studyPlanHandler);
+router.post('/plan', authMiddleware, rateLimitMiddleware, premiumGate('ai_study_plan'), studyPlanHandler);
 
 module.exports = router;
 

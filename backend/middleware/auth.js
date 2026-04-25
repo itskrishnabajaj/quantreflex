@@ -1,6 +1,7 @@
 /**
  * auth.js — Authentication, rate limiting, and premium gating middleware.
- * Extracted from the previous monolithic server.js.
+ *
+ * Uses checkAccess() for unified entitlement — no subscription tiers.
  */
 
 const firestore = require('../services/firebaseAdmin');
@@ -45,13 +46,14 @@ function rateLimitMiddleware(req, res, next) {
 
 /* ------------------------------------------------------------------ */
 /*  Firebase Auth middleware                                           */
+/*  Sets req.userId and req.userPremium (boolean)                     */
 /* ------------------------------------------------------------------ */
 
 async function authMiddleware(req, res, next) {
   var authHeader = req.headers['authorization'];
   if (!authHeader || !authHeader.startsWith('Bearer ')) {
     return res.status(401).json({
-      error: { code: 'UNAUTHORIZED', message: 'Authentication required to use AI features.', retryable: false }
+      error: { code: 'UNAUTHORIZED', message: 'Authentication required.', retryable: false }
     });
   }
 
@@ -60,7 +62,7 @@ async function authMiddleware(req, res, next) {
   try {
     decoded = await firestore.verifyIdToken(idToken);
   } catch (tokenErr) {
-    console.error('[auth:authMiddleware] token verification threw:', tokenErr.message);
+    console.error('[auth] token verification failed:', tokenErr.message);
     return res.status(401).json({
       error: { code: 'UNAUTHORIZED', message: 'Authentication failed. Please login again.', retryable: false }
     });
@@ -73,12 +75,7 @@ async function authMiddleware(req, res, next) {
 
   req.userId = decoded.uid;
   try {
-    var entitlement = await Promise.all([
-      firestore.isUserPremium(decoded.uid),
-      firestore.isUserPremiumPlus(decoded.uid)
-    ]);
-    req.userPremium = entitlement[0];
-    req.userPremiumPlus = entitlement[1];
+    req.userPremium = await firestore.checkAccess(decoded.uid);
   } catch (entitlementErr) {
     return res.status(503).json({ error: formatError(entitlementErr) });
   }
@@ -86,25 +83,14 @@ async function authMiddleware(req, res, next) {
 }
 
 /* ------------------------------------------------------------------ */
-/*  Premium gates                                                     */
+/*  Premium gate — single tier, covers everything                     */
 /* ------------------------------------------------------------------ */
 
 function premiumGate(featureKey) {
   return function (req, res, next) {
     if (!req.userPremium) {
       return res.status(403).json({
-        error: { code: 'PREMIUM_REQUIRED', message: 'This feature requires a premium subscription.', retryable: false }
-      });
-    }
-    next();
-  };
-}
-
-function premiumPlusGate(featureKey) {
-  return function (req, res, next) {
-    if (!req.userPremiumPlus) {
-      return res.status(403).json({
-        error: { code: 'PREMIUM_PLUS_REQUIRED', message: 'This feature requires a Premium+ subscription.', retryable: false }
+        error: { code: 'PREMIUM_REQUIRED', message: 'This feature requires Premium access.', retryable: false }
       });
     }
     next();
@@ -126,6 +112,5 @@ module.exports = {
   authMiddleware: authMiddleware,
   rateLimitMiddleware: rateLimitMiddleware,
   premiumGate: premiumGate,
-  premiumPlusGate: premiumPlusGate,
   formatError: formatError
 };

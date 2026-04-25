@@ -1,7 +1,12 @@
 /**
  * firebaseAdmin.js — Firebase Admin, Firestore, and Auth logic for QuantReflex.
- * Extracted from the previous monolithic aiService.js.
- * All writes use merge:true. All operations are wrapped in try/catch.
+ *
+ * ENTITLEMENT MODEL (one-time payments only):
+ *   premium = true/false
+ *   plan = "premium" | "plus_6m" | "plus_12m"
+ *   expiry = timestamp (ms) | null (lifetime)
+ *
+ * NO trial fields. NO subscription fields. NO isPremiumPlus.
  */
 
 const admin = require('firebase-admin');
@@ -80,100 +85,123 @@ async function safeUserUpdate(uid, data, caller) {
 }
 
 /* ------------------------------------------------------------------ */
-/*  Premium checks                                                    */
+/*  checkAccess — Single unified access check                         */
+/*                                                                    */
+/*  Rules:                                                            */
+/*    premium === true AND expiry === null  → lifetime → ALLOW        */
+/*    premium === true AND expiry > now     → ALLOW                   */
+/*    premium === true AND expiry <= now    → REVOKE, DENY            */
+/*    Backward compat: isPremium/hasPaid    → treat as lifetime       */
+/*    Everything else                      → DENY                    */
 /* ------------------------------------------------------------------ */
 
-async function isUserPremium(uid) {
+async function checkAccess(uid) {
   try {
     var doc = await db.collection('users').doc(uid).get();
     if (!doc.exists) return false;
     var data = doc.data();
 
-    /* Direct premium flags — paid users */
-    if (data.isPremium === true || data.hasPaid === true) return true;
-
-    /* Trial check — admin-granted only, with strict expiry enforcement */
-    if (data.isTrial === true) {
-      var trialEndMs = _toExpiryMillis(data.trialEnd);
-      if (trialEndMs > 0 && trialEndMs >= Date.now()) {
-        return true;
-      }
-      /* Trial expired — revoke in Firestore immediately */
-      console.log('[firebaseAdmin:isUserPremium] trial expired for uid ' + uid + ', revoking');
+    /* New schema: premium + expiry */
+    if (data.premium === true) {
+      if (!data.expiry) return true; /* lifetime */
+      var expiryMs = _toExpiryMillis(data.expiry);
+      if (expiryMs > 0 && expiryMs > Date.now()) return true;
+      /* Expired — revoke */
+      console.log('[firebaseAdmin:checkAccess] premium expired for uid ' + uid + ', revoking');
       try {
-        await safeUserUpdate(uid, { isTrial: false, isPremium: false }, 'isUserPremium:trialExpiry');
+        await safeUserUpdate(uid, { premium: false }, 'checkAccess:expiry');
       } catch (revokeErr) {
-        console.error('[firebaseAdmin:isUserPremium] trial revocation write failed (uid: ' + uid + '):', revokeErr.message);
+        console.error('[firebaseAdmin:checkAccess] revocation write failed (uid: ' + uid + '):', revokeErr.message);
       }
       return false;
     }
+
+    /* Backward compatibility: old isPremium/hasPaid flags → treat as lifetime */
+    if (data.isPremium === true || data.hasPaid === true) {
+      return true;
+    }
+
     return false;
   } catch (err) {
-    console.error('Premium lookup failed for uid ' + uid + ':', err.message);
-    throw new AIServiceError('ENTITLEMENT_ERROR', 'Unable to verify subscription status. Please try again.', true);
+    console.error('[firebaseAdmin:checkAccess] lookup failed for uid ' + uid + ':', err.message);
+    throw new AIServiceError('ENTITLEMENT_ERROR', 'Unable to verify access. Please try again.', true);
   }
 }
 
-async function isUserPremiumPlus(uid) {
-  try {
-    var doc = await db.collection('users').doc(uid).get();
-    if (!doc.exists) return false;
-    var data = doc.data();
-    if (data.isPremiumPlus !== true) return false;
-    var expiryMs = _toExpiryMillis(data.premiumPlusExpiry);
-    if (expiryMs > 0 && expiryMs < Date.now()) {
-      try {
-        await safeUserUpdate(uid, { isPremiumPlus: false, premiumPlusStatus: 'expired' }, 'isUserPremiumPlus:expiry');
-      } catch (expiryErr) {
-        console.error('[firestore:isUserPremiumPlus] expiry revocation write failed (uid: ' + uid + '):', expiryErr.message);
-      }
-      return false;
+/* ------------------------------------------------------------------ */
+/*  unlockPremium — Transactional payment processing                  */
+/*                                                                    */
+/*  Handles:                                                          */
+/*    - Duplicate payment detection (PAYMENT_REPLAY)                  */
+/*    - Expiry extension for existing active plans                    */
+/*    - Lifetime (null expiry) for "premium" plan                     */
+/*    - 6-month / 12-month calculated expiry for plus plans           */
+/* ------------------------------------------------------------------ */
+
+function _calculateExpiry(plan, existingExpiry) {
+  if (plan === 'premium') return null; /* lifetime */
+  var durationMs = plan === 'plus_12m'
+    ? 365 * 24 * 60 * 60 * 1000
+    : 180 * 24 * 60 * 60 * 1000; /* plus_6m */
+
+  /* If user has active existing expiry, extend from that */
+  var baseTime = Date.now();
+  if (existingExpiry) {
+    var existingMs = _toExpiryMillis(existingExpiry);
+    if (existingMs > baseTime) {
+      baseTime = existingMs; /* extend from current expiry */
     }
-    return true;
-  } catch (err) {
-    console.error('[firestore:isUserPremiumPlus] lookup failed (uid: ' + uid + '):', err.message);
-    throw new AIServiceError('ENTITLEMENT_ERROR', 'Unable to verify subscription status. Please try again.', true);
   }
+  return baseTime + durationMs;
 }
 
-/* ------------------------------------------------------------------ */
-/*  Premium+ unlock (transactional)                                   */
-/* ------------------------------------------------------------------ */
-
-async function unlockPremiumPlus(uid, plan, paymentId, subscriptionId) {
-  var days = plan === 'yearly' ? 365 : 30;
-  var expiry = Date.now() + days * 24 * 60 * 60 * 1000;
+async function unlockPremium(uid, plan, paymentId, orderId) {
   var paymentRef = db.collection('payments').doc(String(paymentId));
   var userRef = db.collection('users').doc(uid);
-  var finalExpiry = expiry;
+  var finalExpiry = null;
 
   await db.runTransaction(async function (tx) {
+    /* Check for duplicate payment */
     var paymentDoc = await tx.get(paymentRef);
     if (paymentDoc.exists) {
       var existing = paymentDoc.data();
       if (existing.uid !== uid) {
-        console.error('[firestore:unlockPremiumPlus] PAYMENT_REPLAY detected (uid: ' + uid + ', paymentId: ' + paymentId + ')');
+        console.error('[firestore:unlockPremium] PAYMENT_REPLAY detected — different uid (uid: ' + uid + ', paymentId: ' + paymentId + ')');
         throw new AIServiceError('PAYMENT_REPLAY', 'Payment already used by another account.', false);
       }
-      finalExpiry = existing.expiry || expiry;
-      tx.set(userRef, {
-        isPremiumPlus: true, premiumPlusPlan: existing.plan || plan,
-        premiumPlusExpiry: finalExpiry, premiumPlusStatus: 'active',
-        lastPremiumPlusPaymentId: String(paymentId), updatedAt: new Date().toISOString()
-      }, { merge: true });
+      /* Idempotent: same user, same payment — return existing state */
+      finalExpiry = existing.expiry || null;
+      console.log('[firestore:unlockPremium] idempotent re-verification for uid ' + uid);
       return;
     }
-    var paymentDoc2 = { uid: uid, plan: plan, expiry: expiry, claimedAt: Date.now() };
-    if (subscriptionId) paymentDoc2.subscriptionId = String(subscriptionId);
-    tx.create(paymentRef, paymentDoc2);
+
+    /* Fetch current user to check existing expiry for extension */
+    var userDoc = await tx.get(userRef);
+    var userData = userDoc.exists ? userDoc.data() : {};
+    finalExpiry = _calculateExpiry(plan, userData.expiry);
+
+    /* Record payment (prevents replay) */
+    tx.create(paymentRef, {
+      uid: uid,
+      plan: plan,
+      orderId: String(orderId),
+      expiry: finalExpiry,
+      amount: plan === 'premium' ? 9900 : (plan === 'plus_12m' ? 49900 : 29900),
+      claimedAt: Date.now()
+    });
+
+    /* Update user entitlement */
     tx.set(userRef, {
-      isPremiumPlus: true, premiumPlusPlan: plan,
-      premiumPlusExpiry: expiry, premiumPlusStatus: 'active',
-      lastPremiumPlusPaymentId: String(paymentId), updatedAt: new Date().toISOString()
+      premium: true,
+      plan: plan,
+      expiry: finalExpiry,
+      lastPaymentId: String(paymentId),
+      lastOrderId: String(orderId),
+      updatedAt: new Date().toISOString()
     }, { merge: true });
   });
 
-  console.log('[firestore:unlockPremiumPlus] success (uid: ' + uid + ', plan: ' + plan + ', expiry: ' + new Date(finalExpiry).toISOString() + ')');
+  console.log('[firestore:unlockPremium] success (uid: ' + uid + ', plan: ' + plan + ', expiry: ' + (finalExpiry ? new Date(finalExpiry).toISOString() : 'lifetime') + ')');
   return finalExpiry;
 }
 
@@ -333,13 +361,21 @@ async function clearStudyPlanCache(userId, examDate) {
   } catch (err) { console.warn('Study plan cache clear failed:', err.message); }
 }
 
+/* ------------------------------------------------------------------ */
+/*  Exports                                                           */
+/* ------------------------------------------------------------------ */
+
 module.exports = {
   db: db, admin: admin, AIServiceError: AIServiceError,
-  verifyIdToken: verifyIdToken, isUserPremium: isUserPremium,
-  isUserPremiumPlus: isUserPremiumPlus, unlockPremiumPlus: unlockPremiumPlus,
+  verifyIdToken: verifyIdToken,
+  checkAccess: checkAccess,
+  unlockPremium: unlockPremium,
   safeUserUpdate: safeUserUpdate,
-  checkWordProblemQuota: checkWordProblemQuota, consumeWordProblemQuota: consumeWordProblemQuota,
-  trackExplanationUsage: trackExplanationUsage, trackInsightsUsage: trackInsightsUsage,
+  checkWordProblemQuota: checkWordProblemQuota,
+  consumeWordProblemQuota: consumeWordProblemQuota,
+  trackExplanationUsage: trackExplanationUsage,
+  trackInsightsUsage: trackInsightsUsage,
   clearStudyPlanCache: clearStudyPlanCache,
-  _hashString: _hashString, _shuffleInPlace: _shuffleInPlace, STUDY_PLAN_TTL_DAYS: STUDY_PLAN_TTL_DAYS
+  _hashString: _hashString, _shuffleInPlace: _shuffleInPlace,
+  STUDY_PLAN_TTL_DAYS: STUDY_PLAN_TTL_DAYS
 };

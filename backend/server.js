@@ -10,9 +10,8 @@
  *   POST /api/ai/coach                  — AI Coach insights (alias)
  *   POST /api/ai/study-plan             — Generate study plan
  *   POST /api/ai/plan                   — Generate study plan (alias)
- *   POST /api/subscriptions/create      — Create Razorpay subscription
- *   POST /api/subscriptions/verify      — Verify subscription payment
- *   POST /api/webhooks/razorpay         — Razorpay webhook handler
+ *   POST /api/payment/create-order      — Create Razorpay order
+ *   POST /api/payment/verify-payment    — Verify payment signature
  */
 
 require('dotenv').config();
@@ -22,7 +21,6 @@ const cors = require('cors');
 
 const aiRoutes = require('./routes/ai');
 const paymentRoutes = require('./routes/payment');
-const webhookRoutes = require('./routes/webhook');
 
 const app = express();
 const PORT = process.env.PORT || 5000;
@@ -51,15 +49,7 @@ app.use(cors({
 
 /* ------------------------------------------------------------------ */
 /*  Body parsing                                                      */
-/*  Webhook path needs raw body for HMAC signature verification.      */
-/*  Raw body middleware MUST come before express.json().               */
 /* ------------------------------------------------------------------ */
-
-app.use('/api/webhooks', express.raw({ type: 'application/json', limit: '64kb' }), function (req, _res, next) {
-  req.rawBody = req.body.toString('utf8');
-  try { req.body = JSON.parse(req.rawBody); } catch (_) { req.body = {}; }
-  next();
-});
 
 app.use(express.json({ limit: '16kb' }));
 
@@ -76,9 +66,7 @@ app.get('/api/health', function (req, res) {
 /* ------------------------------------------------------------------ */
 
 app.use('/api/ai', aiRoutes);
-app.use('/api/subscriptions', paymentRoutes);
-app.use('/api/payment', paymentRoutes);      /* alias for React Native */
-app.use('/api/webhooks', webhookRoutes);      /* Razorpay webhooks */
+app.use('/api/payment', paymentRoutes);
 
 /* ------------------------------------------------------------------ */
 /*  404 catch-all                                                     */
