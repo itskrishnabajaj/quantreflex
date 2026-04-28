@@ -1,0 +1,8 @@
+[{
+  "relation": ["delegate_permission/common.handle_all_urls"],
+  "target": {
+    "namespace": "android_app",
+    "package_name": "app.quantreflex.www.twa",
+    "sha256_cert_fingerprints": ["1C:7D:86:70:09:12:42:5F:57:63:2A:7C:B6:79:7E:07:81:98:48:08:45:28:CE:AE:DF:E9:C6:BC:8E:48:E7:10"]
+  }
+}]
