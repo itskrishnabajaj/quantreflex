@@ -30,7 +30,8 @@ app.use(function (req, res, next) {
 
 app.use(express.static(path.join(__dirname), {
   extensions: ['html'],
-  index: 'index.html'
+  index: 'index.html',
+  dotfiles: 'allow'
 }));
 
 app.get('/{*splat}', function (req, res) {
